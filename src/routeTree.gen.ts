@@ -9,38 +9,315 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerifyOtpRouteImport } from './routes/verify-otp'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as CompleteProfileRouteImport } from './routes/complete-profile'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRecordsRouteImport } from './routes/_authenticated.records'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
+import { Route as AuthenticatedPrescriptionsRouteImport } from './routes/_authenticated.prescriptions'
+import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated.notifications'
+import { Route as AuthenticatedFamilyRouteImport } from './routes/_authenticated.family'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
+import { Route as AuthenticatedAppointmentsRouteImport } from './routes/_authenticated.appointments'
+import { Route as AuthenticatedHospitalReportsRouteImport } from './routes/_authenticated.hospital.reports'
+import { Route as AuthenticatedHospitalPatientsRouteImport } from './routes/_authenticated.hospital.patients'
+import { Route as AuthenticatedHospitalDoctorsRouteImport } from './routes/_authenticated.hospital.doctors'
+import { Route as AuthenticatedHospitalDepartmentsRouteImport } from './routes/_authenticated.hospital.departments'
+import { Route as AuthenticatedHospitalDashboardRouteImport } from './routes/_authenticated.hospital.dashboard'
+import { Route as AuthenticatedHospitalAppointmentsRouteImport } from './routes/_authenticated.hospital.appointments'
+import { Route as AuthenticatedHospitalAnalyticsRouteImport } from './routes/_authenticated.hospital.analytics'
 
+const VerifyOtpRoute = VerifyOtpRouteImport.update({
+  id: '/verify-otp',
+  path: '/verify-otp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompleteProfileRoute = CompleteProfileRouteImport.update({
+  id: '/complete-profile',
+  path: '/complete-profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRecordsRoute = AuthenticatedRecordsRouteImport.update({
+  id: '/records',
+  path: '/records',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedPrescriptionsRoute =
+  AuthenticatedPrescriptionsRouteImport.update({
+    id: '/prescriptions',
+    path: '/prescriptions',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedNotificationsRoute =
+  AuthenticatedNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedFamilyRoute = AuthenticatedFamilyRouteImport.update({
+  id: '/family',
+  path: '/family',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAppointmentsRoute =
+  AuthenticatedAppointmentsRouteImport.update({
+    id: '/appointments',
+    path: '/appointments',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedHospitalReportsRoute =
+  AuthenticatedHospitalReportsRouteImport.update({
+    id: '/hospital/reports',
+    path: '/hospital/reports',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedHospitalPatientsRoute =
+  AuthenticatedHospitalPatientsRouteImport.update({
+    id: '/hospital/patients',
+    path: '/hospital/patients',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedHospitalDoctorsRoute =
+  AuthenticatedHospitalDoctorsRouteImport.update({
+    id: '/hospital/doctors',
+    path: '/hospital/doctors',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedHospitalDepartmentsRoute =
+  AuthenticatedHospitalDepartmentsRouteImport.update({
+    id: '/hospital/departments',
+    path: '/hospital/departments',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedHospitalDashboardRoute =
+  AuthenticatedHospitalDashboardRouteImport.update({
+    id: '/hospital/dashboard',
+    path: '/hospital/dashboard',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedHospitalAppointmentsRoute =
+  AuthenticatedHospitalAppointmentsRouteImport.update({
+    id: '/hospital/appointments',
+    path: '/hospital/appointments',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedHospitalAnalyticsRoute =
+  AuthenticatedHospitalAnalyticsRouteImport.update({
+    id: '/hospital/analytics',
+    path: '/hospital/analytics',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/complete-profile': typeof CompleteProfileRoute
+  '/signup': typeof SignupRoute
+  '/verify-otp': typeof VerifyOtpRoute
+  '/appointments': typeof AuthenticatedAppointmentsRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/family': typeof AuthenticatedFamilyRoute
+  '/notifications': typeof AuthenticatedNotificationsRoute
+  '/prescriptions': typeof AuthenticatedPrescriptionsRoute
+  '/profile': typeof AuthenticatedProfileRoute
+  '/records': typeof AuthenticatedRecordsRoute
+  '/hospital/analytics': typeof AuthenticatedHospitalAnalyticsRoute
+  '/hospital/appointments': typeof AuthenticatedHospitalAppointmentsRoute
+  '/hospital/dashboard': typeof AuthenticatedHospitalDashboardRoute
+  '/hospital/departments': typeof AuthenticatedHospitalDepartmentsRoute
+  '/hospital/doctors': typeof AuthenticatedHospitalDoctorsRoute
+  '/hospital/patients': typeof AuthenticatedHospitalPatientsRoute
+  '/hospital/reports': typeof AuthenticatedHospitalReportsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/complete-profile': typeof CompleteProfileRoute
+  '/signup': typeof SignupRoute
+  '/verify-otp': typeof VerifyOtpRoute
+  '/appointments': typeof AuthenticatedAppointmentsRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/family': typeof AuthenticatedFamilyRoute
+  '/notifications': typeof AuthenticatedNotificationsRoute
+  '/prescriptions': typeof AuthenticatedPrescriptionsRoute
+  '/profile': typeof AuthenticatedProfileRoute
+  '/records': typeof AuthenticatedRecordsRoute
+  '/hospital/analytics': typeof AuthenticatedHospitalAnalyticsRoute
+  '/hospital/appointments': typeof AuthenticatedHospitalAppointmentsRoute
+  '/hospital/dashboard': typeof AuthenticatedHospitalDashboardRoute
+  '/hospital/departments': typeof AuthenticatedHospitalDepartmentsRoute
+  '/hospital/doctors': typeof AuthenticatedHospitalDoctorsRoute
+  '/hospital/patients': typeof AuthenticatedHospitalPatientsRoute
+  '/hospital/reports': typeof AuthenticatedHospitalReportsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/complete-profile': typeof CompleteProfileRoute
+  '/signup': typeof SignupRoute
+  '/verify-otp': typeof VerifyOtpRoute
+  '/_authenticated/appointments': typeof AuthenticatedAppointmentsRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/family': typeof AuthenticatedFamilyRoute
+  '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
+  '/_authenticated/prescriptions': typeof AuthenticatedPrescriptionsRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/records': typeof AuthenticatedRecordsRoute
+  '/_authenticated/hospital/analytics': typeof AuthenticatedHospitalAnalyticsRoute
+  '/_authenticated/hospital/appointments': typeof AuthenticatedHospitalAppointmentsRoute
+  '/_authenticated/hospital/dashboard': typeof AuthenticatedHospitalDashboardRoute
+  '/_authenticated/hospital/departments': typeof AuthenticatedHospitalDepartmentsRoute
+  '/_authenticated/hospital/doctors': typeof AuthenticatedHospitalDoctorsRoute
+  '/_authenticated/hospital/patients': typeof AuthenticatedHospitalPatientsRoute
+  '/_authenticated/hospital/reports': typeof AuthenticatedHospitalReportsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/complete-profile'
+    | '/signup'
+    | '/verify-otp'
+    | '/appointments'
+    | '/dashboard'
+    | '/family'
+    | '/notifications'
+    | '/prescriptions'
+    | '/profile'
+    | '/records'
+    | '/hospital/analytics'
+    | '/hospital/appointments'
+    | '/hospital/dashboard'
+    | '/hospital/departments'
+    | '/hospital/doctors'
+    | '/hospital/patients'
+    | '/hospital/reports'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/complete-profile'
+    | '/signup'
+    | '/verify-otp'
+    | '/appointments'
+    | '/dashboard'
+    | '/family'
+    | '/notifications'
+    | '/prescriptions'
+    | '/profile'
+    | '/records'
+    | '/hospital/analytics'
+    | '/hospital/appointments'
+    | '/hospital/dashboard'
+    | '/hospital/departments'
+    | '/hospital/doctors'
+    | '/hospital/patients'
+    | '/hospital/reports'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/complete-profile'
+    | '/signup'
+    | '/verify-otp'
+    | '/_authenticated/appointments'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/family'
+    | '/_authenticated/notifications'
+    | '/_authenticated/prescriptions'
+    | '/_authenticated/profile'
+    | '/_authenticated/records'
+    | '/_authenticated/hospital/analytics'
+    | '/_authenticated/hospital/appointments'
+    | '/_authenticated/hospital/dashboard'
+    | '/_authenticated/hospital/departments'
+    | '/_authenticated/hospital/doctors'
+    | '/_authenticated/hospital/patients'
+    | '/_authenticated/hospital/reports'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  CompleteProfileRoute: typeof CompleteProfileRoute
+  SignupRoute: typeof SignupRoute
+  VerifyOtpRoute: typeof VerifyOtpRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verify-otp': {
+      id: '/verify-otp'
+      path: '/verify-otp'
+      fullPath: '/verify-otp'
+      preLoaderRoute: typeof VerifyOtpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/complete-profile': {
+      id: '/complete-profile'
+      path: '/complete-profile'
+      fullPath: '/complete-profile'
+      preLoaderRoute: typeof CompleteProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +325,153 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/records': {
+      id: '/_authenticated/records'
+      path: '/records'
+      fullPath: '/records'
+      preLoaderRoute: typeof AuthenticatedRecordsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/prescriptions': {
+      id: '/_authenticated/prescriptions'
+      path: '/prescriptions'
+      fullPath: '/prescriptions'
+      preLoaderRoute: typeof AuthenticatedPrescriptionsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/notifications': {
+      id: '/_authenticated/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AuthenticatedNotificationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/family': {
+      id: '/_authenticated/family'
+      path: '/family'
+      fullPath: '/family'
+      preLoaderRoute: typeof AuthenticatedFamilyRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/appointments': {
+      id: '/_authenticated/appointments'
+      path: '/appointments'
+      fullPath: '/appointments'
+      preLoaderRoute: typeof AuthenticatedAppointmentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/hospital/reports': {
+      id: '/_authenticated/hospital/reports'
+      path: '/hospital/reports'
+      fullPath: '/hospital/reports'
+      preLoaderRoute: typeof AuthenticatedHospitalReportsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/hospital/patients': {
+      id: '/_authenticated/hospital/patients'
+      path: '/hospital/patients'
+      fullPath: '/hospital/patients'
+      preLoaderRoute: typeof AuthenticatedHospitalPatientsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/hospital/doctors': {
+      id: '/_authenticated/hospital/doctors'
+      path: '/hospital/doctors'
+      fullPath: '/hospital/doctors'
+      preLoaderRoute: typeof AuthenticatedHospitalDoctorsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/hospital/departments': {
+      id: '/_authenticated/hospital/departments'
+      path: '/hospital/departments'
+      fullPath: '/hospital/departments'
+      preLoaderRoute: typeof AuthenticatedHospitalDepartmentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/hospital/dashboard': {
+      id: '/_authenticated/hospital/dashboard'
+      path: '/hospital/dashboard'
+      fullPath: '/hospital/dashboard'
+      preLoaderRoute: typeof AuthenticatedHospitalDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/hospital/appointments': {
+      id: '/_authenticated/hospital/appointments'
+      path: '/hospital/appointments'
+      fullPath: '/hospital/appointments'
+      preLoaderRoute: typeof AuthenticatedHospitalAppointmentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/hospital/analytics': {
+      id: '/_authenticated/hospital/analytics'
+      path: '/hospital/analytics'
+      fullPath: '/hospital/analytics'
+      preLoaderRoute: typeof AuthenticatedHospitalAnalyticsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedAppointmentsRoute: typeof AuthenticatedAppointmentsRoute
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedFamilyRoute: typeof AuthenticatedFamilyRoute
+  AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
+  AuthenticatedPrescriptionsRoute: typeof AuthenticatedPrescriptionsRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedRecordsRoute: typeof AuthenticatedRecordsRoute
+  AuthenticatedHospitalAnalyticsRoute: typeof AuthenticatedHospitalAnalyticsRoute
+  AuthenticatedHospitalAppointmentsRoute: typeof AuthenticatedHospitalAppointmentsRoute
+  AuthenticatedHospitalDashboardRoute: typeof AuthenticatedHospitalDashboardRoute
+  AuthenticatedHospitalDepartmentsRoute: typeof AuthenticatedHospitalDepartmentsRoute
+  AuthenticatedHospitalDoctorsRoute: typeof AuthenticatedHospitalDoctorsRoute
+  AuthenticatedHospitalPatientsRoute: typeof AuthenticatedHospitalPatientsRoute
+  AuthenticatedHospitalReportsRoute: typeof AuthenticatedHospitalReportsRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAppointmentsRoute: AuthenticatedAppointmentsRoute,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedFamilyRoute: AuthenticatedFamilyRoute,
+  AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
+  AuthenticatedPrescriptionsRoute: AuthenticatedPrescriptionsRoute,
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedRecordsRoute: AuthenticatedRecordsRoute,
+  AuthenticatedHospitalAnalyticsRoute: AuthenticatedHospitalAnalyticsRoute,
+  AuthenticatedHospitalAppointmentsRoute:
+    AuthenticatedHospitalAppointmentsRoute,
+  AuthenticatedHospitalDashboardRoute: AuthenticatedHospitalDashboardRoute,
+  AuthenticatedHospitalDepartmentsRoute: AuthenticatedHospitalDepartmentsRoute,
+  AuthenticatedHospitalDoctorsRoute: AuthenticatedHospitalDoctorsRoute,
+  AuthenticatedHospitalPatientsRoute: AuthenticatedHospitalPatientsRoute,
+  AuthenticatedHospitalReportsRoute: AuthenticatedHospitalReportsRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  AuthRoute: AuthRoute,
+  CompleteProfileRoute: CompleteProfileRoute,
+  SignupRoute: SignupRoute,
+  VerifyOtpRoute: VerifyOtpRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
