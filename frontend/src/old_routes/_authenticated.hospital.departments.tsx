@@ -1,11 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Hospital, Users, Stethoscope } from "lucide-react";
+import Hospital from "lucide-react/dist/esm/icons/hospital.mjs";
+import Users from "lucide-react/dist/esm/icons/users.mjs";
+import Stethoscope from "lucide-react/dist/esm/icons/stethoscope.mjs";
 
+import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/_authenticated/hospital/departments")({
   head: () => ({ meta: [{ title: "Departments — MediDoc" }] }),
   component: DepartmentsPage,
 });
-
 const departments = [
   { name: "Cardiology", doctors: 6, patients: 142, icon: Stethoscope, color: "bg-red-50 text-red-700 ring-1 ring-red-200/50" },
   { name: "Neurology", doctors: 4, patients: 98, icon: Stethoscope, color: "bg-purple-50 text-purple-700 ring-1 ring-purple-200/50" },
@@ -14,7 +15,6 @@ const departments = [
   { name: "General Medicine", doctors: 8, patients: 210, icon: Stethoscope, color: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/50" },
   { name: "Emergency", doctors: 12, patients: 340, icon: Hospital, color: "bg-red-50 text-red-700 ring-1 ring-red-200/50" },
 ];
-
 function DepartmentsPage() {
   return (
     <div className="p-8">
@@ -22,7 +22,6 @@ function DepartmentsPage() {
         <h1 className="text-2xl font-bold tracking-tight">Departments</h1>
         <p className="text-sm text-muted-foreground mt-1">Hospital departments and their statistics.</p>
       </header>
-
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {departments.map((d) => (
           <div key={d.name} className="bg-card ring-1 ring-black/5 rounded-xl p-5 hover:shadow-lg hover:shadow-brand/5 transition-all">

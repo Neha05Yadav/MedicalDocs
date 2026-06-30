@@ -1,28 +1,24 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Bell, Check } from "lucide-react";
-import { useState } from "react";
+import Bell from "lucide-react/dist/esm/icons/bell.mjs";
+import Check from "lucide-react/dist/esm/icons/check.mjs";
 
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 export const Route = createFileRoute("/_authenticated/notifications")({
   head: () => ({ meta: [{ title: "Notifications — MediDoc" }] }),
   component: NotificationsPage,
 });
-
 const initialNotifications = [
   { id: "1", title: "Appointment reminder", message: "Your appointment with Dr. Mehta is tomorrow at 10:00 AM.", time: "2 hours ago", read: false },
   { id: "2", title: "Record shared", message: "City Hospital has viewed your shared Chest X-Ray report.", time: "1 day ago", read: false },
   { id: "3", title: "New prescription added", message: "A new prescription was uploaded to your records.", time: "3 days ago", read: true },
   { id: "4", title: "Profile updated", message: "Your emergency contact information was successfully updated.", time: "1 week ago", read: true },
 ];
-
 function NotificationsPage() {
   const [notifications, setNotifications] = useState(initialNotifications);
-
   const markAsRead = (id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
   };
-
   const unreadCount = notifications.filter((n) => !n.read).length;
-
   return (
     <div className="p-8">
       <header className="mb-8 flex items-center justify-between">
@@ -31,7 +27,6 @@ function NotificationsPage() {
           <p className="text-sm text-muted-foreground mt-1">{unreadCount} unread notification{unreadCount !== 1 ? "s" : ""}</p>
         </div>
       </header>
-
       <div className="bg-card ring-1 ring-black/5 rounded-xl overflow-hidden divide-y divide-border">
         {notifications.map((n) => (
           <div key={n.id} className={`px-6 py-4 flex items-start gap-4 hover:bg-muted/30 transition-colors ${!n.read ? "bg-brand-muted/30" : ""}`}>

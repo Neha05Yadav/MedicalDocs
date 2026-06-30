@@ -1,12 +1,16 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { BarChart3, TrendingUp, Users, FileText, CalendarDays, Activity } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line, PieChart, Pie, Cell } from "recharts";
+import BarChart3 from "lucide-react/dist/esm/icons/bar-chart-3.mjs";
+import TrendingUp from "lucide-react/dist/esm/icons/trending-up.mjs";
+import Users from "lucide-react/dist/esm/icons/users.mjs";
+import FileText from "lucide-react/dist/esm/icons/file-text.mjs";
+import CalendarDays from "lucide-react/dist/esm/icons/calendar-days.mjs";
+import Activity from "lucide-react/dist/esm/icons/activity.mjs";
 
+import { createFileRoute } from "@tanstack/react-router";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 export const Route = createFileRoute("/_authenticated/hospital/analytics")({
   head: () => ({ meta: [{ title: "Analytics — MediDoc" }] }),
   component: AnalyticsPage,
 });
-
 const monthlyData = [
   { month: "Jan", patients: 320, appointments: 210, reports: 180 },
   { month: "Feb", patients: 350, appointments: 240, reports: 200 },
@@ -15,7 +19,6 @@ const monthlyData = [
   { month: "May", patients: 450, appointments: 310, reports: 270 },
   { month: "Jun", patients: 490, appointments: 340, reports: 300 },
 ];
-
 const deptDistribution = [
   { name: "Cardiology", value: 142, color: "#dc2626" },
   { name: "Neurology", value: 98, color: "#7c3aed" },
@@ -23,7 +26,6 @@ const deptDistribution = [
   { name: "Pediatrics", value: 124, color: "#0252d9" },
   { name: "General", value: 210, color: "#059669" },
 ];
-
 function AnalyticsPage() {
   return (
     <div className="p-8">
@@ -31,7 +33,6 @@ function AnalyticsPage() {
         <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
         <p className="text-sm text-muted-foreground mt-1">Hospital performance and patient statistics.</p>
       </header>
-
       {/* KPI Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
@@ -52,7 +53,6 @@ function AnalyticsPage() {
           </div>
         ))}
       </div>
-
       <div className="grid lg:grid-cols-2 gap-8 mb-8">
         {/* Monthly Trend */}
         <div className="bg-card ring-1 ring-black/5 rounded-xl p-6">
@@ -68,7 +68,6 @@ function AnalyticsPage() {
             </LineChart>
           </ResponsiveContainer>
         </div>
-
         {/* Department Distribution */}
         <div className="bg-card ring-1 ring-black/5 rounded-xl p-6">
           <h2 className="text-sm font-semibold mb-6">Department Distribution</h2>
@@ -92,7 +91,6 @@ function AnalyticsPage() {
           </div>
         </div>
       </div>
-
       {/* Report Stats */}
       <div className="bg-card ring-1 ring-black/5 rounded-xl p-6">
         <h2 className="text-sm font-semibold mb-6">Report Statistics</h2>

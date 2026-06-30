@@ -1,41 +1,40 @@
 "use client";
-
+import Eye from "lucide-react/dist/esm/icons/eye.mjs";
+import EyeOff from "lucide-react/dist/esm/icons/eye-off.mjs";
+import Mail from "lucide-react/dist/esm/icons/mail.mjs";
+import Lock from "lucide-react/dist/esm/icons/lock.mjs";
+import ArrowLeft from "lucide-react/dist/esm/icons/arrow-left.mjs";
+import Shield from "lucide-react/dist/esm/icons/shield.mjs";
 import Link from "next/link";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, EyeOff, Mail, Lock, ArrowLeft, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-
 export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
-    
     // Mock authentication for testing - allow any credentials
     setTimeout(() => {
       setIsLoading(false);
-      
       const emailLower = email.toLowerCase();
       if (emailLower.includes("hospital")) {
         toast.success("Welcome to Hospital Dashboard!");
         router.push("/hospital");
-      } else if (emailLower.includes("doctor") || emailLower.includes("dr")) {
-        toast.success("Welcome to Doctor Dashboard!");
-        router.push("/doctor");
+      } else if (emailLower.includes("clinic") || emailLower.includes("dr") || emailLower.includes("doctor")) {
+        toast.success("Welcome to Clinic Dashboard!");
+        router.push("/clinic");
       } else {
         toast.success("Welcome back!");
         router.push("/patient");
       }
     }, 800);
   }
-
   async function handleGoogleLogin() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -43,12 +42,10 @@ export default function AuthPage() {
         redirectTo: `${window.location.origin}/patient`
       }
     });
-    
     if (error) {
       toast.error(error.message || "Google login failed");
     }
   }
-
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -66,7 +63,6 @@ export default function AuthPage() {
           <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
           <p className="text-sm text-muted-foreground mt-1">Sign in to access your health records.</p>
         </div>
-
         <button
           onClick={handleGoogleLogin}
           className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-card border border-border rounded-xl text-sm font-medium hover:bg-muted transition-colors mb-6"
@@ -79,7 +75,6 @@ export default function AuthPage() {
           </svg>
           Continue with Google
         </button>
-
         <div className="relative mb-6">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-border" />
@@ -88,7 +83,6 @@ export default function AuthPage() {
             <span className="bg-background px-2 text-muted-foreground">or continue with email</span>
           </div>
         </div>
-
         <form onSubmit={handleEmailLogin} className="space-y-4">
           <div>
             <label className="text-sm font-medium mb-1.5 block">Email</label>
@@ -133,7 +127,6 @@ export default function AuthPage() {
             {isLoading ? "Signing in..." : "Sign In"}
           </button>
         </form>
-
         <div className="mt-6">
           <div className="relative mb-4">
             <div className="absolute inset-0 flex items-center">
@@ -145,11 +138,10 @@ export default function AuthPage() {
           </div>
           <div className="grid grid-cols-3 gap-2">
             <button onClick={() => { setEmail("user@demo.com"); setPassword("123456"); }} className="py-2 px-2 border border-border rounded-lg text-xs font-medium hover:bg-muted transition-colors text-center">Patient</button>
-            <button onClick={() => { setEmail("doctor@demo.com"); setPassword("123456"); }} className="py-2 px-2 border border-border rounded-lg text-xs font-medium hover:bg-muted transition-colors text-center">Doctor</button>
+            <button onClick={() => { setEmail("clinic@demo.com"); setPassword("123456"); }} className="py-2 px-2 border border-border rounded-lg text-xs font-medium hover:bg-muted transition-colors text-center">Clinic</button>
             <button onClick={() => { setEmail("hospital@demo.com"); setPassword("123456"); }} className="py-2 px-2 border border-border rounded-lg text-xs font-medium hover:bg-muted transition-colors text-center">Hospital</button>
           </div>
         </div>
-
         <p className="text-center text-sm text-muted-foreground mt-6">
           Don't have an account?{" "}
           <Link href="/signup" className="text-brand font-medium hover:underline">

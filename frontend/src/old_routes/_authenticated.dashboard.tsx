@@ -1,12 +1,17 @@
+import FileText from "lucide-react/dist/esm/icons/file-text.mjs";
+import Calendar from "lucide-react/dist/esm/icons/calendar.mjs";
+import Clock from "lucide-react/dist/esm/icons/clock.mjs";
+import Share2 from "lucide-react/dist/esm/icons/share-2.mjs";
+import Upload from "lucide-react/dist/esm/icons/upload.mjs";
+import Plus from "lucide-react/dist/esm/icons/plus.mjs";
+import Pill from "lucide-react/dist/esm/icons/pill.mjs";
+import Activity from "lucide-react/dist/esm/icons/activity.mjs";
+import ArrowUpRight from "lucide-react/dist/esm/icons/arrow-up-right.mjs";
+
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  FileText, Calendar, Clock, Share2, Upload, Plus,
-  Pill, Activity, ArrowUpRight
-} from "lucide-react";
-
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
@@ -16,7 +21,6 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   }),
   component: PatientDashboard,
 });
-
 function PatientDashboard() {
   const { data: records } = useQuery({
     queryKey: ["health-records"],
@@ -25,7 +29,6 @@ function PatientDashboard() {
       return data || [];
     },
   });
-
   const { data: appointments } = useQuery({
     queryKey: ["appointments"],
     queryFn: async () => {
@@ -33,7 +36,6 @@ function PatientDashboard() {
       return data || [];
     },
   });
-
   const totalRecords = records?.length ?? 0;
   const recentRecords = records?.filter((r) => {
     const d = new Date(r.created_at);
@@ -43,14 +45,12 @@ function PatientDashboard() {
     const d = new Date(a.appointment_date || "");
     return d > new Date();
   }).length ?? 0;
-
   const kpiCards = [
     { label: "Total Records", value: totalRecords, icon: FileText, color: "border-t-2 border-brand" },
     { label: "Recent (30d)", value: recentRecords, icon: Activity, color: "border-t-2 border-emerald" },
     { label: "Upcoming Appts", value: upcomingAppointments, icon: Calendar, color: "border-t-2 border-amber" },
     { label: "Prescriptions", value: records?.filter((r) => r.category === "Prescription").length ?? 0, icon: Pill, color: "border-t-2 border-purple" },
   ];
-
   const categoryColor: Record<string, string> = {
     "Lab Report": "category-lab",
     "X-Ray": "category-radiology",
@@ -60,7 +60,6 @@ function PatientDashboard() {
     "Certificate": "category-certificate",
     Other: "category-other",
   };
-
   return (
     <div className="p-8">
       <header className="mb-8 flex items-center justify-between">
@@ -78,7 +77,6 @@ function PatientDashboard() {
           </Link>
         </div>
       </header>
-
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {kpiCards.map((card) => (
@@ -91,7 +89,6 @@ function PatientDashboard() {
           </div>
         ))}
       </div>
-
       {/* Recent Records Table */}
       <div className="bg-card ring-1 ring-black/5 rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b border-border flex items-center justify-between">
@@ -100,7 +97,6 @@ function PatientDashboard() {
             View all <ArrowUpRight className="size-3" />
           </Link>
         </div>
-
         {totalRecords === 0 ? (
           <div className="p-12 text-center">
             <div className="size-12 bg-muted rounded-xl flex items-center justify-center mx-auto mb-4">
@@ -155,7 +151,6 @@ function PatientDashboard() {
           </table>
         )}
       </div>
-
       {/* Upcoming Appointments */}
       <div className="mt-8 bg-card ring-1 ring-black/5 rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b border-border">

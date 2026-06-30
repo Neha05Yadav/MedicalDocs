@@ -1,8 +1,14 @@
+import Shield from "lucide-react/dist/esm/icons/shield.mjs";
+import Share2 from "lucide-react/dist/esm/icons/share-2.mjs";
+import FileText from "lucide-react/dist/esm/icons/file-text.mjs";
+import Stethoscope from "lucide-react/dist/esm/icons/stethoscope.mjs";
+import Users from "lucide-react/dist/esm/icons/users.mjs";
+import Activity from "lucide-react/dist/esm/icons/activity.mjs";
+import ChevronRight from "lucide-react/dist/esm/icons/chevron-right.mjs";
+
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
-import { Shield, Share2, FileText, Stethoscope, Users, Activity, ChevronRight } from "lucide-react";
 import heroImage from "@/assets/hero-dashboard.jpg";
-
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -14,7 +20,6 @@ export const Route = createFileRoute("/")({
   }),
   component: HomePage,
 });
-
 function HomePage() {
   return (
     <div className="min-h-screen bg-background text-foreground font-sans">
@@ -28,7 +33,6 @@ function HomePage() {
     </div>
   );
 }
-
 function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md border-b border-border">
@@ -55,7 +59,6 @@ function Navbar() {
     </nav>
   );
 }
-
 function HeroSection() {
   return (
     <section className="max-w-7xl mx-auto px-6 pt-20 pb-16">
@@ -96,7 +99,6 @@ function HeroSection() {
     </section>
   );
 }
-
 function FeaturesSection() {
   const features = [
     {
@@ -115,7 +117,6 @@ function FeaturesSection() {
       description: "Your data is encrypted end-to-end. We never sell your health information to third-party providers or advertisers.",
     },
   ];
-
   return (
     <section id="features" className="max-w-7xl mx-auto px-6 py-24">
       <div className="text-center mb-16">
@@ -138,7 +139,6 @@ function FeaturesSection() {
     </section>
   );
 }
-
 function HowItWorksSection() {
   const steps = [
     { num: "01", title: "Create Your Account", desc: "Sign up in under a minute with your email or Google account. Verify with a quick OTP." },
@@ -146,7 +146,6 @@ function HowItWorksSection() {
     { num: "03", title: "Upload Records", desc: "Drag and drop prescriptions, lab reports, X-rays, MRIs, and vaccination certificates." },
     { num: "04", title: "Share with Doctors", desc: "When visiting a new hospital, grant secure access to your records instantly. No paper needed." },
   ];
-
   return (
     <section id="how-it-works" className="bg-muted/50 py-24">
       <div className="max-w-7xl mx-auto px-6">
@@ -169,7 +168,6 @@ function HowItWorksSection() {
     </section>
   );
 }
-
 function BenefitsSection() {
   const benefits = [
     { icon: Activity, title: "No more lost reports", desc: "Every prescription, lab result, and imaging report stays safely in your digital vault forever." },
@@ -177,7 +175,6 @@ function BenefitsSection() {
     { icon: Stethoscope, title: "Hospital partnerships", desc: "Leading hospitals use MediDoc to access patient history instantly, reducing redundant tests." },
     { icon: Shield, title: "Military-grade encryption", desc: "AES-256 encryption, SOC 2 compliance, and strict HIPAA adherence keep your data safe." },
   ];
-
   return (
     <section id="benefits" className="max-w-7xl mx-auto px-6 py-24">
       <div className="grid lg:grid-cols-2 gap-16 items-start">
@@ -213,7 +210,6 @@ function BenefitsSection() {
     </section>
   );
 }
-
 function CTASection() {
   return (
     <section className="max-w-7xl mx-auto px-6 pb-24">
@@ -242,7 +238,6 @@ function CTASection() {
     </section>
   );
 }
-
 function Footer() {
   return (
     <footer className="border-t border-border py-12">

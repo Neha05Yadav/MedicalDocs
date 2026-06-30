@@ -1,12 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Calendar, Plus, Clock, MapPin, Stethoscope, CheckCircle2, XCircle } from "lucide-react";
-import { useState } from "react";
+import Calendar from "lucide-react/dist/esm/icons/calendar.mjs";
+import Plus from "lucide-react/dist/esm/icons/plus.mjs";
+import Clock from "lucide-react/dist/esm/icons/clock.mjs";
+import MapPin from "lucide-react/dist/esm/icons/map-pin.mjs";
+import Stethoscope from "lucide-react/dist/esm/icons/stethoscope.mjs";
+import CheckCircle2 from "lucide-react/dist/esm/icons/check-circle-2.mjs";
+import XCircle from "lucide-react/dist/esm/icons/x-circle.mjs";
 
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 export const Route = createFileRoute("/_authenticated/hospital/appointments")({
   head: () => ({ meta: [{ title: "Hospital Appointments — MediDoc" }] }),
   component: HospitalAppointmentsPage,
 });
-
 const appointments = [
   { patient: "Marcus Chen", doctor: "Dr. Sarah Jenkins", department: "Cardiology", date: "Oct 15, 2024", time: "10:00 AM", status: "scheduled" },
   { patient: "Elena Rodriguez", doctor: "Dr. Alan Watts", department: "Neurology", date: "Oct 15, 2024", time: "11:30 AM", status: "scheduled" },
@@ -14,17 +19,14 @@ const appointments = [
   { patient: "Aisha Khan", doctor: "Dr. Michael Brown", department: "Pediatrics", date: "Oct 16, 2024", time: "09:00 AM", status: "scheduled" },
   { patient: "Robert Kim", doctor: "Dr. Emily Chen", department: "Cardiology", date: "Oct 16, 2024", time: "03:30 PM", status: "cancelled" },
 ];
-
 function HospitalAppointmentsPage() {
   const [filter, setFilter] = useState("all");
   const filtered = appointments.filter((a) => filter === "all" || a.status === filter);
-
   const statusBadge: Record<string, string> = {
     scheduled: "bg-blue-50 text-blue-700 ring-1 ring-blue-200/50",
     completed: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/50",
     cancelled: "bg-red-50 text-red-700 ring-1 ring-red-200/50",
   };
-
   return (
     <div className="p-8">
       <header className="mb-8 flex items-center justify-between">
@@ -37,7 +39,6 @@ function HospitalAppointmentsPage() {
           New Appointment
         </button>
       </header>
-
       <div className="flex gap-2 mb-6">
         {["all", "scheduled", "completed", "cancelled"].map((f) => (
           <button key={f} onClick={() => setFilter(f)} className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors capitalize ${filter === f ? "bg-brand text-background" : "bg-muted text-muted-foreground hover:text-foreground"}`}>
@@ -45,7 +46,6 @@ function HospitalAppointmentsPage() {
           </button>
         ))}
       </div>
-
       <div className="bg-card ring-1 ring-black/5 rounded-xl overflow-hidden">
         <div className="divide-y divide-border">
           {filtered.map((a, i) => (

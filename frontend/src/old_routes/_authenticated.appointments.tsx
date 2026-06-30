@@ -1,11 +1,18 @@
+import Calendar from "lucide-react/dist/esm/icons/calendar.mjs";
+import Plus from "lucide-react/dist/esm/icons/plus.mjs";
+import X from "lucide-react/dist/esm/icons/x.mjs";
+import Clock from "lucide-react/dist/esm/icons/clock.mjs";
+import MapPin from "lucide-react/dist/esm/icons/map-pin.mjs";
+import Stethoscope from "lucide-react/dist/esm/icons/stethoscope.mjs";
+import CheckCircle2 from "lucide-react/dist/esm/icons/check-circle-2.mjs";
+import XCircle from "lucide-react/dist/esm/icons/x-circle.mjs";
+
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Plus, X, Clock, MapPin, Stethoscope, CheckCircle2, XCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-
 export const Route = createFileRoute("/_authenticated/appointments")({
   head: () => ({
     meta: [
@@ -15,7 +22,6 @@ export const Route = createFileRoute("/_authenticated/appointments")({
   }),
   component: AppointmentsPage,
 });
-
 function AppointmentsPage() {
   const queryClient = useQueryClient();
   const [showBook, setShowBook] = useState(false);
@@ -25,7 +31,6 @@ function AppointmentsPage() {
   const [apptDate, setApptDate] = useState("");
   const [notes, setNotes] = useState("");
   const [filter, setFilter] = useState<"all" | "upcoming" | "past">("all");
-
   const { data: appointments, isLoading } = useQuery({
     queryKey: ["appointments"],
     queryFn: async () => {
@@ -33,7 +38,6 @@ function AppointmentsPage() {
       return data || [];
     },
   });
-
   const addAppointment = useMutation({
     mutationFn: async (appt: { doctor_name: string; hospital_name: string; department: string; appointment_date: string; notes: string }) => {
       const { data: userData } = await supabase.auth.getUser();
@@ -56,7 +60,6 @@ function AppointmentsPage() {
     },
     onError: (err: Error) => toast.error(err.message),
   });
-
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
@@ -64,19 +67,16 @@ function AppointmentsPage() {
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["appointments"] }),
   });
-
   const filtered = (appointments || []).filter((a) => {
     if (filter === "upcoming") return new Date(a.appointment_date || "") > new Date();
     if (filter === "past") return new Date(a.appointment_date || "") <= new Date();
     return true;
   });
-
   const statusBadge: Record<string, string> = {
     scheduled: "bg-blue-50 text-blue-700 ring-1 ring-blue-200/50",
     completed: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/50",
     cancelled: "bg-red-50 text-red-700 ring-1 ring-red-200/50",
   };
-
   return (
     <div className="p-8">
       <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -92,7 +92,6 @@ function AppointmentsPage() {
           Book Appointment
         </button>
       </header>
-
       {/* Filters */}
       <div className="flex gap-2 mb-6">
         {(["all", "upcoming", "past"] as const).map((f) => (
@@ -107,7 +106,6 @@ function AppointmentsPage() {
           </button>
         ))}
       </div>
-
       {/* Book Modal */}
       {showBook && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
@@ -158,7 +156,6 @@ function AppointmentsPage() {
           </div>
         </div>
       )}
-
       {/* Appointments List */}
       <div className="bg-card ring-1 ring-black/5 rounded-xl overflow-hidden">
         {isLoading ? (

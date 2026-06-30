@@ -1,0 +1,72 @@
+"use client";
+const Bell = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>;
+const AlertTriangle = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>;
+const Clock = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>;
+const XCircle = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>;
+const CreditCard = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="5" rx="2"></rect><line x1="2" x2="22" y1="10" y2="10"></line></svg>;
+const ChevronRight = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>;
+
+
+
+
+
+
+
+import React, { useState } from 'react';
+export default function SalesNotificationsPage() {
+  const tabs = ["All Notifications", "Subscription Expiry Alerts", "Payment Due Alerts", "Renewal Reminders"];
+  const [activeTab, setActiveTab] = useState("All Notifications");
+  return (
+    <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans">
+      {/* Header removed to avoid redundancy */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="md:col-span-1 space-y-2">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+                activeTab === tab ? "bg-indigo-50 text-indigo-700 border-indigo-100 border shadow-sm" : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+        <div className="md:col-span-3 space-y-4">
+          {[
+            { title: "Subscription Expiring Soon", facility: "Sunrise Clinic", time: "2 hours ago", type: "expiry", desc: "Basic Plan expires in 3 days. Send a renewal reminder to avoid service interruption." },
+            { title: "Payment Failed", facility: "Metro Health", time: "5 hours ago", type: "payment", desc: "Auto-renewal payment of ₹45,000 for Enterprise Plan failed due to insufficient funds." },
+            { title: "Successful Renewal", facility: "Apex Laboratories", time: "Yesterday", type: "success", desc: "Pro Plan successfully renewed for 1 year." },
+            { title: "Subscription Expired", facility: "Global Diagnostics", time: "2 days ago", type: "expired", desc: "Basic Plan has expired. Services have been suspended." },
+          ].map((notif, idx) => (
+            <div key={idx} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex gap-4 hover:border-indigo-200 transition-colors cursor-pointer group">
+              <div className="shrink-0 mt-1">
+                {notif.type === 'expiry' ? (
+                  <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center border border-amber-100"><Clock className="size-5" /></div>
+                ) : notif.type === 'payment' ? (
+                  <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center border border-rose-100"><AlertTriangle className="size-5" /></div>
+                ) : notif.type === 'expired' ? (
+                  <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center border border-slate-200"><XCircle className="size-5" /></div>
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center border border-emerald-100"><CreditCard className="size-5" /></div>
+                )}
+              </div>
+              <div className="flex-1">
+                <div className="flex justify-between items-start mb-1">
+                  <h4 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{notif.title}</h4>
+                  <span className="text-[11px] font-bold text-slate-400">{notif.time}</span>
+                </div>
+                <p className="text-xs font-bold text-indigo-600 mb-2">{notif.facility}</p>
+                <p className="text-sm text-slate-600 leading-relaxed">{notif.desc}</p>
+              </div>
+              <div className="shrink-0 flex items-center pl-4 border-l border-slate-100 opacity-0 group-hover:opacity-100 transition-opacity">
+                <ChevronRight className="size-5 text-indigo-400" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

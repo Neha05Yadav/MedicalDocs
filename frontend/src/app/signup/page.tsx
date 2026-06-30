@@ -1,11 +1,15 @@
 "use client";
-
+import Eye from "lucide-react/dist/esm/icons/eye.mjs";
+import EyeOff from "lucide-react/dist/esm/icons/eye-off.mjs";
+import Mail from "lucide-react/dist/esm/icons/mail.mjs";
+import Lock from "lucide-react/dist/esm/icons/lock.mjs";
+import ArrowLeft from "lucide-react/dist/esm/icons/arrow-left.mjs";
+import Shield from "lucide-react/dist/esm/icons/shield.mjs";
+import User from "lucide-react/dist/esm/icons/user.mjs";
 import Link from "next/link";
 import { useState } from "react";
-import { Eye, EyeOff, Mail, Lock, ArrowLeft, Shield, User } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-
 export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -13,11 +17,9 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
-    
     // Mock signup for UI testing
     setTimeout(() => {
       setIsLoading(false);
@@ -25,11 +27,9 @@ export default function SignupPage() {
       router.push("/auth");
     }, 800);
   }
-
   async function handleGoogleSignup() {
     toast.success("Redirecting to Google...");
   }
-
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -47,7 +47,6 @@ export default function SignupPage() {
           <h1 className="text-2xl font-bold tracking-tight">Create your account</h1>
           <p className="text-sm text-muted-foreground mt-1">Join MediDoc to manage your health records securely.</p>
         </div>
-
         <button
           onClick={handleGoogleSignup}
           className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-card border border-border rounded-xl text-sm font-medium hover:bg-muted transition-colors mb-6"
@@ -60,7 +59,6 @@ export default function SignupPage() {
           </svg>
           Sign up with Google
         </button>
-
         <div className="relative mb-6">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-border" />
@@ -69,7 +67,6 @@ export default function SignupPage() {
             <span className="bg-background px-2 text-muted-foreground">or sign up with email</span>
           </div>
         </div>
-
         <form onSubmit={handleSignup} className="space-y-4">
           <div>
             <label className="text-sm font-medium mb-1.5 block">Full Name</label>
@@ -129,7 +126,6 @@ export default function SignupPage() {
             {isLoading ? "Creating account..." : "Create Account"}
           </button>
         </form>
-
         <p className="text-center text-sm text-muted-foreground mt-6">
           Already have an account?{" "}
           <Link href="/auth" className="text-brand font-medium hover:underline">

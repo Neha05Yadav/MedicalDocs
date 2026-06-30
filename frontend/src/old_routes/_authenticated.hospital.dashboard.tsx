@@ -1,9 +1,15 @@
+import Stethoscope from "lucide-react/dist/esm/icons/stethoscope.mjs";
+import Users from "lucide-react/dist/esm/icons/users.mjs";
+import CalendarDays from "lucide-react/dist/esm/icons/calendar-days.mjs";
+import FileUp from "lucide-react/dist/esm/icons/file-up.mjs";
+import Activity from "lucide-react/dist/esm/icons/activity.mjs";
+import TrendingUp from "lucide-react/dist/esm/icons/trending-up.mjs";
+import Clock from "lucide-react/dist/esm/icons/clock.mjs";
+
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Stethoscope, Users, CalendarDays, FileUp, Activity, TrendingUp, Clock } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-
 export const Route = createFileRoute("/_authenticated/hospital/dashboard")({
   head: () => ({
     meta: [
@@ -13,7 +19,6 @@ export const Route = createFileRoute("/_authenticated/hospital/dashboard")({
   }),
   component: HospitalDashboard,
 });
-
 const mockStats = [
   { name: "Mon", patients: 42, appointments: 28 },
   { name: "Tue", patients: 55, appointments: 35 },
@@ -23,14 +28,12 @@ const mockStats = [
   { name: "Sat", patients: 25, appointments: 15 },
   { name: "Sun", patients: 18, appointments: 10 },
 ];
-
 const mockPatients = [
   { name: "Marcus Chen", department: "Cardiology", doctor: "Dr. Sarah Jenkins", status: "Stable" },
   { name: "Elena Rodriguez", department: "Neurology", doctor: "Dr. Alan Watts", status: "Pending Labs" },
   { name: "James Okafor", department: "Orthopedics", doctor: "Dr. Priya Patel", status: "Stable" },
   { name: "Aisha Khan", department: "Pediatrics", doctor: "Dr. Michael Brown", status: "Follow-up" },
 ];
-
 function HospitalDashboard() {
   const { data: totalRecords } = useQuery({
     queryKey: ["hospital-records-count"],
@@ -39,21 +42,18 @@ function HospitalDashboard() {
       return count || 0;
     },
   });
-
   const kpiCards = [
     { label: "Total Doctors", value: "24", icon: Stethoscope, color: "border-t-2 border-brand" },
     { label: "Total Patients", value: "1,842", icon: Users, color: "border-t-2 border-emerald" },
     { label: "Today's Appts", value: "38", icon: CalendarDays, color: "border-t-2 border-amber" },
     { label: "Reports Uploaded", value: String(totalRecords ?? 0), icon: FileUp, color: "border-t-2 border-purple" },
   ];
-
   return (
     <div className="p-8">
       <header className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight">Hospital Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">Overview of hospital operations and patient flow.</p>
       </header>
-
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {kpiCards.map((card) => (
@@ -66,7 +66,6 @@ function HospitalDashboard() {
           </div>
         ))}
       </div>
-
       <div className="grid lg:grid-cols-2 gap-8 mb-8">
         {/* Patient Stats Chart */}
         <div className="bg-card ring-1 ring-black/5 rounded-xl p-6">
@@ -90,7 +89,6 @@ function HospitalDashboard() {
             </BarChart>
           </ResponsiveContainer>
         </div>
-
         {/* Active Patient Queue */}
         <div className="bg-card ring-1 ring-black/5 rounded-xl overflow-hidden">
           <div className="px-6 py-4 border-b border-border">
@@ -120,7 +118,6 @@ function HospitalDashboard() {
           </div>
         </div>
       </div>
-
       {/* Department Stats */}
       <div className="bg-card ring-1 ring-black/5 rounded-xl p-6">
         <h2 className="text-sm font-semibold mb-6">Department Overview</h2>

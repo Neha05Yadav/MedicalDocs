@@ -1,12 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Users, Search, FileText } from "lucide-react";
-import { useState } from "react";
+import Users from "lucide-react/dist/esm/icons/users.mjs";
+import Search from "lucide-react/dist/esm/icons/search.mjs";
+import FileText from "lucide-react/dist/esm/icons/file-text.mjs";
 
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 export const Route = createFileRoute("/_authenticated/hospital/patients")({
   head: () => ({ meta: [{ title: "Patients — MediDoc" }] }),
   component: PatientsPage,
 });
-
 const patients = [
   { name: "Marcus Chen", id: "P-8821", age: 34, lastVisit: "Oct 12, 2023", condition: "Hypertension" },
   { name: "Elena Rodriguez", id: "P-8845", age: 28, lastVisit: "Sep 28, 2023", condition: "Migraine" },
@@ -14,18 +15,15 @@ const patients = [
   { name: "Aisha Khan", id: "P-8912", age: 6, lastVisit: "Aug 22, 2023", condition: "Asthma" },
   { name: "Robert Kim", id: "P-8934", age: 52, lastVisit: "Aug 10, 2023", condition: "Diabetes" },
 ];
-
 function PatientsPage() {
   const [search, setSearch] = useState("");
   const filtered = patients.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()) || p.id.toLowerCase().includes(search.toLowerCase()));
-
   return (
     <div className="p-8">
       <header className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight">Patients</h1>
         <p className="text-sm text-muted-foreground mt-1">Search and manage patient records.</p>
       </header>
-
       <div className="relative max-w-md mb-6">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <input
@@ -36,7 +34,6 @@ function PatientsPage() {
           className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
         />
       </div>
-
       <div className="bg-card ring-1 ring-black/5 rounded-xl overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead className="bg-muted font-mono text-[11px] uppercase tracking-wider text-muted-foreground">

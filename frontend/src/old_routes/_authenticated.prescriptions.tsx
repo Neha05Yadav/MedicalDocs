@@ -1,13 +1,13 @@
+import Pill from "lucide-react/dist/esm/icons/pill.mjs";
+import FileText from "lucide-react/dist/esm/icons/file-text.mjs";
+
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Pill, FileText } from "lucide-react";
-
 export const Route = createFileRoute("/_authenticated/prescriptions")({
   head: () => ({ meta: [{ title: "Prescriptions — MediDoc" }] }),
   component: PrescriptionsPage,
 });
-
 function PrescriptionsPage() {
   const { data: records } = useQuery({
     queryKey: ["prescriptions"],
@@ -16,12 +16,10 @@ function PrescriptionsPage() {
       return data || [];
     },
   });
-
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold tracking-tight mb-2">Prescriptions</h1>
       <p className="text-sm text-muted-foreground mb-8">Your medication prescriptions and refills.</p>
-
       <div className="bg-card ring-1 ring-black/5 rounded-xl overflow-hidden">
         {(records || []).length === 0 ? (
           <div className="p-12 text-center">

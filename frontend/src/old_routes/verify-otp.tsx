@@ -1,8 +1,9 @@
+import Shield from "lucide-react/dist/esm/icons/shield.mjs";
+import ArrowLeft from "lucide-react/dist/esm/icons/arrow-left.mjs";
+
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Shield, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-
 export const Route = createFileRoute("/verify-otp")({
   head: () => ({
     meta: [
@@ -12,11 +13,9 @@ export const Route = createFileRoute("/verify-otp")({
   }),
   component: VerifyOtpPage,
 });
-
 function VerifyOtpPage() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
-
   function handleChange(index: number, value: string) {
     if (value.length > 1) value = value.slice(-1);
     if (!/^\d*$/.test(value)) return;
@@ -28,14 +27,12 @@ function VerifyOtpPage() {
       nextInput?.focus();
     }
   }
-
   function handleKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       const prevInput = document.getElementById(`otp-${index - 1}`) as HTMLInputElement;
       prevInput?.focus();
     }
   }
-
   async function handleVerify(e: React.FormEvent) {
     e.preventDefault();
     const code = otp.join("");
@@ -50,7 +47,6 @@ function VerifyOtpPage() {
     toast.success("OTP verified!");
     window.location.href = "/complete-profile";
   }
-
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -70,7 +66,6 @@ function VerifyOtpPage() {
             Enter the 6-digit verification code sent to your email.
           </p>
         </div>
-
         <form onSubmit={handleVerify} className="space-y-6">
           <div className="flex justify-center gap-3">
             {otp.map((digit, i) => (
@@ -95,7 +90,6 @@ function VerifyOtpPage() {
             {isLoading ? "Verifying..." : "Verify"}
           </button>
         </form>
-
         <p className="text-center text-sm text-muted-foreground mt-6">
           Didn't receive a code?{" "}
           <button className="text-brand font-medium hover:underline" onClick={() => toast.info("Code resent!")}>

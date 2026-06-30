@@ -1,9 +1,13 @@
+import Shield from "lucide-react/dist/esm/icons/shield.mjs";
+import ArrowLeft from "lucide-react/dist/esm/icons/arrow-left.mjs";
+import Calendar from "lucide-react/dist/esm/icons/calendar.mjs";
+import Droplets from "lucide-react/dist/esm/icons/droplets.mjs";
+import Phone from "lucide-react/dist/esm/icons/phone.mjs";
+
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Shield, ArrowLeft, Calendar, Droplets, Phone } from "lucide-react";
 import { toast } from "sonner";
-
 export const Route = createFileRoute("/complete-profile")({
   head: () => ({
     meta: [
@@ -13,25 +17,21 @@ export const Route = createFileRoute("/complete-profile")({
   }),
   component: CompleteProfilePage,
 });
-
 function CompleteProfilePage() {
   const [dob, setDob] = useState("");
   const [gender, setGender] = useState("");
   const [bloodGroup, setBloodGroup] = useState("");
   const [emergencyContact, setEmergencyContact] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
-
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       toast.error("Not authenticated");
       setIsLoading(false);
       return;
     }
-
     const { error } = await supabase.from("profiles").upsert({
       id: user.id,
       dob,
@@ -41,9 +41,7 @@ function CompleteProfilePage() {
       role: "patient",
       updated_at: new Date().toISOString(),
     });
-
     setIsLoading(false);
-
     if (error) {
       toast.error(error.message);
     } else {
@@ -51,7 +49,6 @@ function CompleteProfilePage() {
       window.location.href = "/dashboard";
     }
   }
-
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
@@ -71,7 +68,6 @@ function CompleteProfilePage() {
             Add your medical details for a complete health identity.
           </p>
         </div>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">

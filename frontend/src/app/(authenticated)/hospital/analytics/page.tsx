@@ -1,7 +1,12 @@
 "use client";
+const BarChart3 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg>;
+const TrendingUp = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 7h6v6"></path><path d="m22 7-8.5 8.5-5-5L2 17"></path></svg>;
+const Users = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><path d="M16 3.128a4 4 0 0 1 0 7.744"></path><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><circle cx="9" cy="7" r="4"></circle></svg>;
+const FileText = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>;
+const CalendarDays = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path><path d="M8 14h.01"></path><path d="M12 14h.01"></path><path d="M16 14h.01"></path><path d="M8 18h.01"></path><path d="M12 18h.01"></path><path d="M16 18h.01"></path></svg>;
+const Activity = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"></path></svg>;
 
-import { BarChart3, TrendingUp, Users, FileText, CalendarDays, Activity } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line, PieChart, Pie, Cell } from "recharts";
+import { MonthlyTrendChart, DepartmentDistributionChart, ReportStatisticsChart } from "./HospitalAnalyticsChartWrapper";
 
 const monthlyData = [
   { month: "Jan", patients: 320, appointments: 210, reports: 180 },
@@ -11,7 +16,6 @@ const monthlyData = [
   { month: "May", patients: 450, appointments: 310, reports: 270 },
   { month: "Jun", patients: 490, appointments: 340, reports: 300 },
 ];
-
 const deptDistribution = [
   { name: "Cardiology", value: 142, color: "#dc2626" },
   { name: "Neurology", value: 98, color: "#7c3aed" },
@@ -23,11 +27,6 @@ const deptDistribution = [
 export default function AnalyticsPage() {
   return (
     <div className="p-8">
-      <header className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
-        <p className="text-sm text-muted-foreground mt-1">Hospital performance and patient statistics.</p>
-      </header>
-
       {/* KPI Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
@@ -48,36 +47,16 @@ export default function AnalyticsPage() {
           </div>
         ))}
       </div>
-
       <div className="grid lg:grid-cols-2 gap-8 mb-8">
         {/* Monthly Trend */}
         <div className="bg-card ring-1 ring-black/5 rounded-xl p-6">
           <h2 className="text-sm font-semibold mb-6">Monthly Trends</h2>
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-              <XAxis dataKey="month" tick={{ fontSize: 12, fill: "var(--color-muted-foreground)" }} />
-              <YAxis tick={{ fontSize: 12, fill: "var(--color-muted-foreground)" }} />
-              <Tooltip contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: "8px", fontSize: "12px" }} />
-              <Line type="monotone" dataKey="patients" stroke="var(--color-brand)" strokeWidth={2} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="appointments" stroke="var(--color-emerald)" strokeWidth={2} dot={{ r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
+          <MonthlyTrendChart data={monthlyData} />
         </div>
-
         {/* Department Distribution */}
         <div className="bg-card ring-1 ring-black/5 rounded-xl p-6">
           <h2 className="text-sm font-semibold mb-6">Department Distribution</h2>
-          <ResponsiveContainer width="100%" height={280}>
-            <PieChart>
-              <Pie data={deptDistribution} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value">
-                {deptDistribution.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: "8px", fontSize: "12px" }} />
-            </PieChart>
-          </ResponsiveContainer>
+          <DepartmentDistributionChart data={deptDistribution} />
           <div className="flex flex-wrap gap-3 mt-4 justify-center">
             {deptDistribution.map((d) => (
               <span key={d.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -88,21 +67,11 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
-
       {/* Report Stats */}
       <div className="bg-card ring-1 ring-black/5 rounded-xl p-6">
         <h2 className="text-sm font-semibold mb-6">Report Statistics</h2>
-        <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={monthlyData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-            <XAxis dataKey="month" tick={{ fontSize: 12, fill: "var(--color-muted-foreground)" }} />
-            <YAxis tick={{ fontSize: 12, fill: "var(--color-muted-foreground)" }} />
-            <Tooltip contentStyle={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: "8px", fontSize: "12px" }} />
-            <Bar dataKey="reports" fill="var(--color-purple)" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <ReportStatisticsChart data={monthlyData} />
       </div>
     </div>
   );
 }
-

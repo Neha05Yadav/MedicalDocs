@@ -1,11 +1,19 @@
+import FileText from "lucide-react/dist/esm/icons/file-text.mjs";
+import Upload from "lucide-react/dist/esm/icons/upload.mjs";
+import Search from "lucide-react/dist/esm/icons/search.mjs";
+import Filter from "lucide-react/dist/esm/icons/filter.mjs";
+import Share2 from "lucide-react/dist/esm/icons/share-2.mjs";
+import Download from "lucide-react/dist/esm/icons/download.mjs";
+import Trash2 from "lucide-react/dist/esm/icons/trash-2.mjs";
+import X from "lucide-react/dist/esm/icons/x.mjs";
+import Plus from "lucide-react/dist/esm/icons/plus.mjs";
+
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, Upload, Search, Filter, Share2, Download, Trash2, X, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-
 export const Route = createFileRoute("/_authenticated/records")({
   head: () => ({
     meta: [
@@ -15,9 +23,7 @@ export const Route = createFileRoute("/_authenticated/records")({
   }),
   component: HealthRecordsPage,
 });
-
 const categories = ["All", "Lab Report", "X-Ray", "MRI", "Vaccination", "Prescription", "Certificate", "Other"];
-
 const categoryColor: Record<string, string> = {
   "Lab Report": "category-lab",
   "X-Ray": "category-radiology",
@@ -27,7 +33,6 @@ const categoryColor: Record<string, string> = {
   "Certificate": "category-certificate",
   Other: "category-other",
 };
-
 function HealthRecordsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -37,7 +42,6 @@ function HealthRecordsPage() {
   const [uploadCategory, setUploadCategory] = useState("Lab Report");
   const [uploadProvider, setUploadProvider] = useState("");
   const [uploadDate, setUploadDate] = useState("");
-
   const { data: records, isLoading } = useQuery({
     queryKey: ["health-records"],
     queryFn: async () => {
@@ -45,7 +49,6 @@ function HealthRecordsPage() {
       return data || [];
     },
   });
-
   const addRecord = useMutation({
     mutationFn: async (record: { title: string; category: string; provider: string; record_date: string }) => {
       const { data: userData } = await supabase.auth.getUser();
@@ -65,7 +68,6 @@ function HealthRecordsPage() {
     },
     onError: (err: Error) => toast.error(err.message),
   });
-
   const deleteRecord = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("health_records").delete().eq("id", id);
@@ -76,13 +78,11 @@ function HealthRecordsPage() {
       toast.success("Record deleted");
     },
   });
-
   const filtered = (records || []).filter((r) => {
     const matchesSearch = r.title.toLowerCase().includes(search.toLowerCase()) || (r.provider || "").toLowerCase().includes(search.toLowerCase());
     const matchesCategory = selectedCategory === "All" || r.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
-
   return (
     <div className="p-8">
       <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -98,7 +98,6 @@ function HealthRecordsPage() {
           Upload Record
         </button>
       </header>
-
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="relative flex-1 max-w-md">
@@ -126,7 +125,6 @@ function HealthRecordsPage() {
           ))}
         </div>
       </div>
-
       {/* Upload Modal */}
       {showUpload && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
@@ -202,7 +200,6 @@ function HealthRecordsPage() {
           </div>
         </div>
       )}
-
       {/* Records Table */}
       <div className="bg-card ring-1 ring-black/5 rounded-xl overflow-hidden">
         {isLoading ? (

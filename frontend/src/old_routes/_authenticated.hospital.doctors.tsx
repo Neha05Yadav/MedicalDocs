@@ -1,11 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Stethoscope, Users, Calendar, ClipboardList, Hospital, BarChart3 } from "lucide-react";
+import Stethoscope from "lucide-react/dist/esm/icons/stethoscope.mjs";
+import Users from "lucide-react/dist/esm/icons/users.mjs";
+import Calendar from "lucide-react/dist/esm/icons/calendar.mjs";
+import ClipboardList from "lucide-react/dist/esm/icons/clipboard-list.mjs";
+import Hospital from "lucide-react/dist/esm/icons/hospital.mjs";
+import BarChart3 from "lucide-react/dist/esm/icons/bar-chart-3.mjs";
 
+import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/_authenticated/hospital/doctors")({
   head: () => ({ meta: [{ title: "Doctors — MediDoc" }] }),
   component: DoctorsPage,
 });
-
 const doctors = [
   { name: "Dr. Sarah Jenkins", department: "Cardiology", patients: 142, status: "Active" },
   { name: "Dr. Alan Watts", department: "Neurology", patients: 98, status: "Active" },
@@ -13,7 +17,6 @@ const doctors = [
   { name: "Dr. Michael Brown", department: "Pediatrics", patients: 124, status: "Active" },
   { name: "Dr. Emily Chen", department: "Cardiology", patients: 89, status: "Active" },
 ];
-
 function DoctorsPage() {
   return (
     <div className="p-8">
@@ -27,7 +30,6 @@ function DoctorsPage() {
           Add Doctor
         </button>
       </header>
-
       <div className="bg-card ring-1 ring-black/5 rounded-xl overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead className="bg-muted font-mono text-[11px] uppercase tracking-wider text-muted-foreground">

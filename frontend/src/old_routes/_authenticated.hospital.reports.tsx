@@ -1,22 +1,22 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ClipboardList, Upload, FileText, FileCheck } from "lucide-react";
-import { useState } from "react";
+import ClipboardList from "lucide-react/dist/esm/icons/clipboard-list.mjs";
+import Upload from "lucide-react/dist/esm/icons/upload.mjs";
+import FileText from "lucide-react/dist/esm/icons/file-text.mjs";
+import FileCheck from "lucide-react/dist/esm/icons/file-check.mjs";
 
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 export const Route = createFileRoute("/_authenticated/hospital/reports")({
   head: () => ({ meta: [{ title: "Reports — MediDoc" }] }),
   component: ReportsPage,
 });
-
 const reportTypes = [
   { label: "Discharge Summary", icon: FileCheck, desc: "Patient discharge documentation" },
   { label: "Surgery Report", icon: FileText, desc: "Post-operative summaries" },
   { label: "Admission Record", icon: ClipboardList, desc: "Patient intake forms" },
   { label: "Test Results", icon: FileCheck, desc: "Lab and diagnostic results" },
 ];
-
 function ReportsPage() {
   const [selected, setSelected] = useState<string | null>(null);
-
   return (
     <div className="p-8">
       <header className="mb-8 flex items-center justify-between">
@@ -25,7 +25,6 @@ function ReportsPage() {
           <p className="text-sm text-muted-foreground mt-1">Upload hospital reports and patient documents.</p>
         </div>
       </header>
-
       <div className="grid md:grid-cols-2 gap-4 mb-8">
         {reportTypes.map((rt) => (
           <button
@@ -41,7 +40,6 @@ function ReportsPage() {
           </button>
         ))}
       </div>
-
       {selected && (
         <div className="bg-card ring-1 ring-black/5 rounded-xl p-6">
           <h3 className="font-semibold mb-4">Upload {selected}</h3>

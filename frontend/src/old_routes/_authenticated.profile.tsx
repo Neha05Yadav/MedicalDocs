@@ -1,15 +1,20 @@
+import User from "lucide-react/dist/esm/icons/user.mjs";
+import Mail from "lucide-react/dist/esm/icons/mail.mjs";
+import Phone from "lucide-react/dist/esm/icons/phone.mjs";
+import Droplets from "lucide-react/dist/esm/icons/droplets.mjs";
+import Calendar from "lucide-react/dist/esm/icons/calendar.mjs";
+import Shield from "lucide-react/dist/esm/icons/shield.mjs";
+import Save from "lucide-react/dist/esm/icons/save.mjs";
+
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Mail, Phone, Droplets, Calendar, Shield, Save } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({ meta: [{ title: "Profile — MediDoc" }] }),
   component: ProfilePage,
 });
-
 function ProfilePage() {
   const { data: profile, isLoading } = useQuery({
     queryKey: ["profile"],
@@ -18,14 +23,12 @@ function ProfilePage() {
       return data;
     },
   });
-
   const [dob, setDob] = useState(profile?.dob ?? "");
   const [gender, setGender] = useState(profile?.gender ?? "");
   const [bloodGroup, setBloodGroup] = useState(profile?.blood_group ?? "");
   const [emergencyContact, setEmergencyContact] = useState(profile?.emergency_contact ?? "");
   const [fullName, setFullName] = useState(profile?.full_name ?? "");
   const [isSaving, setIsSaving] = useState(false);
-
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!profile?.id) return;
@@ -42,7 +45,6 @@ function ProfilePage() {
     if (error) toast.error(error.message);
     else toast.success("Profile updated!");
   }
-
   if (isLoading) {
     return (
       <div className="p-8">
@@ -53,14 +55,12 @@ function ProfilePage() {
       </div>
     );
   }
-
   return (
     <div className="p-8 max-w-2xl">
       <header className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight">Profile Settings</h1>
         <p className="text-sm text-muted-foreground mt-1">Manage your personal and medical information.</p>
       </header>
-
       <form onSubmit={handleSave} className="space-y-6">
         <div className="bg-card ring-1 ring-black/5 rounded-xl p-6 space-y-4">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Personal Information</h2>
@@ -91,7 +91,6 @@ function ProfilePage() {
             </div>
           </div>
         </div>
-
         <div className="bg-card ring-1 ring-black/5 rounded-xl p-6 space-y-4">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Medical Information</h2>
           <div className="grid md:grid-cols-2 gap-4">
@@ -114,7 +113,6 @@ function ProfilePage() {
             </div>
           </div>
         </div>
-
         <div className="bg-card ring-1 ring-black/5 rounded-xl p-6 space-y-4">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Security</h2>
           <div className="flex items-center gap-3">
@@ -125,7 +123,6 @@ function ProfilePage() {
             </div>
           </div>
         </div>
-
         <button
           type="submit"
           disabled={isSaving}

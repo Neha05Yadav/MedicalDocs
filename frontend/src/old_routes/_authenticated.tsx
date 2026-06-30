@@ -1,11 +1,20 @@
+import LayoutDashboard from "lucide-react/dist/esm/icons/layout-dashboard.mjs";
+import FileText from "lucide-react/dist/esm/icons/file-text.mjs";
+import Calendar from "lucide-react/dist/esm/icons/calendar.mjs";
+import Pill from "lucide-react/dist/esm/icons/pill.mjs";
+import Users from "lucide-react/dist/esm/icons/users.mjs";
+import Bell from "lucide-react/dist/esm/icons/bell.mjs";
+import Settings from "lucide-react/dist/esm/icons/settings.mjs";
+import Hospital from "lucide-react/dist/esm/icons/hospital.mjs";
+import Stethoscope from "lucide-react/dist/esm/icons/stethoscope.mjs";
+import ClipboardList from "lucide-react/dist/esm/icons/clipboard-list.mjs";
+import BarChart3 from "lucide-react/dist/esm/icons/bar-chart-3.mjs";
+import ChevronLeft from "lucide-react/dist/esm/icons/chevron-left.mjs";
+import LogOut from "lucide-react/dist/esm/icons/log-out.mjs";
+
 import { createFileRoute, Outlet, redirect, Link, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  LayoutDashboard, FileText, Calendar, Pill, Users, Bell, Settings,
-  Hospital, Stethoscope, ClipboardList, BarChart3, ChevronLeft, LogOut
-} from "lucide-react";
 import { useState } from "react";
-
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
@@ -17,7 +26,6 @@ export const Route = createFileRoute("/_authenticated")({
   },
   component: AuthLayout,
 });
-
 const patientNav = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Health Records", url: "/records", icon: FileText },
@@ -27,7 +35,6 @@ const patientNav = [
   { title: "Notifications", url: "/notifications", icon: Bell },
   { title: "Profile", url: "/profile", icon: Settings },
 ];
-
 const hospitalNav = [
   { title: "Dashboard", url: "/hospital/dashboard", icon: LayoutDashboard },
   { title: "Doctors", url: "/hospital/doctors", icon: Stethoscope },
@@ -37,18 +44,15 @@ const hospitalNav = [
   { title: "Departments", url: "/hospital/departments", icon: Hospital },
   { title: "Analytics", url: "/hospital/analytics", icon: BarChart3 },
 ];
-
 function AuthLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const currentPath = useRouterState({ select: (s) => s.location.pathname });
   const isHospital = currentPath.startsWith("/hospital");
   const nav = isHospital ? hospitalNav : patientNav;
-
   async function handleSignOut() {
     await supabase.auth.signOut();
     window.location.href = "/";
   }
-
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
@@ -63,7 +67,6 @@ function AuthLayout() {
           </div>
           {!collapsed && <span className="font-semibold tracking-tight">MediDoc</span>}
         </div>
-
         <nav className="flex-1 p-3 space-y-1">
           {nav.map((item) => {
             const active = currentPath === item.url;
@@ -84,7 +87,6 @@ function AuthLayout() {
             );
           })}
         </nav>
-
         <div className="p-3 border-t border-border space-y-1">
           <button
             onClick={() => setCollapsed(!collapsed)}
@@ -104,7 +106,6 @@ function AuthLayout() {
           </button>
         </div>
       </aside>
-
       {/* Main Content */}
       <main className="flex-1 min-w-0 overflow-y-auto">
         <Outlet />

@@ -1,15 +1,17 @@
+import Users from "lucide-react/dist/esm/icons/users.mjs";
+import Plus from "lucide-react/dist/esm/icons/plus.mjs";
+import Trash2 from "lucide-react/dist/esm/icons/trash-2.mjs";
+import X from "lucide-react/dist/esm/icons/x.mjs";
+
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Plus, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-
 export const Route = createFileRoute("/_authenticated/family")({
   head: () => ({ meta: [{ title: "Family Members — MediDoc" }] }),
   component: FamilyPage,
 });
-
 function FamilyPage() {
   const queryClient = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
@@ -17,7 +19,6 @@ function FamilyPage() {
   const [relationship, setRelationship] = useState("");
   const [dob, setDob] = useState("");
   const [bloodGroup, setBloodGroup] = useState("");
-
   const { data: members } = useQuery({
     queryKey: ["family-members"],
     queryFn: async () => {
@@ -25,7 +26,6 @@ function FamilyPage() {
       return data || [];
     },
   });
-
   const addMember = useMutation({
     mutationFn: async (m: { name: string; relationship: string; dob: string; blood_group: string }) => {
       const { data: userData } = await supabase.auth.getUser();
@@ -42,7 +42,6 @@ function FamilyPage() {
       setBloodGroup("");
     },
   });
-
   const deleteMember = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("family_members").delete().eq("id", id);
@@ -53,7 +52,6 @@ function FamilyPage() {
       toast.success("Removed");
     },
   });
-
   return (
     <div className="p-8">
       <header className="mb-8 flex items-center justify-between">
@@ -66,7 +64,6 @@ function FamilyPage() {
           Add Member
         </button>
       </header>
-
       {showAdd && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
           <div className="bg-card w-full max-w-md rounded-2xl ring-1 ring-black/5 p-6 shadow-2xl">
@@ -87,7 +84,6 @@ function FamilyPage() {
           </div>
         </div>
       )}
-
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {(members || []).length === 0 && (
           <div className="md:col-span-2 lg:col-span-3 p-12 text-center bg-card ring-1 ring-black/5 rounded-xl">
