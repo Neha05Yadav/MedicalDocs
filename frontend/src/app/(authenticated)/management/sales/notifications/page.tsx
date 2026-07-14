@@ -12,10 +12,32 @@ const ChevronRight = (props: any) => <svg {...props} xmlns="http://www.w3.org/20
 
 
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 export default function SalesNotificationsPage() {
-  const tabs = ["All Notifications", "Subscription Expiry Alerts", "Payment Due Alerts", "Renewal Reminders"];
+  const tabs = ["All Notifications", "Subscription Expiry Alerts", "Payment Due Alerts"];
   const [activeTab, setActiveTab] = useState("All Notifications");
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/management/sales/notifications')
+      .then(res => res.json())
+      .then(data => {
+        setNotifications(data.notifications || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to load notifications", err);
+        setLoading(false);
+      });
+  }, []);
+
+  const filteredNotifications = notifications.filter(notif => {
+    if (activeTab === "All Notifications") return true;
+    if (activeTab === "Subscription Expiry Alerts") return notif.type === "expiry" || notif.type === "expired";
+    if (activeTab === "Payment Due Alerts") return notif.type === "payment";
+    return true;
+  });
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans">
       {/* Header removed to avoid redundancy */}
@@ -34,37 +56,42 @@ export default function SalesNotificationsPage() {
           ))}
         </div>
         <div className="md:col-span-3 space-y-4">
-          {[
-            { title: "Subscription Expiring Soon", facility: "Sunrise Clinic", time: "2 hours ago", type: "expiry", desc: "Basic Plan expires in 3 days. Send a renewal reminder to avoid service interruption." },
-            { title: "Payment Failed", facility: "Metro Health", time: "5 hours ago", type: "payment", desc: "Auto-renewal payment of ₹45,000 for Enterprise Plan failed due to insufficient funds." },
-            { title: "Successful Renewal", facility: "Apex Laboratories", time: "Yesterday", type: "success", desc: "Pro Plan successfully renewed for 1 year." },
-            { title: "Subscription Expired", facility: "Global Diagnostics", time: "2 days ago", type: "expired", desc: "Basic Plan has expired. Services have been suspended." },
-          ].map((notif, idx) => (
-            <div key={idx} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex gap-4 hover:border-indigo-200 transition-colors cursor-pointer group">
-              <div className="shrink-0 mt-1">
-                {notif.type === 'expiry' ? (
-                  <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center border border-amber-100"><Clock className="size-5" /></div>
-                ) : notif.type === 'payment' ? (
-                  <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center border border-rose-100"><AlertTriangle className="size-5" /></div>
-                ) : notif.type === 'expired' ? (
-                  <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center border border-slate-200"><XCircle className="size-5" /></div>
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center border border-emerald-100"><CreditCard className="size-5" /></div>
-                )}
-              </div>
-              <div className="flex-1">
-                <div className="flex justify-between items-start mb-1">
-                  <h4 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{notif.title}</h4>
-                  <span className="text-[11px] font-bold text-slate-400">{notif.time}</span>
-                </div>
-                <p className="text-xs font-bold text-indigo-600 mb-2">{notif.facility}</p>
-                <p className="text-sm text-slate-600 leading-relaxed">{notif.desc}</p>
-              </div>
-              <div className="shrink-0 flex items-center pl-4 border-l border-slate-100 opacity-0 group-hover:opacity-100 transition-opacity">
-                <ChevronRight className="size-5 text-indigo-400" />
-              </div>
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
             </div>
-          ))}
+          ) : filteredNotifications.length === 0 ? (
+            <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center text-slate-500 font-medium">
+              No notifications found.
+            </div>
+          ) : (
+            filteredNotifications.map((notif, idx) => (
+              <div key={notif.id || idx} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex gap-4 hover:border-indigo-200 transition-colors cursor-pointer group">
+                <div className="shrink-0 mt-1">
+                  {notif.type === 'expiry' ? (
+                    <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center border border-amber-100"><Clock className="size-5" /></div>
+                  ) : notif.type === 'payment' ? (
+                    <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center border border-rose-100"><AlertTriangle className="size-5" /></div>
+                  ) : notif.type === 'expired' ? (
+                    <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center border border-slate-200"><XCircle className="size-5" /></div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center border border-emerald-100"><CreditCard className="size-5" /></div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between items-start mb-1">
+                    <h4 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{notif.title}</h4>
+                    <span className="text-[11px] font-bold text-slate-400">{notif.time}</span>
+                  </div>
+                  <p className="text-xs font-bold text-indigo-600 mb-2">{notif.facility}</p>
+                  <p className="text-sm text-slate-600 leading-relaxed">{notif.desc}</p>
+                </div>
+                <div className="shrink-0 flex items-center pl-4 border-l border-slate-100 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ChevronRight className="size-5 text-indigo-400" />
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

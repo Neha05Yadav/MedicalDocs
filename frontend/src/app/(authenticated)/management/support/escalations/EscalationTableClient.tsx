@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 
 const BriefcaseMedical = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 11v4"></path><path d="M14 13h-4"></path><path d="M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"></path><path d="M18 6v14"></path><path d="M6 6v14"></path><rect width="20" height="14" x="2" y="6" rx="2"></rect></svg>;
@@ -17,12 +18,15 @@ const FileImage = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/
 const Send = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"></path><path d="m21.854 2.147-10.94 10.939"></path></svg>;
 
 export default function EscalationTableClient({ escalations, teams }: { escalations: any[], teams: any[] }) {
+  const [localEscalations, setLocalEscalations] = useState<any[]>(escalations);
   const [selectedEscalation, setSelectedEscalation] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEscalateModalOpen, setIsEscalateModalOpen] = useState(false);
   
   // Form State
   const [selectedTeam, setSelectedTeam] = useState("dev");
+  const [reason, setReason] = useState("Double deduction / Refund issue");
+  const [priority, setPriority] = useState("High");
   const [notes, setNotes] = useState("Customer has been charged twice for the same subscription renewal. Payment ID: pay_123456789. Requesting refund and root cause check.");
   const [attachment, setAttachment] = useState<string | null>("Payment_Screenshot.jpg");
 
@@ -54,7 +58,7 @@ export default function EscalationTableClient({ escalations, teams }: { escalati
         </div>
         {/* Table Rows */}
         <div className="divide-y divide-slate-100">
-          {escalations.map((esc) => (
+          {localEscalations.map((esc) => (
             <div 
               key={esc.id} 
               className="px-6 py-5 grid grid-cols-6 items-center text-sm gap-4 hover:bg-slate-50/50 cursor-pointer transition-colors group"
@@ -223,7 +227,11 @@ export default function EscalationTableClient({ escalations, teams }: { escalati
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="text-sm font-semibold text-slate-900 block mb-2">Reason for Escalation <span className="text-red-500">*</span></label>
-                    <select className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500">
+                    <select 
+                      className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                    >
                       <option>Double deduction / Refund issue</option>
                       <option>Payment Gateway Timeout</option>
                       <option>Invoice discrepancy</option>
@@ -232,7 +240,11 @@ export default function EscalationTableClient({ escalations, teams }: { escalati
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-slate-900 block mb-2">Priority <span className="text-red-500">*</span></label>
-                    <select className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500">
+                    <select 
+                      className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                      value={priority}
+                      onChange={(e) => setPriority(e.target.value)}
+                    >
                       <option>High</option>
                       <option>Medium</option>
                       <option>Low</option>
@@ -255,14 +267,24 @@ export default function EscalationTableClient({ escalations, teams }: { escalati
                 {/* Attachments */}
                 <div>
                   <label className="text-sm font-semibold text-slate-900 block mb-2">Attachments (Optional)</label>
+                  <input 
+                    type="file" 
+                    id="escalation-attachment" 
+                    className="hidden" 
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setAttachment(e.target.files[0].name);
+                      }
+                    }} 
+                  />
                   <div className="border-2 border-dashed border-purple-200 bg-purple-50/30 rounded-xl p-6 flex flex-col sm:flex-row items-center justify-center gap-6">
-                    <div className="flex items-center gap-3">
-                      <UploadCloud className="w-6 h-6 text-purple-600" />
+                    <label htmlFor="escalation-attachment" className="flex items-center gap-3 cursor-pointer group">
+                      <UploadCloud className="w-6 h-6 text-purple-600 group-hover:scale-110 transition-transform" />
                       <div>
-                        <p className="text-sm font-medium"><span className="text-purple-600 cursor-pointer hover:underline">Click to upload</span> <span className="text-slate-500">or drag and drop</span></p>
+                        <p className="text-sm font-medium"><span className="text-purple-600 group-hover:underline">Click to upload</span> <span className="text-slate-500">or drag and drop</span></p>
                         <p className="text-xs text-slate-400">PDF, PNG, JPG (Max 10MB)</p>
                       </div>
-                    </div>
+                    </label>
                     {attachment && (
                       <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-lg p-3 pr-4 shadow-sm w-full sm:w-auto mt-4 sm:mt-0">
                         <div className="p-2 bg-purple-100 rounded-md text-purple-600">
@@ -270,7 +292,7 @@ export default function EscalationTableClient({ escalations, teams }: { escalati
                         </div>
                         <div className="flex-1 mr-4">
                           <p className="text-xs font-semibold text-slate-900 truncate max-w-[150px]">{attachment}</p>
-                          <p className="text-[10px] text-slate-500">1.2 MB</p>
+                          <p className="text-[10px] text-slate-500">Uploaded</p>
                         </div>
                         <button onClick={() => setAttachment(null)} className="text-slate-400 hover:text-red-500 transition-colors">
                           <X className="w-4 h-4" />
@@ -287,7 +309,34 @@ export default function EscalationTableClient({ escalations, teams }: { escalati
                   >
                     Cancel
                   </button>
-                  <button className="px-6 py-2.5 rounded-lg text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 flex items-center gap-2 transition-colors shadow-sm">
+                  <button 
+                    onClick={() => {
+                      const selTeamObj = teams.find(t => t.id === selectedTeam);
+                      const newEsc = {
+                        id: "ESC-" + Math.floor(Math.random() * 1000 + 500),
+                        ticketId: "TK-" + Math.floor(Math.random() * 1000 + 4000),
+                        issue: reason,
+                        issueCategory: "New Escalation",
+                        assignedTeam: selTeamObj?.name || "Support Team",
+                        teamBg: selTeamObj?.bgColor + " text-purple-600 border border-purple-100",
+                        status: "Just Escalated",
+                        statusColor: "bg-blue-100 text-blue-700",
+                        time: "Just now",
+                        user: "City Hospital",
+                        priority: priority,
+                        internalNotes: notes,
+                        updates: [
+                          { time: "Just now", text: `Ticket escalated to ${selTeamObj?.name} by Support L1.` }
+                        ]
+                      };
+                      setLocalEscalations([newEsc, ...localEscalations]);
+                      toast.success(`Issue escalated successfully to ${selTeamObj?.name}!`);
+                      setIsEscalateModalOpen(false);
+                      setAttachment(null);
+                      setNotes("");
+                    }}
+                    className="px-6 py-2.5 rounded-lg text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 flex items-center gap-2 transition-colors shadow-sm"
+                  >
                     <Send className="w-4 h-4" /> Escalate Issue
                   </button>
                 </div>

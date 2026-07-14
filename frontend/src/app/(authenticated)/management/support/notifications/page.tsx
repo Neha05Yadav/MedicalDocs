@@ -19,28 +19,66 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-// Mock Data
-const initialNotifications = [
-  { id: 1, title: "Critical Server Load", description: "Database server CPU usage exceeded 90% for the last 5 minutes.", time: "2 mins ago", type: "system", priority: "high", read: false, icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50 border-red-100" },
-  { id: 2, title: "SLA Breach Warning", description: "Ticket #TK-4022 (Payment Issue) is 30 mins away from SLA breach.", time: "15 mins ago", type: "ticket", priority: "high", read: false, icon: Clock, color: "text-amber-600", bg: "bg-amber-50 border-amber-100" },
-  { id: 3, title: "New Support Message", description: "Patient Rohan Verma replied to Ticket #TK-4021.", time: "1 hour ago", type: "message", priority: "normal", read: false, icon: MessageSquare, color: "text-blue-600", bg: "bg-blue-50 border-blue-100" },
-  { id: 4, title: "Verification Rejected", description: "Dr. Sarah Johnson's document verification was rejected by Admin Team.", time: "3 hours ago", type: "system", priority: "normal", read: true, icon: ShieldAlert, color: "text-slate-600", bg: "bg-slate-50 border-slate-200" },
-  { id: 5, title: "Weekly Report Generated", description: "Support performance metrics for the week are now available.", time: "1 day ago", type: "system", priority: "low", read: true, icon: Bell, color: "text-emerald-600", bg: "bg-emerald-50 border-emerald-100" },
-];
+// Remove Mock Data
+import { useEffect } from "react";
+import { toast } from "sonner";
 function SupportNotificationsContent() {
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentTab = searchParams.get("tab") || "all";
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/support-tickets/notifications", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.map((n: any) => ({
+          id: n.id,
+          title: n.title,
+          description: n.message,
+          time: new Date(n.createdAt).toLocaleString(),
+          type: n.type,
+          priority: n.severity.toLowerCase() === 'high' ? 'high' : 'normal',
+          read: n.isRead === 1,
+          icon: n.type.includes('reply') ? MessageSquare : AlertTriangle,
+          color: n.severity.toLowerCase() === 'high' ? 'text-red-600' : 'text-blue-600',
+          bg: n.severity.toLowerCase() === 'high' ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'
+        })));
+      }
+    } catch (e) {
+      toast.error("Failed to load notifications");
+    }
+  };
+
   const handleTabChange = (val: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", val);
     router.push(`?${params.toString()}`);
   };
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+
+  const markAllAsRead = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      await fetch("/api/support-tickets/notifications/mark-read", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      fetchNotifications();
+    } catch (e) {
+      toast.error("Failed to mark all as read");
+    }
   };
-  const markAsRead = (id: number) => {
+
+  const markAsRead = async (id: string) => {
+    // For individual read, we would need an API. Since we don't have one, we just mark all as read for now or update local state.
     setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
   };
   const unreadCount = notifications.filter(n => !n.read).length;

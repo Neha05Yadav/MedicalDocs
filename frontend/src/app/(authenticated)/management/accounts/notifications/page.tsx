@@ -16,24 +16,34 @@ const RefreshCcw = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000
 
 
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from "next/navigation";
 function AccountsNotificationsContent() {
   const tabs = ["All Notifications", "Payment Alerts", "Invoices", "Refunds"];
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "All Notifications";
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const handleTabChange = (val: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", val);
     router.push(`?${params.toString()}`);
   };
-  const notifications = [
-    { title: "Overdue Payment", facility: "Sunrise Clinic", time: "2 hours ago", type: "payment", tab: "Payment Alerts", desc: "Payment of ₹45,000 for Invoice #INV-2023 is overdue by 5 days." },
-    { title: "Payment Received", facility: "Metro Health", time: "5 hours ago", type: "success", tab: "Payment Alerts", desc: "Received payment of ₹1,20,000 via Bank Transfer for Invoice #INV-2022." },
-    { title: "New Invoice Generated", facility: "Apex Laboratories", time: "Yesterday", type: "invoice", tab: "Invoices", desc: "Invoice #INV-2024 for ₹85,000 has been generated and sent to the client." },
-    { title: "Refund Processed", facility: "Global Diagnostics", time: "2 days ago", type: "refund", tab: "Refunds", desc: "Refund of ₹15,000 has been successfully processed." },
-  ];
+
+  useEffect(() => {
+    fetch('/api/management/accounts/notifications')
+      .then(res => res.json())
+      .then(data => {
+        setNotifications(data.notifications || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to load notifications", err);
+        setLoading(false);
+      });
+  }, []);
   const filteredNotifications = activeTab === "All Notifications" 
     ? notifications 
     : notifications.filter(n => n.tab === activeTab);
@@ -60,7 +70,11 @@ function AccountsNotificationsContent() {
           ))}
         </div>
         <div className="md:col-span-3 space-y-4">
-          {filteredNotifications.length > 0 ? (
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            </div>
+          ) : filteredNotifications.length > 0 ? (
             filteredNotifications.map((notif, idx) => (
               <div key={idx} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex gap-4 hover:border-indigo-200 transition-colors cursor-pointer group">
                 <div className="shrink-0 mt-1">

@@ -209,6 +209,12 @@ export type Database = {
           full_name: string | null
           gender: string | null
           id: string
+          email: string | null
+          phone: string | null
+          status: string | null
+          is_verified: boolean | null
+          location: string | null
+          documents: Json | null
           role: string
           updated_at: string
         }
@@ -221,6 +227,12 @@ export type Database = {
           full_name?: string | null
           gender?: string | null
           id: string
+          email?: string | null
+          phone?: string | null
+          status?: string | null
+          is_verified?: boolean | null
+          location?: string | null
+          documents?: Json | null
           role?: string
           updated_at?: string
         }
@@ -233,10 +245,190 @@ export type Database = {
           full_name?: string | null
           gender?: string | null
           id?: string
+          email?: string | null
+          phone?: string | null
+          status?: string | null
+          is_verified?: boolean | null
+          location?: string | null
+          documents?: Json | null
           role?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      subscription_plans: {
+        Row: {
+          id: string
+          name: string
+          price: number
+          target: string | null
+          features: Json
+          popular: boolean | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          price: number
+          target?: string | null
+          features?: Json
+          popular?: boolean | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          price?: number
+          target?: string | null
+          features?: Json
+          popular?: boolean | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      super_admin_notifications: {
+        Row: {
+          id: string
+          title: string
+          message: string
+          type: string | null
+          is_read: boolean | null
+          action_url: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          message: string
+          type?: string | null
+          is_read?: boolean | null
+          action_url?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          message?: string
+          type?: string | null
+          is_read?: boolean | null
+          action_url?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          id: string
+          action_type: string
+          entity_type: string
+          user_email: string
+          details: string
+          ip_address: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          action_type: string
+          entity_type: string
+          user_email: string
+          details: string
+          ip_address?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          action_type?: string
+          entity_type?: string
+          user_email?: string
+          details?: string
+          ip_address?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      platform_settings: {
+        Row: {
+          id: string
+          website_name: string
+          logo_url: string
+          support_email: string
+          maintenance_mode: boolean
+          require_complex_password: boolean
+          password_expiry_days: number
+          require_2fa: boolean
+          session_timeout_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          website_name?: string
+          logo_url?: string
+          support_email?: string
+          maintenance_mode?: boolean
+          require_complex_password?: boolean
+          password_expiry_days?: number
+          require_2fa?: boolean
+          session_timeout_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          website_name?: string
+          logo_url?: string
+          support_email?: string
+          maintenance_mode?: boolean
+          require_complex_password?: boolean
+          password_expiry_days?: number
+          require_2fa?: boolean
+          session_timeout_minutes?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      hospital_subscriptions: {
+        Row: {
+          id: string
+          hospital_id: string
+          plan_id: string | null
+          status: string | null
+          start_date: string | null
+          end_date: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          hospital_id: string
+          plan_id?: string | null
+          status?: string | null
+          start_date?: string | null
+          end_date?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          hospital_id?: string
+          plan_id?: string | null
+          status?: string | null
+          start_date?: string | null
+          end_date?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hospital_subscriptions_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hospitals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hospital_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       shared_records: {
         Row: {

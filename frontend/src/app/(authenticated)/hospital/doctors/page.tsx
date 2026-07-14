@@ -1,12 +1,8 @@
 "use client";
 
-
-
-
-
-
-
-
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const Stethoscope = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 2v2"></path><path d="M5 2v2"></path><path d="M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1"></path><path d="M8 15a6 6 0 0 0 12 0v-3"></path><circle cx="20" cy="10" r="2"></circle></svg>;
 const Search = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>;
@@ -17,7 +13,7 @@ const Plus = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" 
 const CheckCircle2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>;
 const AlertCircle = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>;
 const ShieldAlert = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>;
-import { useState } from "react";
+
 interface Doctor {
   id: string;
   name: string;
@@ -25,58 +21,110 @@ interface Doctor {
   patients: number;
   status: "Active" | "On Leave";
 }
-const initialDoctors: Doctor[] = [
-  { id: "d1", name: "Dr. Sarah Jenkins", department: "Cardiology", patients: 142, status: "Active" },
-  { id: "d2", name: "Dr. Alan Watts", department: "Neurology", patients: 98, status: "Active" },
-  { id: "d3", name: "Dr. Priya Patel", department: "Orthopedics", patients: 76, status: "On Leave" },
-  { id: "d4", name: "Dr. Michael Brown", department: "Pediatrics", patients: 124, status: "Active" },
-  { id: "d5", name: "Dr. Emily Chen", department: "Cardiology", patients: 89, status: "Active" },
-];
+
 export default function DoctorsPage() {
-  const [doctors, setDoctors] = useState<Doctor[]>(initialDoctors);
+  const router = useRouter();
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
   const [currentDoctor, setCurrentDoctor] = useState<Partial<Doctor>>({});
-  // Filter doctors based on search
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    fetchDoctors();
+  }, [router]);
+
+  const fetchDoctors = async () => {
+    try {
+      const res = await fetch("/api/hospital/doctors");
+      if (!res.ok) throw new Error("Failed to load doctors");
+      const data = await res.json();
+      setDoctors(data);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to load doctors");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredDoctors = doctors.filter(d => 
     d.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     d.department.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  // Handlers
-  const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to remove this doctor?")) {
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to remove this doctor?")) return;
+    
+    try {
+      const res = await fetch(`/api/hospital/doctors/${id}`, {
+        method: "DELETE"
+      });
+      if (!res.ok) throw new Error("Failed to delete");
       setDoctors(doctors.filter(d => d.id !== id));
+      toast.success("Doctor removed successfully");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to remove doctor");
     }
   };
+
   const openAddModal = () => {
     setModalMode("add");
     setCurrentDoctor({ name: "", department: "", patients: 0, status: "Active" });
     setIsModalOpen(true);
   };
+
   const openEditModal = (doctor: Doctor) => {
     setModalMode("edit");
     setCurrentDoctor(doctor);
     setIsModalOpen(true);
   };
-  const handleSave = (e: React.FormEvent) => {
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentDoctor.name || !currentDoctor.department) return;
-    if (modalMode === "add") {
-      const newDoc: Doctor = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: currentDoctor.name,
-        department: currentDoctor.department,
-        patients: Number(currentDoctor.patients) || 0,
-        status: currentDoctor.status as "Active" | "On Leave" || "Active"
-      };
-      setDoctors([...doctors, newDoc]);
-    } else {
-      setDoctors(doctors.map(d => d.id === currentDoctor.id ? { ...d, ...currentDoctor } as Doctor : d));
+    setIsSaving(true);
+    
+    try {
+      if (modalMode === "add") {
+        const res = await fetch("/api/hospital/doctors", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(currentDoctor)
+        });
+        if (!res.ok) throw new Error("Failed to add");
+        const newDoc = await res.json();
+        setDoctors([...doctors, newDoc]);
+        toast.success("Doctor added successfully");
+      } else {
+        const res = await fetch(`/api/hospital/doctors/${currentDoctor.id}`, {
+          method: "PUT",
+          headers: { 
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(currentDoctor)
+        });
+        if (!res.ok) throw new Error("Failed to update");
+        const updatedDoc = await res.json();
+        setDoctors(doctors.map(d => d.id === currentDoctor.id ? updatedDoc : d));
+        toast.success("Doctor updated successfully");
+      }
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      toast.error(modalMode === "add" ? "Failed to add doctor" : "Failed to update doctor");
+    } finally {
+      setIsSaving(false);
     }
-    setIsModalOpen(false);
   };
+
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen">
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
@@ -99,6 +147,7 @@ export default function DoctorsPage() {
           </button>
         </div>
       </div>
+      
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -112,12 +161,18 @@ export default function DoctorsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredDoctors.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500 animate-pulse">
+                    Loading doctors...
+                  </td>
+                </tr>
+              ) : filteredDoctors.length > 0 ? (
                 filteredDoctors.map((d) => (
                   <tr key={d.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="size-8 rounded-full bg-cyan-50 text-cyan-600 flex items-center justify-center font-bold text-xs">
+                        <div className="size-8 rounded-full bg-cyan-50 text-cyan-600 flex items-center justify-center font-bold text-xs uppercase">
                           {d.name.split(" ").map(n => n[0]).join("").substring(0,2)}
                         </div>
                         <span className="font-medium text-slate-900">{d.name}</span>
@@ -217,10 +272,10 @@ export default function DoctorsPage() {
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Patients Handled</label>
                   <input 
                     type="number" 
-                    min="0"
+                    disabled
                     value={currentDoctor.patients || 0}
-                    onChange={(e) => setCurrentDoctor({...currentDoctor, patients: parseInt(e.target.value)})}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 cursor-not-allowed"
+                    title="This is calculated automatically from appointments"
                   />
                 </div>
                 <div>
@@ -245,9 +300,10 @@ export default function DoctorsPage() {
                 </button>
                 <button 
                   type="submit" 
-                  className="px-5 py-2 bg-[#0891b2] text-white rounded-lg text-sm font-medium hover:bg-cyan-700 transition-colors shadow-sm"
+                  disabled={isSaving}
+                  className="px-5 py-2 bg-[#0891b2] text-white rounded-lg text-sm font-medium hover:bg-cyan-700 transition-colors shadow-sm disabled:opacity-50"
                 >
-                  {modalMode === "add" ? "Add Doctor" : "Save Changes"}
+                  {isSaving ? "Saving..." : modalMode === "add" ? "Add Doctor" : "Save Changes"}
                 </button>
               </div>
             </form>

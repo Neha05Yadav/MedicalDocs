@@ -16,20 +16,48 @@ const ChevronDown = (props: any) => <svg {...props} xmlns="http://www.w3.org/200
 
 
 
-import React, { useState } from 'react';
-const mockPending = [
-  { invoice: "INV-2026-089", client: "City Care Hospital", type: "Hospital", amount: "₹45,000", dueDate: "15 Jun 2026", lateFee: "₹500", reminderSent: true, daysOverdue: 8 },
-  { invoice: "INV-2026-092", client: "Dr. Ramesh Kumar", type: "Doctor", amount: "₹5,000", dueDate: "20 Jun 2026", lateFee: "₹0", reminderSent: false, daysOverdue: 3 },
-  { invoice: "INV-2026-095", client: "Apex Laboratories", type: "Lab", amount: "₹12,500", dueDate: "25 Jun 2026", lateFee: "₹0", reminderSent: false, daysOverdue: -2 }, // Due in 2 days
-  { invoice: "INV-2026-081", client: "Metro Health", type: "Hospital", amount: "₹85,000", dueDate: "05 Jun 2026", lateFee: "₹2,500", reminderSent: true, daysOverdue: 18 },
-  { invoice: "INV-2026-098", client: "Dr. Priya Patel", type: "Doctor", amount: "₹5,000", dueDate: "23 Jun 2026", lateFee: "₹0", reminderSent: false, daysOverdue: 0 }, // Due today
-];
+import React, { useState, useEffect } from 'react';
+
 export default function PendingPaymentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [reminderClient, setReminderClient] = useState("City Care Hospital");
-  const filteredPending = mockPending.filter(pay => {
+  const [payments, setPayments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/management/accounts/payments?status=Pending')
+      .then(res => res.json())
+      .then(data => {
+        const processed = (data.payments || []).map((p: any, idx: number) => {
+          // Simulate some overdue mechanics for realistic mock UI
+          const seed = parseInt(p.id.replace(/\D/g, '')) || idx;
+          const daysOverdue = (seed % 20) - 5; 
+          const lateFee = daysOverdue > 0 ? `₹${(daysOverdue * 100).toLocaleString()}` : "₹0";
+          const reminderSent = daysOverdue > 5;
+          
+          return {
+            invoice: p.invoiceNo,
+            client: p.client,
+            type: "Hospital", 
+            amount: `₹${p.amount.toLocaleString()}`,
+            dueDate: p.date,
+            lateFee,
+            reminderSent,
+            daysOverdue,
+            raw: p
+          };
+        });
+        setPayments(processed);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to fetch pending payments", err);
+        setLoading(false);
+      });
+  }, []);
+  const filteredPending = payments.filter(pay => {
     const matchesSearch = pay.client.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           pay.invoice.toLowerCase().includes(searchTerm.toLowerCase());
     let matchesStatus = true;
@@ -93,7 +121,15 @@ export default function PendingPaymentsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredPending.map((pay, idx) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="flex justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredPending.map((pay, idx) => (
                 <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="font-bold text-slate-900">{pay.invoice}</div>

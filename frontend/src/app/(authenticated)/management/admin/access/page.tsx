@@ -1,276 +1,468 @@
 "use client";
+import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+import { toast } from "sonner";
+
+// Inline SVGs to replace lucide-react (prevents import/runtime errors in Next.js)
 const Shield = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg>;
 const Search = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>;
 const Edit2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path></svg>;
-const CheckSquare = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 10.656V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12.344"></path><path d="m9 11 3 3L22 4"></path></svg>;
-const Square = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"></rect></svg>;
-const Users = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><path d="M16 3.128a4 4 0 0 1 0 7.744"></path><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><circle cx="9" cy="7" r="4"></circle></svg>;
-const MoreVertical = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>;
 const CheckCircle2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>;
 const XCircle = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>;
-const TrendingUp = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 7h6v6"></path><path d="m22 7-8.5 8.5-5-5L2 17"></path></svg>;
-const FileText = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>;
-const Headset = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 11h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Zm0 0a9 9 0 1 1 18 0m0 0v5a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3Z"></path><path d="M21 16v2a4 4 0 0 1-4 4h-5"></path></svg>;
 const Eye = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path><circle cx="12" cy="12" r="3"></circle></svg>;
-const EyeOff = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"></path><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"></path><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"></path><path d="m2 2 20 20"></path></svg>;
 const Trash2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
+const Key = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"></path><path d="m21 2-9.6 9.6"></path><circle cx="7.5" cy="15.5" r="5.5"></circle></svg>;
+const User = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
+const Mail = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>;
+const Phone = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>;
+const Building2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path></svg>;
+const Activity = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-import React, { useState } from 'react';
-import dynamic from 'next/dynamic';
-const EditAccessModal = dynamic(() => import('./AccessModals').then(mod => mod.EditAccessModal), { ssr: false });
 const CreateRoleModal = dynamic(() => import('./AccessModals').then(mod => mod.CreateRoleModal), { ssr: false });
-// Master list of all modules in the system for the Edit Access popup
-const systemModules = [
-  "Dashboard",
-  "Subscription Management",
-  "Revenue Analytics",
-  "Reports",
-  "Payments",
-  "Payment Management",
-  "Billing Records",
-  "Financial Reports",
-  "Support Tickets",
-  "User Verification",
-  "Escalation Management"
-];
-// Mock Data for Roles and their access
-const initialRoles = [
-  { 
-    id: "ROLE002", 
-    name: "Sales Manager", 
-    color: "emerald",
-    desc: "Manage subscriptions, track revenue and generate reports.",
-    modules: ["Dashboard", "Revenue Analytics", "Subscription Management", "Reports"],
-    usersCount: 5,
-    icon: "TrendingUp"
-  },
-  { 
-    id: "ROLE003", 
-    name: "Accounts Manager", 
-    color: "orange",
-    desc: "Handle payments, billing and financial reporting.",
-    modules: ["Payments", "Financial Reports", "Billing Records"],
-    usersCount: 3,
-    icon: "FileText"
-  },
-  { 
-    id: "ROLE004", 
-    name: "Support Agent", 
-    color: "purple",
-    desc: "Manage support tickets, verification and escalations.",
-    modules: ["Support Tickets", "Escalation Management", "User Verification"],
-    usersCount: 8,
-    icon: "Headset"
-  },
-];
-// Mock Data for Assigned Users
-const initialAssignedUsers = [
-  { id: "U001", name: "Rahul Sharma", email: "rahul@example.com", phone: "+91 9876543210", role: "Sales Manager", status: "Active" },
-  { id: "U002", name: "Amit Verma", email: "amit@example.com", phone: "+91 8765432109", role: "Accounts Manager", status: "Active" },
-  { id: "U003", name: "Priya Singh", email: "priya@example.com", phone: "+91 7654321098", role: "Support Manager", status: "Inactive" },
-];
+
 export default function AccessManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [roles, setRoles] = useState(initialRoles);
-  const [assignedUsers, setAssignedUsers] = useState(initialAssignedUsers);
-  // Create New Role Modal State
+  const [activeFilter, setActiveFilter] = useState("All");
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch initial data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch("/api/management/admin/access/users");
+        if (res.ok) setUsers(await res.json());
+      } catch (error) {
+        toast.error("Failed to fetch access data");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newFullName, setNewFullName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPhoneNo, setNewPhoneNo] = useState("");
-  const [newRoleAssign, setNewRoleAssign] = useState("Sales Manager");
-  // Edit Access Modal State
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<any | null>(null);
-  const [tempModules, setTempModules] = useState<string[]>([]);
-  const filteredRoles = roles.filter(role => 
-    role.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  const openEditModal = (role: any) => {
-    setEditingRole(role);
-    setTempModules([...role.modules]);
-    setIsEditModalOpen(true);
-  };
-  const toggleModule = (moduleName: any) => {
-    if (tempModules.includes(moduleName as never)) {
-      setTempModules(tempModules.filter(m => m !== moduleName));
-    } else {
-      setTempModules([...tempModules, moduleName]);
+  const [newRoleAssign, setNewRoleAssign] = useState("Admin");
+
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isEditRoleModalOpen, setIsEditRoleModalOpen] = useState(false);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+
+  const handleEditRole = async (userId: string, newRole: string) => {
+    try {
+      const res = await fetch(`/api/management/admin/users/${userId}/role`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole })
+      });
+      if (!res.ok) throw new Error("Failed");
+      setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      toast.success("Role updated successfully");
+      setIsEditRoleModalOpen(false);
+    } catch (e) {
+      toast.error("Failed to update role");
     }
   };
-  const handleSaveAccess = () => {
-    setRoles(roles.map(r => r.id === editingRole.id ? { ...r, modules: tempModules } : r));
-    setIsEditModalOpen(false);
-    setEditingRole(null);
+
+  const handleResetPassword = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/management/admin/users/${userId}/password`, {
+        method: "PUT"
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast.success("Password reset to 'password123' successfully");
+      setIsResetPasswordModalOpen(false);
+    } catch (e) {
+      toast.error("Failed to reset password");
+    }
   };
-  const handleDeleteUser = (userId: any) => {
-    setAssignedUsers(assignedUsers.filter(user => user.id !== userId));
+
+  // Filtering Logic
+  const filteredUsers = users.filter(user => {
+    // Search Term
+    const matchesSearch = 
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      user.role?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (!matchesSearch) return false;
+
+    // Tabs
+    if (activeFilter === "All") return true;
+    if (activeFilter === "Hospitals") return user.role?.toUpperCase().includes("HOSPITAL") || user.role?.toUpperCase().includes("CLINIC");
+    if (activeFilter === "Labs") return user.role?.toUpperCase().includes("LAB");
+    if (activeFilter === "Doctors") return user.role?.toUpperCase() === "DOCTOR";
+    if (activeFilter === "Staff") return ["ADMIN", "SUPER_ADMIN", "SALES", "SUPPORT", "ACCOUNTS", "TECHNICIAN"].some(r => user.role?.toUpperCase().includes(r));
+    if (activeFilter === "Active") return user.status === "Active";
+    if (activeFilter === "Inactive") return user.status !== "Active";
+    
+    return true;
+  });
+
+  const getRoleBadge = (role: string) => {
+    const r = (role || "").toUpperCase();
+    if (r.includes('HOSPITAL') || r.includes('CLINIC')) return "bg-blue-50 text-blue-700 border-blue-200";
+    if (r.includes('LAB')) return "bg-purple-50 text-purple-700 border-purple-200";
+    if (r === 'DOCTOR') return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    if (r.includes('ADMIN')) return "bg-indigo-50 text-indigo-700 border-indigo-200";
+    if (r.includes('TECHNICIAN')) return "bg-orange-50 text-orange-700 border-orange-200";
+    if (r.includes('ACCOUNT')) return "bg-teal-50 text-teal-700 border-teal-200";
+    if (r.includes('SALE')) return "bg-amber-50 text-amber-700 border-amber-200";
+    if (r.includes('SUPPORT')) return "bg-rose-50 text-rose-700 border-rose-200";
+    return "bg-slate-50 text-slate-700 border-slate-200";
   };
+
+  const handleStatusChange = async (userId: string, newStatus: string) => {
+    try {
+      const res = await fetch(`/api/management/admin/users/${userId}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (!res.ok) throw new Error("Failed");
+      setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u));
+      toast.success("Status updated successfully");
+    } catch (e) {
+      toast.error("Failed to update status");
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    setUsers(users.filter(user => user.id !== userId));
+    toast.success("User removed from access list");
+  };
+
+  if (loading) return <div className="p-8 text-center animate-pulse">Loading access config...</div>;
+
   return (
-    <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans space-y-10">
-      {/* Top Section: Roles */}
-      <div>
-        {/* Header section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-end gap-4 mb-6">
-          <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center gap-2"
-          >
-            <Shield className="size-4" />
-            Create New Role
-          </button>
+    <div className="p-8 max-w-[1600px] mx-auto w-full min-h-screen font-sans space-y-8 bg-[#F8FAFC]">
+      
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Access Management</h1>
+          <p className="text-sm text-slate-500 mt-1 font-medium">Manage organization and staff accounts securely.</p>
         </div>
-        {/* Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Card 1: Total Staff Accounts */}
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 hover:shadow-md transition-shadow flex flex-col relative overflow-hidden">
-            <div className="flex justify-between items-start mb-4">
-              <div className="size-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                <Users className="size-6" />
-              </div>
-              <span className="text-3xl font-extrabold text-slate-900">245</span>
-            </div>
-            <h3 className="text-lg font-extrabold text-slate-900 mb-1">Total Staff Accounts</h3>
-            <p className="text-sm font-semibold text-blue-600 mb-2">All active platform staff</p>
-            <p className="text-xs text-slate-500 font-medium leading-relaxed">(Admin, Doctors, Receptionists, Lab Staff, Pharmacists, etc.)</p>
-          </div>
-          {/* Card 2: Pending Access Requests */}
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 hover:shadow-md transition-shadow flex flex-col relative overflow-hidden">
-            <div className="flex justify-between items-start mb-4">
-              <div className="size-12 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
-                <Shield className="size-6" />
-              </div>
-              <span className="text-3xl font-extrabold text-slate-900">8</span>
-            </div>
-            <h3 className="text-lg font-extrabold text-slate-900 mb-1">Pending Access Requests</h3>
-            <p className="text-sm font-semibold text-orange-600 mb-2">Awaiting admin approval</p>
-            <p className="text-xs text-slate-500 font-medium leading-relaxed">(New staff access requests ya role approval)</p>
-          </div>
-          {/* Card 3: Role Assignments */}
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 hover:shadow-md transition-shadow flex flex-col relative overflow-hidden">
-            <div className="flex justify-between items-start mb-4">
-              <div className="size-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="size-6" />
-              </div>
-              <span className="text-3xl font-extrabold text-slate-900">238</span>
-            </div>
-            <h3 className="text-lg font-extrabold text-slate-900 mb-1">Role Assignments</h3>
-            <p className="text-sm font-semibold text-emerald-600 mb-2">Roles assigned to users</p>
-            <p className="text-xs text-slate-500 font-medium leading-relaxed">(Kitne users ko roles assign ho chuke hain)</p>
-          </div>
-          {/* Card 4: Restricted Accounts */}
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 hover:shadow-md transition-shadow flex flex-col relative overflow-hidden">
-            <div className="flex justify-between items-start mb-4">
-              <div className="size-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-                <XCircle className="size-6" />
-              </div>
-              <span className="text-3xl font-extrabold text-slate-900">5</span>
-            </div>
-            <h3 className="text-lg font-extrabold text-slate-900 mb-1">Restricted Accounts</h3>
-            <p className="text-sm font-semibold text-rose-600 mb-2">Access temporarily disabled</p>
-            <p className="text-xs text-slate-500 font-medium leading-relaxed">(Blocked/Suspended users)</p>
-          </div>
+        <button 
+          onClick={() => setIsAddModalOpen(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center gap-2"
+        >
+          <Shield className="size-4.5" />
+          Add Staff Account
+        </button>
+      </div>
+
+      {/* Filters and Search */}
+      <div className="flex flex-col lg:flex-row justify-between gap-4 items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        
+        {/* Tabs */}
+        <div className="flex overflow-x-auto gap-2 pb-2 lg:pb-0 hide-scrollbar w-full lg:w-auto">
+          {["All", "Hospitals", "Labs", "Doctors", "Staff", "Active", "Inactive"].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveFilter(tab)}
+              className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-colors ${
+                activeFilter === tab 
+                  ? "bg-slate-100 text-slate-900" 
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* Search */}
+        <div className="relative w-full lg:w-80 shrink-0">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4.5 text-slate-400" />
+          <input 
+            type="text" 
+            placeholder="Search by Name, Email, Role..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400 font-medium"
+          />
         </div>
       </div>
-      {/* Bottom Section: Assigned Users Table */}
-      <div>
-        <h3 className="text-xl font-bold text-slate-900 mb-4">Assigned Users</h3>
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
-                <tr>
-                  <th className="px-6 py-4">User</th>
-                  <th className="px-6 py-4">Phone No</th>
-                  <th className="px-6 py-4">Role</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Access</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {assignedUsers.map(user => (
-                  <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="size-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">
-                          {user.name.charAt(0)}
-                        </div>
-                        <div>
-                          <div className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{user.name}</div>
-                          <div className="text-xs text-slate-500 font-medium">{user.email}</div>
-                        </div>
+
+      {/* Table */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-visible">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left whitespace-nowrap">
+            <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+              <tr>
+                <th className="px-6 py-4">Name & Email</th>
+                <th className="px-6 py-4">Organization</th>
+                <th className="px-6 py-4">Role</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Last Login</th>
+                <th className="px-6 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredUsers.map(user => (
+                <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="size-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm shrink-0 border border-slate-200">
+                        {user.name?.charAt(0) || '?'}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 font-medium text-slate-600">
-                      {user.phone}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-slate-100 text-slate-600">
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      {user.status === "Active" ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-100">
-                          <CheckCircle2 className="size-3" /> Active
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-rose-50 text-rose-600 border border-rose-100">
-                          <XCircle className="size-3" /> Inactive
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
+                      <div>
+                        <div className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{user.name}</div>
+                        <div className="text-xs text-slate-500 font-medium mt-0.5">{user.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="font-medium text-slate-700">{user.organization || '-'}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider border ${getRoleBadge(user.role)}`}>
+                      {user.role}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider border ${
+                      user.status === 'Active' 
+                        ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
+                        : "bg-slate-50 text-slate-500 border-slate-200"
+                    }`}>
+                      {user.status === 'Active' ? <CheckCircle2 className="size-3" /> : <XCircle className="size-3" />}
+                      {user.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-slate-500 font-medium">
+                      {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right relative">
+                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button 
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                        title="Delete Access"
+                        onClick={() => { setSelectedUser(user); setIsViewModalOpen(true); }}
+                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="View Details"
                       >
-                        <Trash2 className="size-5" />
+                        <Eye className="size-4.5" />
                       </button>
-                    </td>
-                  </tr>
-                ))}
-                {assignedUsers.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center">
-                      <Users className="size-10 text-slate-300 mx-auto mb-3" />
-                      <p className="text-slate-500 font-medium">No users found.</p>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                      <button 
+                        onClick={() => { setSelectedUser(user); setIsEditRoleModalOpen(true); }}
+                        className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Edit Role"
+                      >
+                        <Edit2 className="size-4.5" />
+                      </button>
+                      <button 
+                        onClick={() => { setSelectedUser(user); setIsResetPasswordModalOpen(true); }}
+                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Reset Password"
+                      >
+                        <Key className="size-4.5" />
+                      </button>
+                      <button 
+                        onClick={() => handleStatusChange(user.id, user.status === 'Active' ? 'Inactive' : 'Active')}
+                        className={`p-2 text-slate-400 rounded-lg transition-colors ${user.status === 'Active' ? 'hover:text-rose-600 hover:bg-rose-50' : 'hover:text-emerald-600 hover:bg-emerald-50'}`} title="Toggle Status"
+                      >
+                        {user.status === 'Active' ? <XCircle className="size-4.5" /> : <CheckCircle2 className="size-4.5" />}
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          if (confirm("Are you sure you want to delete this user?")) {
+                            try {
+                              const res = await fetch(`/api/management/admin/users/${user.id}`, { method: "DELETE" });
+                              if (!res.ok) throw new Error("Failed");
+                              handleDeleteUser(user.id);
+                            } catch (e) {
+                              toast.error("Failed to delete user");
+                            }
+                          }
+                        }}
+                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Delete"
+                      >
+                        <Trash2 className="size-4.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filteredUsers.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-6 py-16 text-center">
+                    <div className="size-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
+                      <Search className="size-6 text-slate-400" />
+                    </div>
+                    <p className="text-slate-900 font-bold text-lg mb-1">No accounts found</p>
+                    <p className="text-slate-500 text-sm font-medium">Try adjusting your filters or search term.</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
-      {/* Edit Access Modal */}
-      {isEditModalOpen && (
-        <EditAccessModal 
-          isOpen={isEditModalOpen} 
-          onOpenChange={setIsEditModalOpen} 
-          editingRole={editingRole} 
-          tempModules={tempModules} 
-          systemModules={systemModules} 
-          toggleModule={toggleModule} 
-          handleSaveAccess={handleSaveAccess} 
-        />
+
+      {/* View Details Modal */}
+      {isViewModalOpen && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            {/* Header with gradient */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-8 text-center relative">
+              <button 
+                onClick={() => setIsViewModalOpen(false)}
+                className="absolute top-4 right-4 p-2 text-white/70 hover:text-white bg-black/10 hover:bg-black/20 rounded-full transition-colors"
+              >
+                <XCircle className="size-5" />
+              </button>
+              
+              <div className="size-20 bg-white rounded-full flex items-center justify-center text-3xl font-black text-blue-600 mx-auto shadow-lg shadow-black/10 ring-4 ring-white/20 mb-3">
+                {selectedUser.name.charAt(0).toUpperCase()}
+              </div>
+              <h2 className="text-2xl font-bold text-white">{selectedUser.name}</h2>
+              <p className="text-blue-100 font-medium mt-1 text-sm flex items-center justify-center gap-1.5">
+                <Shield className="size-4 opacity-80" /> {selectedUser.role}
+              </p>
+            </div>
+
+            {/* Content Details */}
+            <div className="p-6">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    <User className="size-3.5" /> Full Name
+                  </div>
+                  <p className="text-slate-900 font-semibold">{selectedUser.name}</p>
+                </div>
+                
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    <Mail className="size-3.5" /> Email Address
+                  </div>
+                  <p className="text-slate-900 font-semibold truncate" title={selectedUser.email}>{selectedUser.email}</p>
+                </div>
+
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    <Phone className="size-3.5" /> Phone Number
+                  </div>
+                  <p className="text-slate-900 font-semibold">{selectedUser.phone || 'N/A'}</p>
+                </div>
+
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    <Building2 className="size-3.5" /> Organization
+                  </div>
+                  <p className="text-slate-900 font-semibold">{selectedUser.organization || 'Platform Level'}</p>
+                </div>
+              </div>
+
+              <div className="mt-5 bg-slate-50 rounded-xl p-4 border border-slate-100 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    <Activity className="size-3.5" /> Account Status
+                  </div>
+                  <p className="text-slate-900 font-medium text-sm">
+                    {selectedUser.lastLogin ? `Last login: ${new Date(selectedUser.lastLogin).toLocaleDateString()}` : 'Never logged in'}
+                  </p>
+                </div>
+                <div>
+                   <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold tracking-wide border shadow-sm ${
+                      selectedUser.status === 'Active' 
+                        ? "bg-emerald-50 text-emerald-600 border-emerald-200" 
+                        : "bg-slate-100 text-slate-500 border-slate-200"
+                    }`}>
+                      {selectedUser.status === 'Active' ? <CheckCircle2 className="size-4" /> : <XCircle className="size-4" />}
+                      {selectedUser.status}
+                    </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button 
+                onClick={() => setIsViewModalOpen(false)}
+                className="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-xl font-bold transition-all shadow-sm"
+              >
+                Close Profile
+              </button>
+            </div>
+          </div>
+        </div>
       )}
+
+      {/* Edit Role Modal */}
+      {isEditRoleModalOpen && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-xl font-bold text-slate-900 mb-2">Edit Role</h2>
+            <p className="text-sm text-slate-500 mb-4">Change the role for <strong>{selectedUser.name}</strong></p>
+            
+            <select 
+              id="editRoleSelect"
+              defaultValue={selectedUser.role}
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 mb-6"
+            >
+              <option value="ADMIN">ADMIN</option>
+              <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+              <option value="DOCTOR">DOCTOR</option>
+              <option value="HOSPITAL">HOSPITAL</option>
+              <option value="LAB">LAB</option>
+              <option value="SALES">SALES</option>
+              <option value="SUPPORT">SUPPORT</option>
+              <option value="ACCOUNTS">ACCOUNTS</option>
+              <option value="TECHNICIAN">TECHNICIAN</option>
+            </select>
+            
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setIsEditRoleModalOpen(false)}
+                className="px-4 py-2 text-slate-500 hover:bg-slate-50 rounded-lg font-bold transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  const newRole = (document.getElementById('editRoleSelect') as HTMLSelectElement).value;
+                  handleEditRole(selectedUser.id, newRole);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-bold transition-colors"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Password Modal */}
+      {isResetPasswordModalOpen && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-xl font-bold text-slate-900 mb-2">Reset Password</h2>
+            <p className="text-sm text-slate-600 mb-6">
+              Are you sure you want to reset the password for <strong>{selectedUser.name}</strong>? 
+              <br/><br/>
+              Their password will be temporarily set to <code className="bg-slate-100 text-rose-600 px-1.5 py-0.5 rounded font-bold">password123</code>.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setIsResetPasswordModalOpen(false)}
+                className="px-4 py-2 text-slate-500 hover:bg-slate-50 rounded-lg font-bold transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => handleResetPassword(selectedUser.id)}
+                className="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-bold transition-colors"
+              >
+                Reset Password
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Create New Role (Provision Account) Modal */}
       {isAddModalOpen && (
         <CreateRoleModal 
@@ -284,23 +476,28 @@ export default function AccessManagementPage() {
           setNewPhoneNo={setNewPhoneNo}
           newRoleAssign={newRoleAssign}
           setNewRoleAssign={setNewRoleAssign}
-          handleProvision={() => {
+          handleProvision={async () => {
             if (newFullName && newEmail) {
-              const newUser = {
-                id: `U00${assignedUsers.length + 4}`,
-                name: newFullName,
-                email: newEmail,
-                phone: newPhoneNo || "—",
-                role: newRoleAssign,
-                status: "Active"
-              };
-              setAssignedUsers([...assignedUsers, newUser]);
+              try {
+                const res = await fetch("/api/management/admin/access/users", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ name: newFullName, email: newEmail, phone: newPhoneNo, role: newRoleAssign })
+                });
+                if (!res.ok) throw new Error("Failed");
+                
+                toast.success("Account provisioned successfully!");
+                // Refresh data
+                fetch("/api/management/admin/access/users").then(r => r.json()).then(setUsers);
+              } catch (e) {
+                toast.error("Failed to provision account");
+              }
             }
             setIsAddModalOpen(false);
             setNewFullName("");
             setNewEmail("");
             setNewPhoneNo("");
-            setNewRoleAssign("Sales Manager");
+            setNewRoleAssign("Admin");
           }}
         />
       )}

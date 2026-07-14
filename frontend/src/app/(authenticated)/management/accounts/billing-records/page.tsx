@@ -16,46 +16,28 @@ const Clock = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg"
 
 
 
-import React, { useState } from 'react';
-const mockLedger = [
-  { 
-    id: "CL-001", client: "City Care Hospital", type: "Hospital", 
-    totalBilled: "₹4,50,000", totalPaid: "₹4,05,000", outstanding: "₹45,000",
-    history: [
-      { date: "22 Jun 2026", desc: "Payment Received (Credit Card)", amount: "+₹45,000", balance: "₹45,000" },
-      { date: "15 Jun 2026", desc: "Invoice INV-2026-099 Generated", amount: "-₹53,100", balance: "₹90,000" },
-      { date: "01 May 2026", desc: "Payment Received (Netbanking)", amount: "+₹1,00,000", balance: "₹36,900" },
-    ]
-  },
-  { 
-    id: "CL-002", client: "Dr. Ramesh Kumar", type: "Doctor", 
-    totalBilled: "₹60,000", totalPaid: "₹55,000", outstanding: "₹5,000",
-    history: [
-      { date: "21 Jun 2026", desc: "Payment Received (UPI)", amount: "+₹5,000", balance: "₹5,000" },
-      { date: "20 Jun 2026", desc: "Invoice INV-2026-092 Generated", amount: "-₹5,900", balance: "₹10,000" },
-    ]
-  },
-  { 
-    id: "CL-003", client: "Apex Laboratories", type: "Lab", 
-    totalBilled: "₹1,50,000", totalPaid: "₹1,50,000", outstanding: "₹0",
-    history: [
-      { date: "20 Jun 2026", desc: "Payment Received (Netbanking)", amount: "+₹12,500", balance: "₹0" },
-      { date: "18 Jun 2026", desc: "Invoice INV-2026-090 Generated", amount: "-₹12,500", balance: "₹12,500" },
-    ]
-  },
-  { 
-    id: "CL-004", client: "Metro Health", type: "Hospital", 
-    totalBilled: "₹8,50,000", totalPaid: "₹7,65,000", outstanding: "₹85,000",
-    history: [
-      { date: "05 Jun 2026", desc: "Invoice INV-2026-081 Generated", amount: "-₹100,300", balance: "₹85,000" },
-      { date: "10 May 2026", desc: "Payment Received (RTGS)", amount: "+₹2,00,000", balance: "-₹15,300" },
-    ]
-  },
-];
+import React, { useState, useEffect } from 'react';
+
 export default function ClientAccountLedgerPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const filteredLedger = mockLedger.filter(client => 
+  const [ledger, setLedger] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/management/accounts/billing')
+      .then(res => res.json())
+      .then(data => {
+        setLedger(data.ledger || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to load billing ledger", err);
+        setLoading(false);
+      });
+  }, []);
+
+  const filteredLedger = ledger.filter(client => 
     client.client.toLowerCase().includes(searchTerm.toLowerCase()) || 
     client.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -95,7 +77,15 @@ export default function ClientAccountLedgerPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredLedger.map((client) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="flex justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredLedger.map((client) => (
                 <React.Fragment key={client.id}>
                   <tr 
                     className={`hover:bg-slate-50/50 transition-colors group cursor-pointer ${expandedRow === client.id ? 'bg-indigo-50/30' : ''}`}

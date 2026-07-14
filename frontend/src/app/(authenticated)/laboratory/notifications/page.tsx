@@ -13,34 +13,113 @@ const ShieldAlert = (props: any) => <svg {...props} xmlns="http://www.w3.org/200
 const Activity = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"></path></svg>;
 const User = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
 const Trash2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
-// Mock data
-const initialNotifications = [
-  { id: "NOTIF-01", type: "TestRequest", title: "New Test Request", message: "Dr. Rohan Verma requested a Complete Blood Count for patient Rahul Sharma.", time: "10 mins ago", isRead: false, actionRequired: true },
-  { id: "NOTIF-02", type: "AccessGranted", title: "Access Granted", message: "Priya Singh granted you access to their medical history.", time: "2 hours ago", isRead: false, actionRequired: false },
-  { id: "NOTIF-03", type: "TestRequest", title: "New Walk-in Test", message: "Patient Amit Kumar registered for HbA1c test.", time: "4 hours ago", isRead: true, actionRequired: true },
-  { id: "NOTIF-04", type: "System", title: "System Maintenance", message: "Scheduled maintenance tonight at 2:00 AM.", time: "1 day ago", isRead: true, actionRequired: false },
-];
+import { useRouter } from "next/navigation";
+import { formatDistanceToNow } from 'date-fns';
+
 export default function LabNotificationsPage() {
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const router = useRouter();
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"All" | "Unread" | "Action Required">("All");
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [router]);
+
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return router.push("/auth");
+      
+      const res = await fetch("/api/laboratory/notifications", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data);
+
+        // Auto mark as read when page is opened
+        const hasUnread = data.some((n: any) => !n.isRead);
+        if (hasUnread) {
+          fetch("/api/laboratory/notifications/read-all", {
+            method: "PUT",
+            headers: { "Authorization": `Bearer ${token}` }
+          }).then(() => {
+            setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+            window.dispatchEvent(new Event('notificationsRead'));
+          }).catch(e => console.error("Auto mark read failed", e));
+        }
+
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredNotifications = notifications.filter(n => {
     if (filter === "Unread") return !n.isRead;
     if (filter === "Action Required") return n.actionRequired;
     return true;
   });
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-    toast.success("All notifications marked as read");
+
+  const markAllAsRead = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/laboratory/notifications/read-all", {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+        toast.success("All notifications marked as read");
+        window.dispatchEvent(new Event('notificationsRead'));
+      }
+    } catch (e) {
+      toast.error("Error marking all as read");
+    }
   };
-  const deleteNotification = (id: string) => {
-    setNotifications(notifications.filter(n => n.id !== id));
+
+  const deleteNotification = async (id: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/laboratory/notifications/${id}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setNotifications(notifications.filter(n => n.id !== id));
+        toast.success("Notification deleted");
+      }
+    } catch (e) {
+      toast.error("Error deleting notification");
+    }
   };
+
+  const markAsRead = async (id: string) => {
+    const notif = notifications.find(n => n.id === id);
+    if (notif?.isRead) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      await fetch(`/api/laboratory/notifications/${id}/read`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
+      window.dispatchEvent(new Event('notificationsRead'));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
-      case "TestRequest": return <Activity className="size-5 text-cyan-600" />;
-      case "AccessGranted": return <ShieldAlert className="size-5 text-emerald-600" />;
+      case "Request": return <Activity className="size-5 text-cyan-600" />;
+      case "Alert": return <ShieldAlert className="size-5 text-emerald-600" />;
       default: return <Bell className="size-5 text-slate-600" />;
     }
   };
@@ -72,13 +151,27 @@ export default function LabNotificationsPage() {
           </button>
         ))}
       </div>
+      
+      {notifications.filter(n => !n.isRead).length > 0 && (
+        <div className="mb-4 flex justify-end">
+          <button onClick={markAllAsRead} className="text-sm font-bold text-[#0891b2] hover:text-cyan-700 transition-colors">
+            Mark all as read
+          </button>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        {filteredNotifications.length > 0 ? (
+        {loading ? (
+          <div className="flex justify-center p-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0891b2]"></div>
+          </div>
+        ) : filteredNotifications.length > 0 ? (
           <div className="divide-y divide-slate-100">
             {filteredNotifications.map((notif) => (
               <div 
                 key={notif.id} 
-                className={`p-6 flex gap-4 transition-colors relative group ${
+                onClick={() => !notif.isRead && markAsRead(notif.id)}
+                className={`p-6 flex gap-4 transition-colors relative group cursor-pointer ${
                   !notif.isRead ? "bg-cyan-50/30" : "hover:bg-slate-50"
                 }`}
               >
@@ -93,7 +186,9 @@ export default function LabNotificationsPage() {
                     <h3 className={`text-base font-bold truncate ${!notif.isRead ? "text-slate-900" : "text-slate-700"}`}>
                       {notif.title}
                     </h3>
-                    <span className="text-xs font-medium text-slate-400 whitespace-nowrap">{notif.time}</span>
+                    <span className="text-xs font-medium text-slate-400 whitespace-nowrap">
+                      {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}
+                    </span>
                   </div>
                   <p className={`text-sm mb-3 ${!notif.isRead ? "text-slate-700" : "text-slate-500"}`}>
                     {notif.message}

@@ -20,7 +20,8 @@ const CheckCircle2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/20
 
 
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { toast } from "sonner";
 const tabs = [
   { id: "system", label: "System Settings", icon: Server },
   { id: "roles", label: "Roles & Permissions", icon: Users },
@@ -30,13 +31,55 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("system");
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const handleSave = () => {
+  const [loading, setLoading] = useState(true);
+
+  // Settings State
+  const [settings, setSettings] = useState({
+    platform_name: "MediDoc Platform",
+    support_email: "support@medidoc.com",
+    timezone: "Asia/Kolkata (IST)",
+    auto_backups: true,
+    auto_archive: true,
+    roles_hospital: true,
+    roles_lab: true,
+    roles_doctor: true,
+    security_2fa: false,
+    security_logging: true,
+    security_session: "30"
+  });
+
+  useEffect(() => {
+    fetch('/api/management/admin/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (Object.keys(data).length > 0) {
+          setSettings(prev => ({ ...prev, ...data }));
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const handleChange = (key: string, value: any) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSave = async () => {
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
+      await fetch('/api/management/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
       setSaved(true);
+      toast.success("Settings saved successfully!");
       setTimeout(() => setSaved(false), 2000);
-    }, 1000);
+    } catch (e) {
+      toast.error("Failed to save settings");
+    } finally {
+      setIsSaving(false);
+    }
   };
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans">
@@ -88,18 +131,18 @@ export default function SettingsPage() {
                 <div className="space-y-5 max-w-2xl">
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Platform Name</label>
-                    <input type="text" defaultValue="MediDoc Platform" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
+                    <input type="text" value={settings.platform_name} onChange={e => handleChange('platform_name', e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Support Email</label>
-                    <input type="email" defaultValue="support@medidoc.com" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
+                    <input type="email" value={settings.support_email} onChange={e => handleChange('support_email', e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Timezone</label>
-                    <select className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
-                      <option>Asia/Kolkata (IST)</option>
-                      <option>UTC</option>
-                      <option>America/New_York (EST)</option>
+                    <select value={settings.timezone} onChange={e => handleChange('timezone', e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+                      <option value="Asia/Kolkata (IST)">Asia/Kolkata (IST)</option>
+                      <option value="UTC">UTC</option>
+                      <option value="America/New_York (EST)">America/New_York (EST)</option>
                     </select>
                   </div>
                 </div>
@@ -115,7 +158,7 @@ export default function SettingsPage() {
                       <p className="text-xs text-slate-500 mt-0.5">Run daily database backups at 02:00 AM.</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" defaultChecked className="sr-only peer" />
+                      <input type="checkbox" checked={settings.auto_backups} onChange={e => handleChange('auto_backups', e.target.checked)} className="sr-only peer" />
                       <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                     </label>
                   </div>
@@ -125,7 +168,7 @@ export default function SettingsPage() {
                       <p className="text-xs text-slate-500 mt-0.5">Move reports older than 5 years to cold storage.</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" defaultChecked className="sr-only peer" />
+                      <input type="checkbox" checked={settings.auto_archive} onChange={e => handleChange('auto_archive', e.target.checked)} className="sr-only peer" />
                       <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                     </label>
                   </div>
@@ -139,27 +182,39 @@ export default function SettingsPage() {
                 <Users className="size-5 text-indigo-600" /> Default Permissions
               </h3>
               <div className="space-y-4">
-                {['Hospital Admins', 'Lab Admins', 'Doctors'].map(role => (
-                  <div key={role} className="border border-slate-200 rounded-xl overflow-hidden">
-                    <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 font-bold text-sm text-slate-800">
-                      {role}
-                    </div>
-                    <div className="p-4 space-y-3">
-                      <label className="flex items-center gap-3">
-                        <input type="checkbox" defaultChecked className="size-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
-                        <span className="text-sm font-medium text-slate-700">Can view patient global history (with consent)</span>
-                      </label>
-                      <label className="flex items-center gap-3">
-                        <input type="checkbox" defaultChecked className="size-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
-                        <span className="text-sm font-medium text-slate-700">Can invite new staff members</span>
-                      </label>
-                      <label className="flex items-center gap-3">
-                        <input type="checkbox" className="size-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
-                        <span className="text-sm font-medium text-slate-700">Can modify facility billing details</span>
-                      </label>
-                    </div>
+                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 font-bold text-sm text-slate-800">
+                    Hospital Admins
                   </div>
-                ))}
+                  <div className="p-4 space-y-3">
+                    <label className="flex items-center gap-3">
+                      <input type="checkbox" checked={settings.roles_hospital} onChange={e => handleChange('roles_hospital', e.target.checked)} className="size-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
+                      <span className="text-sm font-medium text-slate-700">Can view patient global history (with consent)</span>
+                    </label>
+                  </div>
+                </div>
+                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 font-bold text-sm text-slate-800">
+                    Lab Admins
+                  </div>
+                  <div className="p-4 space-y-3">
+                    <label className="flex items-center gap-3">
+                      <input type="checkbox" checked={settings.roles_lab} onChange={e => handleChange('roles_lab', e.target.checked)} className="size-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
+                      <span className="text-sm font-medium text-slate-700">Can view patient global history (with consent)</span>
+                    </label>
+                  </div>
+                </div>
+                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 font-bold text-sm text-slate-800">
+                    Doctors
+                  </div>
+                  <div className="p-4 space-y-3">
+                    <label className="flex items-center gap-3">
+                      <input type="checkbox" checked={settings.roles_doctor} onChange={e => handleChange('roles_doctor', e.target.checked)} className="size-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
+                      <span className="text-sm font-medium text-slate-700">Can view patient global history (with consent)</span>
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -175,7 +230,7 @@ export default function SettingsPage() {
                     <p className="text-xs text-slate-500 mt-0.5">Mandatory for all admin and staff accounts.</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" defaultChecked className="sr-only peer" />
+                    <input type="checkbox" checked={settings.security_2fa} onChange={e => handleChange('security_2fa', e.target.checked)} className="sr-only peer" />
                     <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500"></div>
                   </label>
                 </div>
@@ -185,13 +240,13 @@ export default function SettingsPage() {
                     <p className="text-xs text-slate-500 mt-0.5">Log every instance of record access with IP address.</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" defaultChecked className="sr-only peer" />
+                    <input type="checkbox" checked={settings.security_logging} onChange={e => handleChange('security_logging', e.target.checked)} className="sr-only peer" />
                     <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500"></div>
                   </label>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mt-6 mb-1.5">Session Timeout (Minutes)</label>
-                  <input type="number" defaultValue={30} className="w-32 px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500" />
+                  <input type="number" value={settings.security_session} onChange={e => handleChange('security_session', e.target.value)} className="w-32 px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500" />
                 </div>
               </div>
             </div>

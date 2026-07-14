@@ -1,130 +1,345 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { 
+  Search, UserPlus, MoreVertical, CheckCircle2, Clock, 
+  XCircle, FileText, ChevronDown, User, X, Edit
+} from "lucide-react";
 
-
-
-
-
-
-
-
-
-const Search = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>;
-const UserPlus = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" x2="19" y1="8" y2="14"></line><line x1="22" x2="16" y1="11" y2="11"></line></svg>;
-const MoreVertical = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>;
-const CheckCircle2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>;
-const Clock = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>;
-const XCircle = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>;
-const FileText = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>;
-const ChevronDown = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>;
-const User = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
-const X = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>;
-import { useState } from "react";
-// Mock data matching the UI provided
-const mockPatients = [
-  { 
-    id: "MD1023", 
-    name: "Rahul Sharma", 
-    mobile: "9876543210", 
-    age: 32, 
-    gender: "Male",
-    status: "Access Approved",
-    validTill: "20 Jun 2026",
-    avatarBg: "bg-cyan-50",
-    avatarColor: "text-cyan-500"
-  },
-  { 
-    id: "MD1056", 
-    name: "Priya Singh", 
-    mobile: "9123456780", 
-    age: 28, 
-    gender: "Female",
-    status: "Not Requested",
-    avatarBg: "bg-orange-50",
-    avatarColor: "text-orange-400"
-  },
-  { 
-    id: "MD1078", 
-    name: "Aman Gupta", 
-    mobile: "9988776655", 
-    age: 45, 
-    gender: "Male",
-    status: "Pending",
-    requestSent: "10 Jun 2026",
-    avatarBg: "bg-purple-50",
-    avatarColor: "text-purple-500"
-  },
-  { 
-    id: "MD1090", 
-    name: "Neha Verma", 
-    mobile: "9012345678", 
-    age: 36, 
-    gender: "Female",
-    status: "Access Approved",
-    validTill: "15 Jun 2026",
-    avatarBg: "bg-red-50",
-    avatarColor: "text-red-400"
-  },
-  { 
-    id: "MD1101", 
-    name: "Vikram Patel", 
-    mobile: "9899989898", 
-    age: 50, 
-    gender: "Male",
-    status: "Rejected",
-    rejectedOn: "05 Jun 2026",
-    avatarBg: "bg-cyan-50",
-    avatarColor: "text-cyan-500"
-  },
-];
 export default function DoctorPatientsPage() {
   const [activeFilter, setActiveFilter] = useState("All Patients");
   const [searchTerm, setSearchTerm] = useState("");
+  const [patients, setPatients] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Doctor's custom patients data from backend
+  const [doctorPatientsData, setDoctorPatientsData] = useState<any[]>([]);
+
+  
+  // Lab Test Request State
+  const [isLabModalOpen, setIsLabModalOpen] = useState(false);
+  const [labForm, setLabForm] = useState({ patientId: "", labId: "", labTestName: "", priority: "Normal" });
+  const [labsList, setLabsList] = useState<any[]>([]);
+  const [isSubmittingLab, setIsSubmittingLab] = useState(false);
+
+  const fetchLabsList = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch('/api/clinic/labs', { headers: { 'Authorization': `Bearer ${token}` }});
+      if (res.ok) {
+        const data = await res.json();
+        setLabsList(data);
+      }
+    } catch(e) { console.error(e); }
+  };
+
+  const submitLabRequest = async () => {
+    if (!labForm.patientId || !labForm.labId || !labForm.labTestName) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    setIsSubmittingLab(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch('/api/clinic/test-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(labForm)
+      });
+      if (res.ok) {
+        toast.success("Lab test request sent successfully!");
+        setIsLabModalOpen(false);
+        setLabForm({ patientId: "", labId: "", labTestName: "", priority: "Normal" });
+      } else {
+        toast.error("Failed to send lab request");
+      }
+    } catch(e) {
+      toast.error("Error submitting lab request");
+    } finally {
+      setIsSubmittingLab(false);
+    }
+  };
+
+  // New Patient Modal state
+  const [isNewPatientModalOpen, setIsNewPatientModalOpen] = useState(false);
+  const [editingPatientId, setEditingPatientId] = useState<string | null>(null);
+  const [newPatientForm, setNewPatientForm] = useState({
+    name: '', phone: '', age: '', gender: 'Male', bloodGroup: 'A+', diagnosis: '', followUp: '', status: 'Treatment Ongoing'
+  });
+
+  // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<"request" | "records">("request");
-  const [selectedPatientForModal, setSelectedPatientForModal] = useState<typeof mockPatients[0] | null>(null);
-  const filters = [
-    { name: "All Patients", count: 24, badgeBg: "bg-cyan-100", badgeText: "text-cyan-700" },
-    { name: "Access Approved", count: 8, badgeBg: "bg-green-100", badgeText: "text-green-700" },
-    { name: "Pending Requests", count: 6, badgeBg: "bg-orange-100", badgeText: "text-orange-700" },
-    { name: "Rejected", count: 2, badgeBg: "bg-red-100", badgeText: "text-red-700" },
-  ];
-  const handleOpenModal = (patient: typeof mockPatients[0] | null = null) => {
-    setSelectedPatientForModal(patient);
+  const [selectedPatient, setSelectedPatient] = useState<any>(null);
+
+  // Dropdown state
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+
+  // Request Access state
+  const [accessReportTypes, setAccessReportTypes] = useState<string[]>(["All Reports"]);
+  const [reason, setReason] = useState("");
+  const [priority, setPriority] = useState("Normal");
+  const [duration, setDuration] = useState("7 Days");
+  const [isRequesting, setIsRequesting] = useState(false);
+
+  // View Records state
+  const [records, setRecords] = useState<any[]>([]);
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [isLoadingRecords, setIsLoadingRecords] = useState(false);
+
+  // Fetch initial data
+  const fetchPatients = async (query = "") => {
+    setLoading(true);
+    try {
+      const url = query ? `/api/clinic/patients/search?query=${query}` : `/api/clinic/patients`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setPatients(data);
+      } else {
+        console.error("API returned non-array:", data);
+        setPatients([]);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load patients");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchMyPatients = async () => {
+    try {
+      const res = await fetch('/api/clinic/my-patients');
+      if (res.ok) {
+        const data = await res.json();
+        setDoctorPatientsData(data);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchPatients();
+    fetchMyPatients();
+    fetchLabsList();
+  }, []);
+
+  // Handle Search with debounce
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchPatients(searchTerm);
+    }, 500);
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
+
+  // Request Access logic
+  const handleOpenRequestModal = (patient: any = null) => {
+    if(!patient) {
+      toast.error("Please search and select a patient first.");
+      return;
+    }
+    setSelectedPatient(patient);
     setModalType("request");
     setIsModalOpen(true);
   };
-  const handleOpenRecordsModal = (patient: typeof mockPatients[0]) => {
-    setSelectedPatientForModal(patient);
+
+  const submitAccessRequest = async () => {
+    if (!selectedPatient) return;
+    
+    if (accessReportTypes.length === 0) {
+      toast.error("Please select at least one report type");
+      return;
+    }
+    if (!reason.trim()) {
+      toast.error("Please provide a reason for access");
+      return;
+    }
+
+    setIsRequesting(true);
+    try {
+      const payload = {
+        patientId: selectedPatient.id,
+        reportTypes: accessReportTypes.join(", "),
+        reason,
+        priority,
+        duration
+      };
+
+      const res = await fetch('/api/clinic/patients/request-access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      toast.success(`Access request sent to ${selectedPatient.name}`);
+      setIsModalOpen(false);
+      fetchPatients(searchTerm); // Refresh list
+    } catch (error) {
+      toast.error("Failed to send request");
+    } finally {
+      setIsRequesting(false);
+    }
+  };
+
+  // Test feature: Auto Approve
+  const handleAutoApprove = async (patientId: string) => {
+    try {
+      await fetch('/api/clinic/patients/approve-access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId })
+      });
+      toast.success(`Access Approved (Test Mode)`);
+      fetchPatients(searchTerm);
+    } catch (error) {
+      toast.error("Failed to approve");
+    }
+  };
+
+  // View Records logic
+  const handleOpenRecordsModal = async (patient: any) => {
+    setSelectedPatient(patient);
     setModalType("records");
     setIsModalOpen(true);
+    setIsLoadingRecords(true);
+    setRecords([]);
+    setSelectedRecord(null);
+    
+    try {
+      const res = await fetch(`/api/clinic/patients/${patient.id}/records`);
+      if(!res.ok) throw new Error("Failed to load");
+      const data = await res.json();
+      setRecords(data);
+      if(data.length > 0) {
+        setSelectedRecord(data[0]);
+      }
+    } catch (error) {
+      toast.error("Failed to load patient records");
+    } finally {
+      setIsLoadingRecords(false);
+    }
   };
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setSelectedPatientForModal(null);
+    setSelectedPatient(null);
   };
+
+  const filteredPatients = patients.filter(p => {
+    if (activeFilter === "All Patients") return true;
+    if (activeFilter === "Access Approved") return p.status === "Access Approved";
+    if (activeFilter === "Pending Requests") return p.status === "Pending";
+    if (activeFilter === "Rejected") return p.status === "Rejected";
+    return true;
+  });
+
+  const filters = [
+    { name: "All Patients", count: patients.length, badgeBg: "bg-cyan-100", badgeText: "text-cyan-700" },
+    { name: "Access Approved", count: patients.filter(p => p.status === "Access Approved").length, badgeBg: "bg-green-100", badgeText: "text-green-700" },
+    { name: "Pending Requests", count: patients.filter(p => p.status === "Pending").length, badgeBg: "bg-orange-100", badgeText: "text-orange-700" },
+    { name: "Rejected", count: patients.filter(p => p.status === "Rejected").length, badgeBg: "bg-red-100", badgeText: "text-red-700" },
+  ];
+
   return (
     <div className="p-8 max-w-[1400px] mx-auto w-full min-h-screen">
+      {/* Doctor's Active Patients Table */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-8">
+        <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">My Patients</h2>
+            <p className="text-sm text-slate-500 mt-1">Patients currently under your care.</p>
+          </div>
+          <button 
+            onClick={() => {
+              setEditingPatientId(null);
+              setNewPatientForm({ name: '', phone: '', age: '', gender: 'Male', bloodGroup: 'A+', diagnosis: '', followUp: '', status: 'Treatment Ongoing' });
+              setIsNewPatientModalOpen(true);
+            }}
+            className="flex items-center gap-2 bg-[#0052cc] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#0043a8] transition-colors"
+          >
+            <UserPlus className="size-4" />
+            New Patient
+          </button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-4">Patient ID</th>
+                <th className="px-6 py-4">Patient Name</th>
+                <th className="px-6 py-4">Age</th>
+                <th className="px-6 py-4">Gender</th>
+                <th className="px-6 py-4">Blood Group</th>
+                <th className="px-6 py-4">Last Visit</th>
+                <th className="px-6 py-4">Diagnosis</th>
+                <th className="px-6 py-4">Follow-up</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {doctorPatientsData.map((dp, idx) => (
+                <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 text-sm font-semibold text-slate-700">{dp.id}</td>
+                  <td className="px-6 py-4 text-sm font-bold text-slate-900">{dp.name}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{dp.age}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{dp.gender}</td>
+                  <td className="px-6 py-4 text-sm font-medium text-red-500">{dp.bloodGroup}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{dp.lastVisit}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{dp.diagnosis}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{dp.followUp}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${dp.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {dp.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 flex justify-center">
+                    <button 
+                      onClick={() => {
+                        setEditingPatientId(dp.id);
+                        setNewPatientForm({ 
+                          name: dp.name, 
+                          phone: dp.phone || '',
+                          age: dp.age.toString(), 
+                          gender: dp.gender, 
+                          bloodGroup: dp.bloodGroup, 
+                          diagnosis: dp.diagnosis, 
+                          followUp: '', // skip date mapping for mock simplicity
+                          status: dp.status 
+                        });
+                        setIsNewPatientModalOpen(true);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-[#0052cc] hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Edit Patient"
+                    >
+                      <Edit className="size-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Search and Action Bar */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-slate-400" />
           <input 
             type="text" 
-            placeholder="Search by Patient ID or Mobile Number" 
+            placeholder="Search by Patient Name, ID or Mobile" 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0052cc]/20 focus:border-[#0052cc]"
           />
         </div>
-        <button 
-          onClick={() => handleOpenModal()}
-          className="px-6 py-3 bg-[#0052cc] hover:bg-cyan-800 text-white rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
-        >
-          <UserPlus className="size-4" /> Request Access
-        </button>
       </div>
-      {/* Filter and Sort Bar */}
+
+      {/* Filter Bar */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           {filters.map((filter) => (
@@ -144,208 +359,609 @@ export default function DoctorPatientsPage() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-50 self-start md:self-auto">
-          <span className="text-slate-400"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="21" y1="18" x2="3" y2="18"></line></svg></span>
-          Sort by: Recent
-          <ChevronDown className="size-4 text-slate-500 ml-1" />
-        </div>
       </div>
+
       {/* Patient Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {mockPatients.map((patient) => (
-          <div key={patient.id} className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] p-6 flex flex-col hover:border-cyan-200 transition-colors">
-            {/* Header: Avatar, Info, Menu */}
-            <div className="flex items-start gap-4 mb-6">
-              <div className={`size-14 rounded-full flex items-center justify-center shrink-0 ${patient.avatarBg} ${patient.avatarColor}`}>
-                <User className="size-6" />
+      {loading ? (
+        <div className="text-center p-12 text-slate-500 animate-pulse">Loading patients...</div>
+      ) : filteredPatients.length === 0 ? (
+        <div className="text-center p-12 text-slate-500 bg-white rounded-2xl border border-slate-200">No patients found.</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredPatients.map((patient) => (
+            <div key={patient.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col hover:border-cyan-200 transition-colors">
+              
+              <div className="flex items-start gap-4 mb-6">
+                <div className={`size-14 rounded-full flex items-center justify-center shrink-0 ${patient.avatarBg || 'bg-slate-100'} ${patient.avatarColor || 'text-slate-500'}`}>
+                  <User className="size-6" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between relative">
+                    <h3 className="font-bold text-slate-900 text-base truncate pr-2">{patient.name}</h3>
+                    <div className="relative">
+                      <button onClick={() => setActiveDropdown(activeDropdown === patient.id ? null : patient.id)} className="text-slate-400 hover:text-slate-600 shrink-0 relative z-20">
+                        <MoreVertical className="size-5" />
+                      </button>
+                      {activeDropdown === patient.id && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setActiveDropdown(null)}></div>
+                          <div className="absolute right-0 top-6 mt-1 w-40 bg-white border border-slate-200 rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] z-20 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                            <button 
+                              onClick={() => { 
+                                setEditingPatientId(patient.id);
+                                setNewPatientForm({
+                                  name: patient.name || '', phone: patient.mobile || '', age: patient.age?.toString() || '', gender: patient.gender || 'Male', bloodGroup: patient.bloodGroup || 'A+', diagnosis: patient.diagnosis || '', followUp: patient.followUp || '', status: patient.status || 'Treatment Ongoing'
+                                });
+                                setIsNewPatientModalOpen(true);
+                                setActiveDropdown(null); 
+                              }} 
+                              className="w-full text-left px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-[#0052cc] transition-colors"
+                            >
+                              Edit Details
+                            </button>
+                            <button 
+                              onClick={() => { setActiveDropdown(null); toast.info("Delete functionality not implemented yet"); }} 
+                              className="w-full text-left px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                            >
+                              Delete Patient
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-sm text-slate-500 mt-1 space-y-1">
+                    <p className="truncate">ID: {patient.id}</p>
+                    <p>Mobile: {patient.mobile}</p>
+                    <p>Age: {patient.age} • {patient.gender}</p>
+                  </div>
+                </div>
               </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-slate-900 text-base">{patient.name}</h3>
-                  <button className="text-slate-400 hover:text-slate-600"><MoreVertical className="size-5" /></button>
-                </div>
-                <div className="text-sm text-slate-500 mt-1 space-y-1">
-                  <p>Patient ID: {patient.id}</p>
-                  <p>Mobile: {patient.mobile}</p>
-                  <p>Age: {patient.age} • {patient.gender}</p>
-                </div>
+
+              {/* Status Section */}
+              <div className="mb-6 flex-1">
+                {patient.status === "Access Approved" && (
+                  <>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-emerald-600 border border-emerald-100 text-xs font-semibold mb-2">
+                      <CheckCircle2 className="size-3.5" /> Access Approved
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium ml-1">Valid till: {patient.validTill}</p>
+                  </>
+                )}
+                {patient.status === "Not Requested" && (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 text-slate-500 border border-slate-200 text-xs font-semibold mb-2">
+                    <UserPlus className="size-3.5" /> Not Requested
+                  </div>
+                )}
+                {patient.status === "Pending" && (
+                  <>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 text-orange-500 border border-orange-100 text-xs font-semibold mb-2">
+                      <Clock className="size-3.5" /> Pending
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium ml-1">Request sent: {patient.requestSent}</p>
+                    {/* TEST BUTTON - REMOVE IN PROD */}
+                    <button onClick={() => handleAutoApprove(patient.id)} className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] rounded hover:bg-green-200">Test: Auto Approve</button>
+                  </>
+                )}
+                {patient.status === "Rejected" && (
+                  <>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 text-red-500 border border-red-100 text-xs font-semibold mb-2">
+                      <XCircle className="size-3.5" /> Rejected
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium ml-1">Request rejected on: {patient.rejectedOn}</p>
+                  </>
+                )}
               </div>
-            </div>
-            {/* Status Section */}
-            <div className="mb-6 flex-1">
-              {patient.status === "Access Approved" && (
-                <>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white text-emerald-600 border border-emerald-100 text-xs font-semibold mb-2">
-                    <CheckCircle2 className="size-3.5" /> Access Approved
-                  </div>
-                  <p className="text-xs text-slate-500 font-medium ml-1">Valid till: {patient.validTill}</p>
-                </>
-              )}
-              {patient.status === "Not Requested" && (
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 text-slate-500 border border-slate-200 text-xs font-semibold mb-2">
-                  <UserPlus className="size-3.5" /> Not Requested
-                </div>
-              )}
-              {patient.status === "Pending" && (
-                <>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 text-orange-500 border border-orange-100 text-xs font-semibold mb-2">
-                    <Clock className="size-3.5" /> Pending
-                  </div>
-                  <p className="text-xs text-slate-500 font-medium ml-1">Request sent: {patient.requestSent}</p>
-                </>
-              )}
-              {patient.status === "Rejected" && (
-                <>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 text-red-500 border border-red-100 text-xs font-semibold mb-2">
-                    <XCircle className="size-3.5" /> Rejected
-                  </div>
-                  <p className="text-xs text-slate-500 font-medium ml-1">Request rejected on: {patient.rejectedOn}</p>
-                </>
-              )}
-            </div>
-            {/* Actions */}
-            <div className="flex items-center gap-3">
-              {patient.status === "Access Approved" && (
-                <>
+
+              {/* Actions */}
+              <div className="flex items-center gap-3 mt-auto">
+                {patient.status === "Access Approved" && (
                   <button 
                     onClick={() => handleOpenRecordsModal(patient)}
-                    className="flex-1 py-2.5 px-4 rounded-xl border-2 border-[#0052cc] text-[#0052cc] font-semibold text-sm hover:bg-cyan-50 transition-colors"
+                    className="w-full py-2.5 px-4 rounded-xl bg-[#0052cc] text-white font-semibold text-sm hover:bg-cyan-800 transition-colors flex justify-center items-center gap-2"
                   >
-                    View Records
+                    <FileText className="size-4" /> View Records
                   </button>
+                )}
+                {patient.status === "Not Requested" && (
                   <button 
-                    onClick={() => handleOpenRecordsModal(patient)}
-                    className="p-2.5 rounded-xl border-2 border-[#0052cc] text-[#0052cc] hover:bg-cyan-50 transition-colors"
+                    onClick={() => handleOpenRequestModal(patient)}
+                    className="w-full py-2.5 px-4 rounded-xl bg-[#0052cc] hover:bg-cyan-800 text-white font-semibold text-sm transition-colors"
                   >
-                    <FileText className="size-5" />
+                    Request Access
                   </button>
-                </>
-              )}
-              {patient.status === "Not Requested" && (
-                <button 
-                  onClick={() => handleOpenModal(patient)}
-                  className="w-full py-2.5 px-4 rounded-xl bg-[#0052cc] hover:bg-cyan-800 text-white font-semibold text-sm transition-colors"
-                >
-                  Request Access
-                </button>
-              )}
-              {patient.status === "Pending" && (
-                <button className="w-full py-2.5 px-4 rounded-xl border-2 border-[#0052cc] text-[#0052cc] font-semibold text-sm hover:bg-cyan-50 transition-colors">
-                  View Request
-                </button>
-              )}
-              {patient.status === "Rejected" && (
-                <button className="w-full py-2.5 px-4 rounded-xl border-2 border-[#0052cc] text-[#0052cc] font-semibold text-sm hover:bg-cyan-50 transition-colors">
-                  View Details
-                </button>
-              )}
+                )}
+                {patient.status === "Pending" && (
+                  <button disabled className="w-full py-2.5 px-4 rounded-xl bg-slate-100 text-slate-400 font-semibold text-sm cursor-not-allowed">
+                    Request Pending...
+                  </button>
+                )}
+                {patient.status === "Rejected" && (
+                  <button 
+                    onClick={() => handleOpenRequestModal(patient)}
+                    className="w-full py-2.5 px-4 rounded-xl border-2 border-[#0052cc] text-[#0052cc] font-semibold text-sm hover:bg-cyan-50 transition-colors"
+                  >
+                    Request Again
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-      {/* Modals */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          {modalType === "request" ? (
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-[420px] overflow-hidden">
-            <div className="p-5 flex items-center justify-between border-b border-slate-100">
-              <h2 className="text-lg font-bold text-slate-900">Request Access</h2>
-              <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-full p-1 transition-colors">
+          ))}
+        </div>
+      )}
+
+      {/* View Records Modal */}
+      {isModalOpen && modalType === "records" && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        </div>
+      )}
+
+      {/* New Patient Modal */}
+      {isNewPatientModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">{editingPatientId ? "Edit Patient" : "Add New Patient"}</h3>
+                <p className="text-sm text-slate-500">{editingPatientId ? "Update patient records and treatment details" : "Register a new patient for treatment"}</p>
+              </div>
+              <button 
+                onClick={() => setIsNewPatientModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+              >
                 <X className="size-5" />
               </button>
             </div>
-            <div className="p-6 space-y-5">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Patient</label>
-                <input 
-                  type="text" 
-                  readOnly 
-                  value={selectedPatientForModal ? `${selectedPatientForModal.name} (${selectedPatientForModal.id})` : ""}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 cursor-not-allowed"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Reason for Access</label>
-                <div className="relative">
-                  <select className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0052cc]/20 focus:border-[#0052cc]">
-                    <option>Consultation / Treatment</option>
-                    <option>Second Opinion</option>
-                    <option>Emergency Care</option>
-                  </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
+            
+            <div className="p-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Patient Name</label>
+                  <input 
+                    type="text" 
+                    value={newPatientForm.name}
+                    onChange={e => setNewPatientForm({...newPatientForm, name: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-[#0052cc] focus:ring-2 focus:ring-[#0052cc]/20 transition-all"
+                    placeholder="Enter patient name"
+                  />
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Duration</label>
-                <div className="relative">
-                  <select className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0052cc]/20 focus:border-[#0052cc]">
-                    <option>7 Days</option>
-                    <option>15 Days</option>
-                    <option>30 Days</option>
-                    <option>Permanent</option>
-                  </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Phone Number</label>
+                  <input 
+                    type="text" 
+                    value={newPatientForm.phone}
+                    onChange={e => setNewPatientForm({...newPatientForm, phone: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-[#0052cc] focus:ring-2 focus:ring-[#0052cc]/20 transition-all"
+                    placeholder="Enter 10-digit mobile number"
+                  />
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Additional Note (Optional)</label>
-                <textarea 
-                  rows={3}
-                  placeholder="Required to review previous reports for better diagnosis."
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0052cc]/20 focus:border-[#0052cc]"
-                ></textarea>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Age</label>
+                  <input 
+                    type="number" 
+                    value={newPatientForm.age}
+                    onChange={e => setNewPatientForm({...newPatientForm, age: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-[#0052cc] focus:ring-2 focus:ring-[#0052cc]/20 transition-all"
+                    placeholder="E.g. 45"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Gender</label>
+                  <select 
+                    value={newPatientForm.gender}
+                    onChange={e => setNewPatientForm({...newPatientForm, gender: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-[#0052cc] focus:ring-2 focus:ring-[#0052cc]/20 transition-all"
+                  >
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Blood Group</label>
+                  <select 
+                    value={newPatientForm.bloodGroup}
+                    onChange={e => setNewPatientForm({...newPatientForm, bloodGroup: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-[#0052cc] focus:ring-2 focus:ring-[#0052cc]/20 transition-all"
+                  >
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Status</label>
+                  <select 
+                    value={newPatientForm.status}
+                    onChange={e => setNewPatientForm({...newPatientForm, status: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-[#0052cc] focus:ring-2 focus:ring-[#0052cc]/20 transition-all"
+                  >
+                    <option value="Treatment Ongoing">Treatment Ongoing</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                </div>
+                
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Diagnosis</label>
+                  <input 
+                    type="text" 
+                    value={newPatientForm.diagnosis}
+                    onChange={e => setNewPatientForm({...newPatientForm, diagnosis: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-[#0052cc] focus:ring-2 focus:ring-[#0052cc]/20 transition-all"
+                    placeholder="Enter diagnosis details"
+                  />
+                </div>
+                
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Follow-up Date</label>
+                  <input 
+                    type="date" 
+                    value={newPatientForm.followUp}
+                    onChange={e => setNewPatientForm({...newPatientForm, followUp: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:border-[#0052cc] focus:ring-2 focus:ring-[#0052cc]/20 transition-all"
+                  />
+                </div>
               </div>
             </div>
-            <div className="p-5 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50">
+            
+            <div className="p-6 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50">
               <button 
-                onClick={handleCloseModal}
-                className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-200 border border-slate-200 bg-white rounded-xl transition-colors"
+                onClick={() => setIsNewPatientModalOpen(false)}
+                className="px-6 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
               >
                 Cancel
               </button>
               <button 
-                onClick={handleCloseModal}
-                className="px-5 py-2.5 text-sm font-semibold text-white bg-[#0052cc] hover:bg-cyan-800 rounded-xl transition-colors shadow-sm"
+                onClick={async () => {
+                  if(!newPatientForm.name || !newPatientForm.age) {
+                    toast.error("Please fill required fields");
+                    return;
+                  }
+                  
+                  try {
+                    if (editingPatientId) {
+                      // Update existing
+                      const res = await fetch(`/api/clinic/my-patients/${editingPatientId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newPatientForm)
+                      });
+                      if (res.ok) {
+                        toast.success("Patient updated successfully!");
+                      } else {
+                        toast.error("Failed to update patient");
+                      }
+                    } else {
+                      // Add new
+                      const res = await fetch('/api/clinic/my-patients', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newPatientForm)
+                      });
+                      if (res.ok) {
+                        toast.success("New patient added successfully!");
+                      } else {
+                        toast.error("Failed to add patient");
+                      }
+                    }
+                    fetchMyPatients();
+                    setIsNewPatientModalOpen(false);
+                    setEditingPatientId(null);
+                    setNewPatientForm({ name: '', phone: '', age: '', gender: 'Male', bloodGroup: 'A+', diagnosis: '', followUp: '', status: 'Treatment Ongoing' });
+                  } catch (e) {
+                    toast.error("An error occurred");
+                  }
+                }}
+                className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-[#0052cc] hover:bg-[#0043a8] shadow-sm shadow-[#0052cc]/20 transition-all"
               >
-                Send Request
+                {editingPatientId ? "Update Patient" : "Save Patient"}
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Modals */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          
+          {modalType === "request" ? (
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-[500px] overflow-hidden flex flex-col h-[85vh]">
+              <div className="p-5 flex items-center justify-between border-b border-slate-100 shrink-0">
+                <h2 className="text-lg font-bold text-slate-900">Request Report Access</h2>
+                <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-full p-1.5 transition-colors">
+                  <X className="size-5" />
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto space-y-6">
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1.5">Patient Name</label>
+                    <input 
+                      type="text" 
+                      readOnly 
+                      value={selectedPatient ? selectedPatient.name : ""}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1.5">Patient ID</label>
+                    <input 
+                      type="text" 
+                      readOnly 
+                      value={selectedPatient ? selectedPatient.id : ""}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-2">Report Type *</label>
+                  <div className="p-4 border border-slate-200 rounded-xl bg-slate-50/50">
+                    <label className="flex items-center gap-3 p-2 bg-white rounded-lg border border-slate-200 mb-3 cursor-pointer hover:border-[#0052cc] transition-colors shadow-sm">
+                      <input 
+                        type="checkbox" 
+                        checked={accessReportTypes.includes("All Reports")}
+                        onChange={(e) => {
+                          if (e.target.checked) setAccessReportTypes(["All Reports"]);
+                          else setAccessReportTypes([]);
+                        }}
+                        className="w-4 h-4 rounded border-slate-300 text-[#0052cc] focus:ring-[#0052cc]" 
+                      />
+                      <span className="font-semibold text-sm text-slate-800">All Reports</span>
+                    </label>
+                    
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 pl-2">
+                      {["Blood Test", "CBC", "Lipid Profile", "Thyroid Test", "Urine Test", "Liver Function Test", "Kidney Function Test", "X-Ray", "MRI", "CT Scan", "ECG", "Prescription", "Discharge Summary", "Other"].map(type => (
+                        <label key={type} className="flex items-center gap-2 cursor-pointer group">
+                          <input 
+                            type="checkbox" 
+                            checked={accessReportTypes.includes(type) && !accessReportTypes.includes("All Reports")}
+                            disabled={accessReportTypes.includes("All Reports")}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setAccessReportTypes(prev => prev.filter(t => t !== "All Reports").concat(type));
+                              } else {
+                                setAccessReportTypes(prev => prev.filter(t => t !== type));
+                              }
+                            }}
+                            className="w-3.5 h-3.5 rounded border-slate-300 text-[#0052cc] focus:ring-[#0052cc] disabled:opacity-50" 
+                          />
+                          <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 transition-colors disabled:opacity-50">{type}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Reason for Access *</label>
+                  <textarea 
+                    value={reason}
+                    onChange={e => setReason(e.target.value)}
+                    rows={3}
+                    placeholder="Required for diagnosis and follow-up treatment."
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0052cc]/20 focus:border-[#0052cc]"
+                  ></textarea>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Priority</label>
+                    <div className="relative">
+                      <select value={priority} onChange={e => setPriority(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0052cc]/20 focus:border-[#0052cc]">
+                        <option>Normal</option>
+                        <option>Urgent</option>
+                      </select>
+                      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Access Duration</label>
+                    <div className="relative">
+                      <select value={duration} onChange={e => setDuration(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0052cc]/20 focus:border-[#0052cc]">
+                        <option>24 Hours</option>
+                        <option>7 Days</option>
+                        <option>Until Patient Revokes</option>
+                      </select>
+                      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+              <div className="p-5 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50 shrink-0">
+                <button onClick={handleCloseModal} className="px-6 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 border border-slate-200 bg-white rounded-xl transition-colors">Cancel</button>
+                <button onClick={submitAccessRequest} disabled={isRequesting} className="px-6 py-2.5 text-sm font-bold text-white bg-[#0052cc] hover:bg-[#0042a3] rounded-xl transition-all shadow-sm shadow-[#0052cc]/20 disabled:opacity-50 flex items-center gap-2">
+                  {isRequesting ? "Sending..." : "Send Request"}
+                </button>
+              </div>
+            </div>
           ) : (
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="p-5 flex items-center justify-between border-b border-slate-100 shrink-0">
-              <h2 className="text-lg font-bold text-slate-900">Patient Records: {selectedPatientForModal?.name}</h2>
-              <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-full p-1 transition-colors">
+            // SPLIT VIEW RECORDS MODAL
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-6xl overflow-hidden flex flex-col h-[85vh]">
+              <div className="p-5 flex items-center justify-between border-b border-slate-100 shrink-0 bg-slate-50">
+                <div className="flex items-center gap-3">
+                  <div className={`size-10 rounded-full flex items-center justify-center shrink-0 ${selectedPatient?.avatarBg || 'bg-slate-100'} ${selectedPatient?.avatarColor || 'text-slate-500'}`}>
+                    <User className="size-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900">Patient Records: {selectedPatient?.name}</h2>
+                    <p className="text-xs text-slate-500">ID: {selectedPatient?.id}</p>
+                  </div>
+                </div>
+                <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full p-2 transition-colors">
+                  <X className="size-5" />
+                </button>
+              </div>
+              
+              <div className="flex flex-1 overflow-hidden">
+                {/* Left Sidebar - List of Records */}
+                <div className="w-1/3 border-r border-slate-100 bg-white overflow-y-auto p-4 space-y-3">
+                  {isLoadingRecords ? (
+                     <div className="text-center p-8 text-slate-400 animate-pulse text-sm">Loading records...</div>
+                  ) : records.length === 0 ? (
+                     <div className="text-center p-8 text-slate-400 text-sm border border-dashed rounded-xl border-slate-200 bg-slate-50">No records uploaded yet.</div>
+                  ) : (
+                    records.map((record) => (
+                      <div 
+                        key={record.id} 
+                        onClick={() => setSelectedRecord(record)}
+                        className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${
+                          selectedRecord?.id === record.id 
+                            ? "bg-cyan-50 border-[#0052cc]/30 shadow-sm" 
+                            : "bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50"
+                        }`}
+                      >
+                        <div className={`p-2 rounded-lg ${selectedRecord?.id === record.id ? "bg-[#0052cc] text-white" : "bg-cyan-50 text-[#0052cc]"}`}>
+                          <FileText className="size-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-semibold text-sm truncate ${selectedRecord?.id === record.id ? "text-[#0052cc]" : "text-slate-900"}`}>{record.title}</p>
+                          <p className="text-xs text-slate-500 truncate">{record.category} • {record.date}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Right Main Area - Document Viewer */}
+                <div className="w-2/3 bg-slate-100 flex flex-col relative">
+                  {!selectedRecord ? (
+                    <div className="m-auto flex flex-col items-center justify-center text-slate-400">
+                      <FileText className="size-16 mb-4 opacity-20" />
+                      <p className="text-sm font-medium">Select a record from the list to view it here.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between items-center mt-6 p-4 bg-slate-50 border border-slate-200 rounded-xl mx-6">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-white rounded-lg shadow-sm border border-slate-100">
+                            <FileText className="size-6 text-[#0052cc]" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-bold text-slate-800">{selectedRecord.title}</div>
+                            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{selectedRecord.type}</div>
+                          </div>
+                        </div>
+                        <a href={selectedRecord.fileUrl?.startsWith('http') ? selectedRecord.fileUrl : `/uploads/${selectedRecord.fileUrl}`} target="_blank" rel="noreferrer" className="text-xs font-semibold text-[#0052cc] hover:underline bg-cyan-50 px-3 py-1.5 rounded-lg">
+                          View Full Report
+                        </a>
+                      </div>
+                      <div className="mt-4 px-6 mb-6">
+                        {!selectedRecord.fileUrl ? (
+                          <img src="/dummy-report.png" alt="Dummy Medical Report" className="max-w-full h-auto object-contain rounded-lg shadow-sm bg-white mx-auto" />
+                        ) : selectedRecord.fileUrl?.match(/\.(jpeg|jpg|gif|png)$/i) || selectedRecord.fileUrl?.startsWith('http') ? (
+                          <img src={selectedRecord.fileUrl?.startsWith('http') ? selectedRecord.fileUrl : `/uploads/${selectedRecord.fileUrl}`} alt={selectedRecord.title} className="max-w-full h-auto object-contain rounded-lg shadow-sm bg-white mx-auto" />
+                        ) : (
+                          <iframe 
+                            src={selectedRecord.fileUrl?.startsWith('http') ? selectedRecord.fileUrl : `/uploads/${selectedRecord.fileUrl}`} 
+                            className="w-full h-[60vh] border border-slate-200 rounded-lg bg-white" 
+                            title={selectedRecord.title} 
+                          />
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Lab Test Request Modal */}
+      {isLabModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg border border-slate-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-indigo-50/50">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <FileText className="size-5 text-indigo-600" />
+                Send Lab Test Request
+              </h3>
+              <button onClick={() => setIsLabModalOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">
                 <X className="size-5" />
               </button>
             </div>
-            <div className="p-6 overflow-y-auto">
-              <div className="space-y-4">
-                {[
-                  { date: "15 May 2026", title: "Complete Blood Count", category: "Lab Report" },
-                  { date: "10 May 2026", title: "Lipid Profile", category: "Lab Report" },
-                  { date: "16 May 2026", title: "Brain MRI", category: "Imaging" },
-                  { date: "22 Apr 2026", title: "Thyroid Panel", category: "Lab Report" },
-                ].map((record, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 border border-slate-200 rounded-xl hover:border-cyan-200 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="p-2.5 bg-cyan-50 text-[#0052cc] rounded-lg">
-                        <FileText className="size-6" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-slate-900 text-sm md:text-base">{record.title}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{record.category} • {record.date}</p>
-                      </div>
-                    </div>
-                    <button className="px-4 py-2 text-sm font-semibold text-[#0052cc] bg-cyan-50 hover:bg-cyan-100 rounded-lg transition-colors">
-                      View
-                    </button>
-                  </div>
-                ))}
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Select Patient</label>
+                <select 
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+                  value={labForm.patientId}
+                  onChange={e => setLabForm({...labForm, patientId: e.target.value})}
+                >
+                  <option value="">-- Choose Patient --</option>
+                  {doctorPatientsData.map(dp => (
+                    <option key={dp.id} value={dp.id}>{dp.name} ({dp.id})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Select Laboratory</label>
+                <select 
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+                  value={labForm.labId}
+                  onChange={e => setLabForm({...labForm, labId: e.target.value})}
+                >
+                  <option value="">-- Choose Lab --</option>
+                  {labsList.map(lab => (
+                    <option key={lab.id} value={lab.id}>{lab.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Test Name</label>
+                <input 
+                  type="text" 
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  placeholder="e.g. Complete Blood Count (CBC)"
+                  value={labForm.labTestName}
+                  onChange={e => setLabForm({...labForm, labTestName: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Priority</label>
+                <div className="flex gap-3">
+                  {["Normal", "High", "Urgent"].map(p => (
+                    <label key={p} className={`flex-1 cursor-pointer border ${labForm.priority === p ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 hover:border-slate-300 text-slate-600'} rounded-xl px-4 py-3 flex items-center justify-center font-medium transition-colors`}>
+                      <input type="radio" name="priority" className="hidden" checked={labForm.priority === p} onChange={() => setLabForm({...labForm, priority: p})} />
+                      {p}
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+              <button 
+                onClick={() => setIsLabModalOpen(false)}
+                className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={submitLabRequest}
+                disabled={isSubmittingLab}
+                className="px-6 py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
+              >
+                {isSubmittingLab ? "Sending..." : "Send Request"}
+              </button>
+            </div>
           </div>
-          )}
         </div>
       )}
     </div>

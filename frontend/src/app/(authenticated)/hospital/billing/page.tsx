@@ -21,34 +21,100 @@ const AlertCircle = (props: any) => <svg {...props} xmlns="http://www.w3.org/200
 const Calendar = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>;
 const Receipt = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 17V7"></path><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"></path><path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z"></path></svg>;
 const User = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
-import { useState } from "react";
-const mockPatients = [
-  { id: "P-10234", name: "Rahul Sharma", mobile: "98XXXXX12" },
-  { id: "P-8845", name: "Elena Rodriguez", mobile: "98XXXXX11" },
-];
-const mockHistory = [
-  { id: "INV-2026-001", patient: "Rahul Sharma", date: "12 Jun 2026", amount: 1500, status: "Paid", items: "Consultation + Blood Test" },
-  { id: "INV-2026-002", patient: "Marcus Chen", date: "11 Jun 2026", amount: 850, status: "Pending", items: "Consultation" },
-  { id: "INV-2026-003", patient: "Elena Rodriguez", date: "10 Jun 2026", amount: 3200, status: "Paid", items: "Consultation + MRI Scan" },
-  { id: "INV-2026-004", patient: "Aisha Khan", date: "09 Jun 2026", amount: 1200, status: "Paid", items: "Consultation + X-Ray" },
-];
+const Paperclip = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>;
+const UploadCloud = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 13v8"></path><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="m8 17 4-4 4 4"></path></svg>;
+const Eye = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path><circle cx="12" cy="12" r="3"></circle></svg>;
+const X = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>;
+const ImageIcon = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>;
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+
 export default function BillingPage() {
   const [activeTab, setActiveTab] = useState<"generate" | "history">("generate");
+  
+  // Data State
+  const [patients, setPatients] = useState<any[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
   // Bill Generation State
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [consultationFee, setConsultationFee] = useState<number | "">("");
   const [testFee, setTestFee] = useState<number | "">("");
   const [paymentStatus, setPaymentStatus] = useState<"Paid" | "Pending">("Pending");
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [attachmentPreviewUrl, setAttachmentPreviewUrl] = useState<string | null>(null);
+
   const totalAmount = (Number(consultationFee) || 0) + (Number(testFee) || 0);
-  const handleGenerateBill = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetch("/api/hospital/billing/patients")
+      .then(res => res.json())
+      .then(data => setPatients(data))
+      .catch(err => console.error(err));
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "history") {
+      setLoadingHistory(true);
+      fetch("/api/hospital/billing/invoices")
+        .then(res => res.json())
+        .then(data => setHistory(data))
+        .catch(err => console.error(err))
+        .finally(() => setLoadingHistory(false));
+    }
+  }, [activeTab]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("File size must be less than 5MB");
+        return;
+      }
+      setAttachment(file);
+      const url = URL.createObjectURL(file);
+      setAttachmentPreviewUrl(url);
+    }
+  };
+
+  const handleRemoveAttachment = () => {
+    setAttachment(null);
+    setAttachmentPreviewUrl(null);
+  };
+
+  const handleGenerateBill = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert(`Bill generated for ₹${totalAmount} (${paymentStatus})`);
-    // Reset form
-    setSelectedPatientId("");
-    setConsultationFee("");
-    setTestFee("");
-    setPaymentStatus("Pending");
-    setActiveTab("history");
+    if (!selectedPatientId) return;
+
+    try {
+      const res = await fetch("/api/hospital/billing/invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patientId: selectedPatientId,
+          consultationFee: Number(consultationFee) || 0,
+          testFee: Number(testFee) || 0,
+          totalAmount,
+          status: paymentStatus
+        })
+      });
+
+      if (!res.ok) throw new Error("Failed to generate invoice");
+      
+      toast.success(`Bill generated successfully for ₹${totalAmount}`);
+      
+      // Reset form
+      setSelectedPatientId("");
+      setConsultationFee("");
+      setTestFee("");
+      setPaymentStatus("Pending");
+      setAttachment(null);
+      setAttachmentPreviewUrl(null);
+      setActiveTab("history");
+    } catch (error) {
+      toast.error("Failed to generate invoice");
+      console.error(error);
+    }
   };
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen">
@@ -95,8 +161,8 @@ export default function BillingPage() {
                   className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 outline-none text-slate-700 bg-white"
                 >
                   <option value="" disabled>Select a patient</option>
-                  {mockPatients.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.id})</option>
+                  {patients.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.phone})</option>
                   ))}
                 </select>
               </div>
@@ -134,6 +200,57 @@ export default function BillingPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+              <div className="pt-4 border-t border-slate-100">
+                <label className="block text-sm font-medium text-slate-700 mb-3">Bill Attachment</label>
+                {!attachment ? (
+                  <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:border-cyan-500 hover:bg-cyan-50/30 transition-colors relative">
+                    <input 
+                      type="file" 
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      onChange={handleFileChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <div className="size-10 bg-slate-100 rounded-full flex items-center justify-center mb-2">
+                      <UploadCloud className="size-5 text-slate-500" />
+                    </div>
+                    <p className="text-sm font-semibold text-slate-700">Drag & drop or click to upload</p>
+                    <p className="text-xs text-slate-500 mt-1">JPG, PNG, or PDF (max. 5MB)</p>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-4 border border-slate-200 rounded-xl bg-slate-50">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="p-2 bg-white rounded-lg shadow-sm border border-slate-200">
+                        <Paperclip className="size-4 text-cyan-600" />
+                      </div>
+                      <div className="truncate">
+                        <p className="text-sm font-semibold text-slate-700 truncate">{attachment.name}</p>
+                        <p className="text-xs text-slate-500">{(attachment.size / 1024 / 1024).toFixed(2)} MB</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {attachmentPreviewUrl && (
+                        <a 
+                          href={attachmentPreviewUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 text-cyan-600 hover:bg-cyan-100 rounded-md transition-colors"
+                          title="Preview"
+                        >
+                          <Eye className="size-4" />
+                        </a>
+                      )}
+                      <button 
+                        type="button"
+                        onClick={handleRemoveAttachment}
+                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                        title="Remove"
+                      >
+                        <X className="size-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="pt-4 border-t border-slate-100">
                 <label className="block text-sm font-medium text-slate-700 mb-3">Initial Payment Status</label>
@@ -185,9 +302,23 @@ export default function BillingPage() {
           {/* Invoice Preview */}
           <div className="bg-slate-100/50 rounded-2xl border border-slate-200 p-8 flex flex-col items-center justify-center text-center relative overflow-hidden">
              <div className="absolute top-0 left-0 w-full h-2 bg-cyan-600" />
-             <FileText className="size-16 text-slate-300 mb-4" />
-             <h3 className="text-lg font-semibold text-slate-700 mb-2">Invoice Preview</h3>
-             {totalAmount > 0 && selectedPatientId && (
+             
+             {attachmentPreviewUrl ? (
+               <div className="w-full h-full min-h-[400px] bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                 {attachment?.type?.includes("pdf") ? (
+                   <iframe src={attachmentPreviewUrl} className="w-full h-full min-h-[400px]" />
+                 ) : (
+                   <img src={attachmentPreviewUrl} alt="Bill Preview" className="w-full h-full object-contain" />
+                 )}
+               </div>
+             ) : (
+               <>
+                 <FileText className="size-16 text-slate-300 mb-4" />
+                 <h3 className="text-lg font-semibold text-slate-700 mb-2">Invoice Preview</h3>
+               </>
+             )}
+             
+             {!attachmentPreviewUrl && totalAmount > 0 && selectedPatientId && (
                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm w-full max-w-sm text-left">
                  <div className="flex justify-between items-start mb-6">
                    <div>
@@ -246,36 +377,46 @@ export default function BillingPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {mockHistory.map((invoice) => (
-                  <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-4 px-4 font-medium text-cyan-600">{invoice.id}</td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-2">
-                        <div className="size-6 bg-slate-100 rounded-full flex items-center justify-center text-xs font-bold text-slate-600">
-                          {invoice.patient.charAt(0)}
-                        </div>
-                        <span className="font-medium text-slate-800">{invoice.patient}</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-slate-600"><div className="flex items-center gap-1.5"><Calendar className="size-3.5" />{invoice.date}</div></td>
-                    <td className="py-4 px-4 text-slate-600 truncate max-w-[150px]" title={invoice.items}>{invoice.items}</td>
-                    <td className="py-4 px-4 font-semibold text-slate-900">₹{invoice.amount}</td>
-                    <td className="py-4 px-4">
-                      <span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${
-                        invoice.status === "Paid" 
-                          ? "bg-white text-emerald-700 border-emerald-200" 
-                          : "bg-amber-50 text-amber-700 border-amber-200"
-                      }`}>
-                        {invoice.status}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-right">
-                      <button className="p-2 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors" title="Download Invoice">
-                        <Download className="size-4" />
-                      </button>
-                    </td>
+                {loadingHistory ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-slate-500 animate-pulse">Loading history...</td>
                   </tr>
-                ))}
+                ) : history.length > 0 ? (
+                  history.map((invoice) => (
+                    <tr key={invoice.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="py-4 px-4 font-medium text-cyan-600 truncate max-w-[100px]" title={invoice.id}>{invoice.id.split('-')[0]}...</td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="size-6 bg-slate-100 rounded-full flex items-center justify-center text-xs font-bold text-slate-600">
+                            {invoice.patient.charAt(0)}
+                          </div>
+                          <span className="font-medium text-slate-800">{invoice.patient}</span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-slate-600"><div className="flex items-center gap-1.5"><Calendar className="size-3.5" />{invoice.date}</div></td>
+                      <td className="py-4 px-4 text-slate-600 truncate max-w-[150px]" title={invoice.items}>{invoice.items}</td>
+                      <td className="py-4 px-4 font-semibold text-slate-900">₹{invoice.amount}</td>
+                      <td className="py-4 px-4">
+                        <span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${
+                          invoice.status === "Paid" 
+                            ? "bg-white text-emerald-700 border-emerald-200" 
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}>
+                          {invoice.status}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <button className="p-2 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors" title="Download Invoice">
+                          <Download className="size-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-slate-500">No invoices found.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

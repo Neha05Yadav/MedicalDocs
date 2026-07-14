@@ -1,6 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { 
   TestRequestDonutChartWrapper, 
   ReportsSummaryDonutChartWrapper, 
@@ -13,12 +15,9 @@ const FileText = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/s
 const Users = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><path d="M16 3.128a4 4 0 0 1 0 7.744"></path><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><circle cx="9" cy="7" r="4"></circle></svg>;
 const Bell = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>;
 const User = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
-const Activity = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"></path></svg>;
-const CheckCircle2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>;
 const TestTube2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 7 6.82 21.18a2.83 2.83 0 0 1-3.99-.01a2.83 2.83 0 0 1 0-4L17 3"></path><path d="m16 2 6 6"></path><path d="M12 16H4"></path></svg>;
 const Microscope = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 18h8"></path><path d="M3 22h18"></path><path d="M14 22a7 7 0 1 0 0-14h-1"></path><path d="M9 14h2"></path><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"></path><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"></path></svg>;
-const Snowflake = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m10 20-1.25-2.5L6 18"></path><path d="M10 4 8.75 6.5 6 6"></path><path d="m14 20 1.25-2.5L18 18"></path><path d="m14 4 1.25 2.5L18 6"></path><path d="m17 21-3-6h-4"></path><path d="m17 3-3 6 1.5 3"></path><path d="M2 12h6.5L10 9"></path><path d="m20 10-1.5 2 1.5 2"></path><path d="M22 12h-6.5L14 15"></path><path d="m4 10 1.5 2L4 14"></path><path d="m7 21 3-6-1.5-3"></path><path d="m7 3 3 6h4"></path></svg>;
-const Trash2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
+const CheckCircle2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>;
 
 const patientChartData = [
   { name: 'Jan', patients: 25 },
@@ -28,35 +27,58 @@ const patientChartData = [
   { name: 'May', patients: 60 },
   { name: 'Jun', patients: 90 },
 ];
-const testRequestOverviewData = [
-  { name: 'Received', value: 48, color: '#06b6d4' },
-  { name: 'In Progress', value: 35, color: '#10b981' },
-  { name: 'Sample Collected', value: 25, color: '#a855f7' },
-  { name: 'Cancelled', value: 20, color: '#f59e0b' },
-];
-const reportsSummaryData = [
-  { name: 'Completed', value: 64, color: '#10b981' },
-  { name: 'Pending', value: 32, color: '#06b6d4' },
-  { name: 'Verified', value: 24, color: '#a855f7' },
-];
-const recentTestRequests = [
-  { id: "TRF-250516-001", patient: "Rahul Kumar", tests: "CBC, RBS, Lipid Profile", status: "Received" },
-  { id: "TRF-250516-002", patient: "Priya Sharma", tests: "Thyroid Profile", status: "In Progress" },
-  { id: "TRF-250516-003", patient: "Amit Verma", tests: "Liver Function Test", status: "Sample Collected" },
-  { id: "TRF-250516-004", patient: "Neha Singh", tests: "Vitamin D, B12", status: "Received" },
-  { id: "TRF-250516-005", patient: "Suresh Patel", tests: "Kidney Function Test", status: "In Progress" },
-];
 
 const getStatusStyles = (status: string) => {
   switch (status) {
-    case "Received": return "bg-cyan-50 text-cyan-600";
-    case "In Progress": return "bg-white text-emerald-600";
-    case "Sample Collected": return "bg-purple-50 text-purple-600";
-    default: return "bg-slate-50 text-muted-foreground";
+    case "Pending": return "bg-amber-50 text-amber-600 border border-amber-200";
+    case "Accepted": return "bg-cyan-50 text-cyan-600 border border-cyan-200";
+    case "Tested": return "bg-purple-50 text-purple-600 border border-purple-200";
+    case "Completed": return "bg-emerald-50 text-emerald-600 border border-emerald-200";
+    case "Cancelled": return "bg-red-50 text-red-600 border border-red-200";
+    default: return "bg-slate-50 text-muted-foreground border border-slate-200";
   }
 }
 
 export default function LaboratoryDashboard() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchOverview();
+  }, []);
+
+  const fetchOverview = async () => {
+    try {
+      const res = await fetch("/api/laboratory/overview", { headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` } });
+      if (res.ok) {
+        const jsonData = await res.json();
+        setData(jsonData);
+      }
+    } catch (e) {
+      toast.error("Failed to fetch lab overview data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="p-12 text-center min-h-screen text-slate-500">Loading Dashboard...</div>;
+  }
+
+  if (!data) return null;
+
+  const { kpis, testRequestOverviewData, reportsSummaryData, recentTestRequests, recentNotifications = [] } = data;
+
+  const getNotificationIcon = (type: string) => {
+    switch(type) {
+      case 'Alert': return <div className="p-3 bg-orange-50 text-orange-500 rounded-full shrink-0"><Bell className="size-5" /></div>;
+      case 'Request': return <div className="p-3 bg-cyan-50 text-cyan-600 rounded-full shrink-0"><ClipboardList className="size-5" /></div>;
+      case 'Report': return <div className="p-3 bg-white text-emerald-600 rounded-full shrink-0"><CheckCircle2 className="size-5" /></div>;
+      case 'Sample': return <div className="p-3 bg-purple-50 text-purple-600 rounded-full shrink-0"><TestTube2 className="size-5" /></div>;
+      default: return <div className="p-3 bg-cyan-50 text-cyan-600 rounded-full shrink-0"><Bell className="size-5" /></div>;
+    }
+  };
+
   return (
     <div className="p-8 max-w-[1600px] mx-auto w-full min-h-screen font-sans">
       {/* ROW 1: KPIs */}
@@ -65,12 +87,11 @@ export default function LaboratoryDashboard() {
         <div className="bg-card rounded-2xl border border-border shadow-sm p-6 xl:col-span-1">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 bg-cyan-50 text-cyan-500 rounded-lg"><ClipboardList className="size-5" /></div>
-            <span className="font-bold text-card-foreground text-[13px]">Test Requests</span>
+            <span className="font-bold text-card-foreground text-[13px]">Total Requests</span>
           </div>
           <div className="flex items-end justify-between">
             <div>
-              <h3 className="text-3xl font-extrabold text-foreground">128</h3>
-              <p className="text-xs font-bold text-cyan-500 mt-1">+18 today</p>
+              <h3 className="text-3xl font-extrabold text-foreground">{kpis.totalRequests}</h3>
             </div>
             <div className="w-16 h-10">
               <StaticSparkline color="#06b6d4" />
@@ -81,28 +102,26 @@ export default function LaboratoryDashboard() {
         <div className="bg-card rounded-2xl border border-border shadow-sm p-6 xl:col-span-1">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 bg-white text-emerald-500 rounded-lg"><FileText className="size-5" /></div>
-            <span className="font-bold text-card-foreground text-[13px]">Reports Generated</span>
+            <span className="font-bold text-card-foreground text-[13px]">Completed Reports</span>
           </div>
           <div className="flex items-end justify-between">
             <div>
-              <h3 className="text-3xl font-extrabold text-foreground">96</h3>
-              <p className="text-xs font-bold text-emerald-500 mt-1">+14 today</p>
+              <h3 className="text-3xl font-extrabold text-foreground">{kpis.completedReports}</h3>
             </div>
             <div className="w-16 h-10">
               <StaticSparkline color="#10b981" />
             </div>
           </div>
         </div>
-        {/* Samples Received */}
+        {/* In Progress */}
         <div className="bg-card rounded-2xl border border-border shadow-sm p-6 xl:col-span-1">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><TestTube2 className="size-5" /></div>
-            <span className="font-bold text-card-foreground text-[13px]">Samples Received</span>
+            <span className="font-bold text-card-foreground text-[13px]">In Progress</span>
           </div>
           <div className="flex items-end justify-between">
             <div>
-              <h3 className="text-3xl font-extrabold text-foreground">112</h3>
-              <p className="text-xs font-bold text-purple-600 mt-1">+16 today</p>
+              <h3 className="text-3xl font-extrabold text-foreground">{kpis.inProgress}</h3>
             </div>
             <div className="w-16 h-10">
               <StaticSparkline color="#a855f7" />
@@ -117,8 +136,7 @@ export default function LaboratoryDashboard() {
           </div>
           <div className="flex items-end justify-between">
             <div>
-              <h3 className="text-3xl font-extrabold text-foreground">342</h3>
-              <p className="text-xs font-bold text-orange-500 mt-1">+21 today</p>
+              <h3 className="text-3xl font-extrabold text-foreground">{kpis.totalPatients}</h3>
             </div>
             <div className="w-16 h-10">
               <StaticSparkline color="#f97316" />
@@ -127,12 +145,15 @@ export default function LaboratoryDashboard() {
         </div>
         {/* Pending Reports */}
         <div className="bg-card rounded-2xl border border-border shadow-sm p-6 xl:col-span-1 flex flex-col items-center justify-center text-center">
-          <div className="p-3 bg-cyan-50 text-cyan-500 rounded-full mb-3"><User className="size-6" /></div>
+          <div className="p-3 bg-amber-50 text-amber-500 rounded-full mb-3"><User className="size-6" /></div>
           <span className="font-bold text-card-foreground text-sm">Pending Reports</span>
-          <h3 className="text-3xl font-extrabold text-foreground my-1">32</h3>
-          <p className="text-[11px] font-bold text-cyan-500 uppercase tracking-wider cursor-pointer hover:underline">View all</p>
+          <h3 className="text-3xl font-extrabold text-foreground my-1">{kpis.pendingReports}</h3>
+          <Link href="/laboratory/test-requests">
+            <p className="text-[11px] font-bold text-cyan-500 uppercase tracking-wider cursor-pointer hover:underline">View all</p>
+          </Link>
         </div>
       </div>
+      
       {/* ROW 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Test Request Overview Donut */}
@@ -144,12 +165,12 @@ export default function LaboratoryDashboard() {
             <div className="w-36 h-36 relative flex-shrink-0">
               <TestRequestDonutChartWrapper data={testRequestOverviewData} />
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-2xl font-extrabold text-foreground">128</span>
+                <span className="text-2xl font-extrabold text-foreground">{kpis.totalRequests}</span>
                 <span className="text-[10px] font-bold text-muted-foreground uppercase">Total</span>
               </div>
             </div>
             <div className="flex-1 space-y-4">
-              {testRequestOverviewData.map(item => (
+              {testRequestOverviewData.map((item: any) => (
                 <div key={item.name} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="size-2 rounded-full" style={{ backgroundColor: item.color }}></div>
@@ -161,7 +182,7 @@ export default function LaboratoryDashboard() {
             </div>
           </div>
         </div>
-        {/* Recent Test Requests Table */}
+        
         <div className="bg-card rounded-2xl border border-border shadow-sm p-6 lg:col-span-2 flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-bold text-card-foreground text-sm">Recent Test Requests</h3>
@@ -171,11 +192,24 @@ export default function LaboratoryDashboard() {
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                <tr>
+                  <th className="px-2 py-3">ID</th>
+                  <th className="px-2 py-3">Patient</th>
+                  <th className="px-2 py-3">Origin</th>
+                  <th className="px-2 py-3">Test</th>
+                  <th className="px-2 py-3 text-right">Status</th>
+                </tr>
+              </thead>
               <tbody className="divide-y divide-slate-50">
-                {recentTestRequests.map(req => (
+                {recentTestRequests.length > 0 ? recentTestRequests.map((req: any) => (
                   <tr key={req.id} className="hover:bg-slate-50/50">
-                    <td className="py-3 px-2 font-medium text-muted-foreground text-xs">{req.id}</td>
+                    <td className="py-3 px-2 font-medium text-muted-foreground text-xs">{req.id.split('-')[0]}...</td>
                     <td className="py-3 px-2 font-bold text-foreground text-[13px]">{req.patient}</td>
+                    <td className="py-3 px-2">
+                      <p className="font-semibold text-slate-800 text-xs">{req.clinicName}</p>
+                      <p className="text-[10px] text-muted-foreground">{req.doctorName}</p>
+                    </td>
                     <td className="py-3 px-2 text-muted-foreground text-xs">{req.tests}</td>
                     <td className="py-3 px-2 text-right">
                       <span className={`inline-block px-3 py-1 rounded-md text-[10px] font-bold tracking-wider ${getStatusStyles(req.status)}`}>
@@ -183,19 +217,24 @@ export default function LaboratoryDashboard() {
                       </span>
                     </td>
                   </tr>
-                ))}
+                )) : (
+                  <tr>
+                    <td colSpan={5} className="py-10 text-center text-slate-500">No test requests found.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         </div>
       </div>
+      
       {/* ROW 3 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Reports Summary Donut */}
         <div className="bg-card rounded-2xl border border-border shadow-sm p-6 lg:col-span-1">
           <div className="flex justify-between items-center mb-8">
             <h3 className="font-bold text-card-foreground text-sm">Reports Summary</h3>
-            <Link href="/laboratory/reports">
+            <Link href="/laboratory/test-requests">
               <span className="text-xs font-bold text-cyan-600 cursor-pointer hover:underline">View all</span>
             </Link>
           </div>
@@ -203,12 +242,12 @@ export default function LaboratoryDashboard() {
             <div className="w-36 h-36 relative flex-shrink-0">
               <ReportsSummaryDonutChartWrapper data={reportsSummaryData} />
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-2xl font-extrabold text-foreground">96</span>
+                <span className="text-2xl font-extrabold text-foreground">{kpis.totalRequests}</span>
                 <span className="text-[10px] font-bold text-muted-foreground uppercase">Total</span>
               </div>
             </div>
             <div className="flex-1 space-y-4">
-              {reportsSummaryData.map(item => (
+              {reportsSummaryData.map((item: any) => (
                 <div key={item.name} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="size-2 rounded-full" style={{ backgroundColor: item.color }}></div>
@@ -220,49 +259,47 @@ export default function LaboratoryDashboard() {
             </div>
           </div>
         </div>
+        
         {/* Sample Management Grid */}
         <div className="bg-card rounded-2xl border border-border shadow-sm p-6 lg:col-span-1">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-bold text-card-foreground text-sm">Sample Management</h3>
-            <Link href="/laboratory/sample-management">
+            <Link href="/laboratory/test-requests">
               <span className="text-xs font-bold text-cyan-600 cursor-pointer hover:underline">View all</span>
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            {/* Samples Received */}
             <div className="bg-card border border-border shadow-sm rounded-xl p-4 flex items-center justify-center gap-3 text-center md:text-left md:justify-start">
               <div className="hidden sm:block p-2 bg-purple-50 text-purple-600 rounded-lg shrink-0"><TestTube2 className="size-5" /></div>
               <div>
                 <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider leading-tight">Samples<br/>Received</p>
-                <p className="text-xl font-bold text-foreground leading-none mt-1.5">112</p>
+                <p className="text-xl font-bold text-foreground leading-none mt-1.5">{kpis.inProgress}</p>
               </div>
             </div>
-            {/* In Testing */}
             <div className="bg-card border border-border shadow-sm rounded-xl p-4 flex items-center justify-center gap-3 text-center md:text-left md:justify-start">
               <div className="hidden sm:block p-2 bg-purple-50 text-purple-600 rounded-lg shrink-0"><Microscope className="size-5" /></div>
               <div>
                 <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider leading-tight">In<br/>Testing</p>
-                <p className="text-xl font-bold text-foreground leading-none mt-1.5">45</p>
+                <p className="text-xl font-bold text-foreground leading-none mt-1.5">{kpis.inProgress}</p>
               </div>
             </div>
-            {/* Completed Tests */}
             <div className="bg-card border border-border shadow-sm rounded-xl p-4 flex items-center justify-center gap-3 text-center md:text-left md:justify-start">
               <div className="hidden sm:block p-2 bg-white text-emerald-600 rounded-lg shrink-0"><CheckCircle2 className="size-5" /></div>
               <div>
                 <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider leading-tight">Completed<br/>Tests</p>
-                <p className="text-xl font-bold text-foreground leading-none mt-1.5">64</p>
+                <p className="text-xl font-bold text-foreground leading-none mt-1.5">{kpis.completedReports}</p>
               </div>
             </div>
-            {/* Reports Ready */}
             <div className="bg-card border border-border shadow-sm rounded-xl p-4 flex items-center justify-center gap-3 text-center md:text-left md:justify-start">
               <div className="hidden sm:block p-2 bg-cyan-50 text-cyan-600 rounded-lg shrink-0"><FileText className="size-5" /></div>
               <div>
                 <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider leading-tight">Reports<br/>Ready</p>
-                <p className="text-xl font-bold text-foreground leading-none mt-1.5">32</p>
+                <p className="text-xl font-bold text-foreground leading-none mt-1.5">{kpis.completedReports}</p>
               </div>
             </div>
           </div>
         </div>
+        
         {/* Patients Overview Line Chart */}
         <div className="bg-card rounded-2xl border border-border shadow-sm p-6 lg:col-span-1">
           <div className="flex justify-between items-center mb-6">
@@ -276,6 +313,7 @@ export default function LaboratoryDashboard() {
           </div>
         </div>
       </div>
+      
       {/* ROW 4 */}
       <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
         <div className="flex justify-between items-center mb-6">
@@ -285,40 +323,23 @@ export default function LaboratoryDashboard() {
           </Link>
         </div>
         <div className="flex flex-col md:flex-row gap-6 md:divide-x divide-slate-100">
-          <div className="flex-1 flex items-start gap-4 px-2">
-            <div className="p-3 bg-cyan-50 text-cyan-600 rounded-full shrink-0"><ClipboardList className="size-5" /></div>
-            <div>
-              <p className="font-bold text-foreground text-[13px]">New test request received</p>
-              <p className="text-xs font-semibold text-muted-foreground mt-1">TRF-250516-006</p>
-              <p className="text-[10px] font-bold text-slate-400 mt-1.5 uppercase tracking-wider">5 minutes ago</p>
+          {recentNotifications.length > 0 ? recentNotifications.map((notif: any, i: number) => (
+            <div key={notif.id} className={`flex-1 flex items-start gap-4 px-2 ${i !== 0 ? 'md:pl-6' : ''}`}>
+              {getNotificationIcon(notif.type)}
+              <div>
+                <p className="font-bold text-foreground text-[13px]">{notif.title}</p>
+                <p className="text-xs font-semibold text-muted-foreground mt-1">{notif.message}</p>
+                <p className="text-[10px] font-bold text-slate-400 mt-1.5 uppercase tracking-wider">
+                  {new Date(notif.createdAt).toLocaleDateString()}
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="flex-1 flex items-start gap-4 px-2 md:pl-6">
-            <div className="p-3 bg-white text-emerald-600 rounded-full shrink-0"><CheckCircle2 className="size-5" /></div>
-            <div>
-              <p className="font-bold text-foreground text-[13px]">Report generated</p>
-              <p className="text-xs font-semibold text-muted-foreground mt-1">TRF-250516-001</p>
-              <p className="text-[10px] font-bold text-slate-400 mt-1.5 uppercase tracking-wider">25 minutes ago</p>
-            </div>
-          </div>
-          <div className="flex-1 flex items-start gap-4 px-2 md:pl-6">
-            <div className="p-3 bg-purple-50 text-purple-600 rounded-full shrink-0"><TestTube2 className="size-5" /></div>
-            <div>
-              <p className="font-bold text-foreground text-[13px]">Sample collected</p>
-              <p className="text-xs font-semibold text-muted-foreground mt-1">Rahul Kumar</p>
-              <p className="text-[10px] font-bold text-slate-400 mt-1.5 uppercase tracking-wider">1 hour ago</p>
-            </div>
-          </div>
-          <div className="flex-1 flex items-start gap-4 px-2 md:pl-6">
-            <div className="p-3 bg-orange-50 text-orange-500 rounded-full shrink-0"><Bell className="size-5" /></div>
-            <div>
-              <p className="font-bold text-foreground text-[13px]">System maintenance</p>
-              <p className="text-xs font-semibold text-muted-foreground mt-1">Scheduled on 18 May</p>
-              <p className="text-[10px] font-bold text-slate-400 mt-1.5 uppercase tracking-wider">2 hours ago</p>
-            </div>
-          </div>
+          )) : (
+            <p className="text-slate-500 text-sm px-2">No new notifications.</p>
+          )}
         </div>
       </div>
+      
     </div>
   );
 }

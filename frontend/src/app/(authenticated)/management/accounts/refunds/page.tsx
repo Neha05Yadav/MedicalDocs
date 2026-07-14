@@ -14,18 +14,29 @@ const ChevronDown = (props: any) => <svg {...props} xmlns="http://www.w3.org/200
 
 
 
-import React, { useState } from 'react';
-const mockRefunds = [
-  { id: "REF-0012", client: "City Care Hospital", date: "22 Jun 2026", amount: "₹45,000", reason: "Duplicate payment for Invoice INV-2026-089", status: "Pending" },
-  { id: "REF-0011", client: "Dr. Ramesh Kumar", date: "20 Jun 2026", amount: "₹5,000", reason: "Subscription cancelled within cooling period", status: "Approved" },
-  { id: "REF-0010", client: "Apex Laboratories", date: "15 Jun 2026", amount: "₹12,500", reason: "Service downgrade requested mid-billing cycle", status: "Rejected" },
-  { id: "REF-0009", client: "Metro Health", date: "10 Jun 2026", amount: "₹85,000", reason: "Overcharged on annual enterprise renewal", status: "Approved" },
-];
+import React, { useState, useEffect } from 'react';
+
 export default function RefundsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedRefund, setSelectedRefund] = useState<any>(null);
-  const filteredRefunds = mockRefunds.filter(ref => {
+  const [refunds, setRefunds] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/management/accounts/refunds')
+      .then(res => res.json())
+      .then(data => {
+        setRefunds(data.refunds || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to load refunds", err);
+        setLoading(false);
+      });
+  }, []);
+
+  const filteredRefunds = refunds.filter(ref => {
     const matchesSearch = ref.client.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           ref.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           ref.reason.toLowerCase().includes(searchTerm.toLowerCase());
@@ -78,7 +89,15 @@ export default function RefundsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredRefunds.map((ref, idx) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="flex justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredRefunds.map((ref, idx) => (
                 <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="font-bold text-slate-900">{ref.id}</div>

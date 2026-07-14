@@ -14,18 +14,27 @@ const Smartphone = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000
 
 
 
-import React, { useState } from 'react';
-const mockPayments = [
-  { id: "TXN-90182", client: "City Care Hospital", amount: "₹45,000", date: "22 Jun 2026, 10:30 AM", method: "Credit Card", status: "Success", type: "Hospital" },
-  { id: "TXN-90183", client: "Dr. Ramesh Kumar", amount: "₹5,000", date: "21 Jun 2026, 02:15 PM", method: "UPI", status: "Success", type: "Doctor" },
-  { id: "TXN-90184", client: "Apex Laboratories", amount: "₹12,500", date: "20 Jun 2026, 11:45 AM", method: "Netbanking", status: "Success", type: "Lab" },
-  { id: "TXN-90185", client: "Sunrise Clinic", amount: "₹25,000", date: "19 Jun 2026, 09:20 AM", method: "Credit Card", status: "Success", type: "Hospital" },
-  { id: "TXN-90186", client: "Dr. Priya Patel", amount: "₹5,000", date: "18 Jun 2026, 04:50 PM", method: "UPI", status: "Success", type: "Doctor" },
-  { id: "TXN-90187", Global: "Global Diagnostics", client: "Global Diagnostics", amount: "₹12,500", date: "17 Jun 2026, 01:10 PM", method: "Netbanking", status: "Success", type: "Lab" },
-];
+import React, { useState, useEffect } from 'react';
+
 export default function PaymentsReceivedPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const filteredPayments = mockPayments.filter(pay => 
+  const [payments, setPayments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/management/accounts/payments?status=Successful')
+      .then(res => res.json())
+      .then(data => {
+        setPayments(data.payments || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to load payments", err);
+        setLoading(false);
+      });
+  }, []);
+
+  const filteredPayments = payments.filter(pay => 
     pay.client.toLowerCase().includes(searchTerm.toLowerCase()) || 
     pay.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -65,7 +74,15 @@ export default function PaymentsReceivedPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredPayments.map((pay, idx) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="flex justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredPayments.map((pay, idx) => (
                 <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="font-bold text-slate-900">{pay.id}</div>
@@ -76,7 +93,7 @@ export default function PaymentsReceivedPage() {
                     <div className="text-[11px] font-bold text-indigo-600 mt-0.5">{pay.type}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="font-black text-slate-900 text-base">{pay.amount}</span>
+                    <span className="font-black text-slate-900 text-base">₹{pay.amount.toLocaleString()}</span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-slate-600 font-medium">

@@ -1,67 +1,162 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
+const FileText = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>;
+const Search = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>;
+const Filter = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"></path></svg>;
+const Eye = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path><circle cx="12" cy="12" r="3"></circle></svg>;
+const Calendar = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>;
+const User = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
+const UploadCloud = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 13v8"></path><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="m8 17 4-4 4 4"></path></svg>;
+const X = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>;
+const FileUp = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M12 12v6"></path><path d="m15 15-3-3-3 3"></path></svg>;
+const CheckCircle2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>;
+const ChevronDown = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"></path></svg>;
+const Plus = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>;
+const FlaskConical = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"></path><path d="M6.453 15h11.094"></path><path d="M8.5 2h7"></path></svg>;
 
-
-
-
-
-
-
-
-
-
-const FileText = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>;
-const Search = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>;
-const Filter = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"></path></svg>;
-const Download = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg>;
-const Eye = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path><circle cx="12" cy="12" r="3"></circle></svg>;
-const Calendar = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>;
-const User = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
-const UploadCloud = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 13v8"></path><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="m8 17 4-4 4 4"></path></svg>;
-const X = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>;
-const FileUp = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M12 12v6"></path><path d="m15 15-3-3-3 3"></path></svg>;
-const CheckCircle2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>;
-const ChevronDown = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>;
-import { useState, useRef } from "react";
-// Mock data
-const mockReports = [
-  { id: "REP001", patientName: "Rahul Sharma", patientId: "PAT001", title: "Complete Blood Count", category: "Lab Report", date: "15 May 2025", size: "1.2 MB", status: "Unread" },
-  { id: "REP002", patientName: "Rahul Sharma", patientId: "PAT001", title: "Lipid Profile", category: "Lab Report", date: "10 May 2025", size: "0.8 MB", status: "Read" },
-  { id: "REP003", patientName: "Priya Singh", patientId: "PAT002", title: "Brain MRI", category: "Imaging", date: "16 May 2025", size: "15.4 MB", status: "Unread" },
-  { id: "REP004", patientName: "Aman Singh", patientId: "PAT003", title: "Chest X-Ray", category: "X-Ray", date: "12 May 2025", size: "5.1 MB", status: "Read" },
-];
 export default function DoctorReportsPage() {
   const [activeTab, setActiveTab] = useState("view"); // "view" | "upload"
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  
+  const [reports, setReports] = useState<any[]>([]);
+  const [labReports, setLabReports] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingLabReports, setLoadingLabReports] = useState(true);
+
   // Upload state
+  const [patientId, setPatientId] = useState("");
+  const [reportTitle, setReportTitle] = useState("");
+  const [reportCategory, setReportCategory] = useState("Lab Report");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
   // Modal State
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<typeof mockReports[0] | null>(null);
-  const handleViewReport = (report: typeof mockReports[0]) => {
+  const [selectedReport, setSelectedReport] = useState<any | null>(null);
+
+  useEffect(() => {
+    fetchReports();
+    fetchLabReports();
+  }, []);
+
+  const fetchReports = async () => {
+    try {
+      const res = await fetch("/api/clinic/reports");
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setReports(data);
+      } else {
+        setReports([]);
+      }
+    } catch (e) {
+      toast.error("Failed to fetch reports.");
+      setReports([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchLabReports = async () => {
+    try {
+      const res = await fetch("/api/clinic/reports/lab-reports");
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setLabReports(data);
+      } else {
+        setLabReports([]);
+      }
+    } catch (e) {
+      console.error("Failed to fetch lab reports", e);
+      setLabReports([]);
+    } finally {
+      setLoadingLabReports(false);
+    }
+  };
+
+  const handleViewReport = (report: any) => {
     setSelectedReport(report);
     setIsViewModalOpen(true);
   };
-  const filteredReports = mockReports.filter(report => {
-    const matchesSearch = report.patientName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          report.title.toLowerCase().includes(searchTerm.toLowerCase());
+
+  const handleAddExtraReport = (pId: string) => {
+    setPatientId(pId);
+    setActiveTab("upload");
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const filteredReports = reports.filter(report => {
+    const matchesSearch = report.patientName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          report.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          report.patientId?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === "All" || report.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
-  const categories = ["All", "Lab Report", "Imaging", "X-Ray", "Other"];
+
+  const categories = ["All", "Lab Report", "Imaging", "X-Ray", "Prescription", "Other"];
   const uploadCategories = ["Lab Report", "Imaging", "X-Ray", "Prescription", "Medical Certificate", "Other"];
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
     }
   };
+
   const removeFile = () => {
     setSelectedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
+
+  const handleUploadReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!patientId || !reportTitle) {
+      toast.error("Please fill in the required fields");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("patientId", patientId);
+      formData.append("title", reportTitle);
+      formData.append("category", reportCategory);
+      if (selectedFile) {
+        formData.append("file", selectedFile);
+      } else {
+        // We can pass a dummy fileUrl string or handle it differently.
+        formData.append("fileUrl", "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=600");
+      }
+
+      const res = await fetch("/api/clinic/reports", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (res.ok) {
+        toast.success("Report successfully uploaded!");
+        setActiveTab("view");
+        fetchReports();
+        
+        // Reset form
+        setPatientId("");
+        setReportTitle("");
+        setReportCategory("Lab Report");
+        removeFile();
+      } else {
+        toast.error("Failed to upload report");
+      }
+    } catch (err) {
+      toast.error("An error occurred during upload");
+    }
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen">
       {/* Header */}
@@ -72,7 +167,7 @@ export default function DoctorReportsPage() {
               onClick={() => setActiveTab("upload")}
               className="px-5 py-2.5 bg-[#0891b2] hover:bg-cyan-700 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-all shadow-sm"
             >
-              <FileUp className="size-4" /> Upload New Report
+              <FileUp className="size-4" /> Upload New Patient Report
             </button>
           ) : (
             <button 
@@ -84,6 +179,7 @@ export default function DoctorReportsPage() {
           )}
         </div>
       </div>
+
       {/* VIEW REPORTS SECTION */}
       {activeTab === "view" && (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -93,7 +189,7 @@ export default function DoctorReportsPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
                 <input 
                   type="text" 
-                  placeholder="Search by patient name or report title..." 
+                  placeholder="Search by patient name, ID or report title..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2]"
@@ -120,6 +216,9 @@ export default function DoctorReportsPage() {
             </div>
           </div>
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            {loading ? (
+              <div className="p-12 text-center text-slate-500">Loading reports...</div>
+            ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead className="bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500 font-bold">
@@ -147,7 +246,7 @@ export default function DoctorReportsPage() {
                                   <span className="size-2 rounded-full bg-cyan-500" title="New Report"></span>
                                 )}
                               </div>
-                              <div className="text-xs text-slate-500">{report.size} • PDF</div>
+                              <div className="text-[11px] text-slate-500 font-mono mt-0.5" title={report.id}>ID: {report.id.substring(0,8)}...</div>
                             </div>
                           </div>
                         </td>
@@ -156,7 +255,7 @@ export default function DoctorReportsPage() {
                             <User className="size-4 text-slate-400" />
                             <div>
                               <p className="font-medium text-slate-800">{report.patientName}</p>
-                              <p className="text-[10px] text-slate-500">{report.patientId}</p>
+                              <p className="text-[10px] text-slate-500">{report.patientId.substring(0,8)}...</p>
                             </div>
                           </div>
                         </td>
@@ -172,7 +271,14 @@ export default function DoctorReportsPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
+                          <div className="flex items-center justify-center gap-1">
+                            <button 
+                              onClick={() => handleAddExtraReport(report.patientId)}
+                              className="p-2 text-slate-400 hover:text-[#0891b2] hover:bg-cyan-50 rounded-md transition-colors" 
+                              title="Add Extra Report for this Patient"
+                            >
+                              <Plus className="size-4" />
+                            </button>
                             <button 
                               onClick={() => handleViewReport(report)}
                               className="p-2 text-slate-400 hover:text-[#0891b2] hover:bg-cyan-50 rounded-md transition-colors" 
@@ -195,23 +301,85 @@ export default function DoctorReportsPage() {
                 </tbody>
               </table>
             </div>
+            )}
+          </div>
+
+          {/* Received Lab Reports Table */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mt-6">
+            <div className="flex items-center gap-2 mb-5">
+              <FlaskConical className="size-5 text-purple-600" />
+              <h2 className="text-purple-700 font-semibold text-base">Received Lab Reports</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-[13px] text-slate-800 font-semibold border-b border-slate-200 bg-slate-50/50">
+                  <tr>
+                    <th className="py-3 px-4 rounded-tl-lg">Patient ID</th>
+                    <th className="py-3 px-4">Patient Name</th>
+                    <th className="py-3 px-4">Test Name</th>
+                    <th className="py-3 px-4">Laboratory</th>
+                    <th className="py-3 px-4">Upload Date</th>
+                    <th className="py-3 px-4 text-center rounded-tr-lg">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {loadingLabReports ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-slate-500">Loading lab reports...</td>
+                    </tr>
+                  ) : labReports.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-slate-500">No lab reports received yet.</td>
+                    </tr>
+                  ) : labReports.map((report) => (
+                    <tr key={report.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-4 px-4 font-mono text-xs text-slate-500">{report.patientId.substring(0,8)}...</td>
+                      <td className="py-4 px-4 font-bold text-slate-900">
+                        {report.patientName}
+                        <div className="text-[10px] text-slate-500 font-normal mt-0.5">{report.patientPhone || 'N/A'}</div>
+                      </td>
+                      <td className="py-4 px-4 font-semibold text-slate-700">{report.testName}</td>
+                      <td className="py-4 px-4 text-slate-600">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-100">
+                          {report.labName}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-slate-600 font-medium">{report.date}</td>
+                      <td className="py-4 px-4 text-center">
+                        <button 
+                          onClick={() => window.open(report.fileUrl.startsWith('http') ? report.fileUrl : `/uploads/${report.fileUrl}`, '_blank')}
+                          className="p-1.5 border border-[#0891b2]/20 text-[#0891b2] hover:bg-cyan-50 rounded-md inline-flex items-center justify-center transition-colors shadow-sm"
+                          title="View Report PDF"
+                        >
+                          <Eye className="size-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
+
       {/* UPLOAD REPORTS SECTION */}
       {activeTab === "upload" && (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-3xl mx-auto">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
             <h2 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-100 pb-4">Upload New Patient Report</h2>
-            <form className="space-y-6">
+            <form className="space-y-6" onSubmit={handleUploadReport}>
               {/* Patient Selection */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Patient ID or Name</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Patient ID (UUID)</label>
                   <div className="relative">
                     <input 
+                      required
                       type="text" 
-                      placeholder="e.g. PAT001 or Rahul" 
+                      value={patientId}
+                      onChange={(e) => setPatientId(e.target.value)}
+                      placeholder="e.g. 22365a7a-5715-4984-b2f1..." 
                       className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all"
                     />
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
@@ -220,8 +388,12 @@ export default function DoctorReportsPage() {
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Report Category</label>
                   <div className="relative">
-                    <select className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all text-slate-700">
-                      {uploadCategories.map(cat => <option key={cat}>{cat}</option>)}
+                    <select 
+                      value={reportCategory}
+                      onChange={(e) => setReportCategory(e.target.value)}
+                      className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all text-slate-700"
+                    >
+                      {uploadCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
                   </div>
@@ -231,7 +403,10 @@ export default function DoctorReportsPage() {
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Report Title</label>
                 <input 
+                  required
                   type="text" 
+                  value={reportTitle}
+                  onChange={(e) => setReportTitle(e.target.value)}
                   placeholder="e.g. Complete Blood Count (CBC)" 
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all"
                 />
@@ -283,7 +458,7 @@ export default function DoctorReportsPage() {
               {/* Submit Button */}
               <div className="pt-4 flex justify-end">
                 <button 
-                  type="button"
+                  type="submit"
                   className="px-8 py-3 bg-[#0891b2] hover:bg-cyan-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm flex items-center gap-2"
                 >
                   <UploadCloud className="size-4" /> Upload & Share with Patient
@@ -293,14 +468,15 @@ export default function DoctorReportsPage() {
           </div>
         </div>
       )}
-      {/* VIEW MODAL */}
+
+      {/* VIEW MODAL WITH IMAGE/FILE SUPPORT */}
       {isViewModalOpen && selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg border border-slate-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] border border-slate-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
                 <FileText className="size-5 text-[#0891b2]" />
-                Report Details
+                Report Details: {selectedReport.title}
               </h3>
               <button 
                 onClick={() => setIsViewModalOpen(false)}
@@ -309,41 +485,56 @@ export default function DoctorReportsPage() {
                 <X className="size-5" />
               </button>
             </div>
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Patient Name</p>
-                  <p className="text-sm font-semibold text-slate-900">{selectedReport.patientName}</p>
-                  <p className="text-xs text-slate-500">{selectedReport.patientId}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Report ID</p>
-                  <p className="text-sm font-semibold text-slate-900">{selectedReport.id}</p>
-                  <p className="text-xs text-slate-500">{selectedReport.date}</p>
+            
+            <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+              {/* Left Side: Report Meta Details */}
+              <div className="w-full md:w-1/3 p-6 border-r border-slate-100 bg-white overflow-y-auto">
+                <div className="space-y-6">
+                  <div>
+                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Patient Name</p>
+                    <p className="text-sm font-semibold text-slate-900">{selectedReport.patientName}</p>
+                    <p className="text-xs text-slate-500 break-all">{selectedReport.patientId}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Report ID</p>
+                    <p className="text-sm font-semibold text-slate-900 break-all">{selectedReport.id}</p>
+                    <p className="text-xs text-slate-500">{selectedReport.date}</p>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">Report Info</p>
+                    <div className="space-y-3">
+                      <div className="flex flex-col gap-1 pb-2 border-b border-slate-200/60">
+                        <span className="text-sm font-semibold text-slate-800">{selectedReport.title}</span>
+                        <span className="text-xs font-bold text-[#0891b2] bg-cyan-50 px-2 py-1 rounded-md self-start">{selectedReport.category}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">Report Info</p>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center pb-2 border-b border-slate-200/60">
-                    <span className="text-sm font-semibold text-slate-800">{selectedReport.title}</span>
-                    <span className="text-xs font-bold text-[#0891b2] bg-cyan-50 px-2 py-1 rounded-md">{selectedReport.category}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate-500">File Size:</span>
-                    <span className="text-sm font-medium text-slate-900">{selectedReport.size}</span>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Status</p>
-                <span className={`inline-flex px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider border ${
-                  selectedReport.status === "Read" ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-amber-50 text-amber-600 border-amber-100"
-                }`}>
-                  {selectedReport.status}
-                </span>
+
+              {/* Right Side: File Preview */}
+              <div className="w-full md:w-2/3 bg-slate-100 flex items-center justify-center p-4 overflow-hidden relative min-h-[300px]">
+                {!selectedReport.fileUrl ? (
+                  <img src="/dummy-report.png" alt="Dummy Medical Report" className="max-w-full max-h-full object-contain rounded-lg shadow-sm border border-slate-200 bg-white" />
+                ) : selectedReport.fileUrl?.match(/\.(jpeg|jpg|gif|png)$/i) || selectedReport.fileUrl?.startsWith('http') ? (
+                  <img 
+                    src={selectedReport.fileUrl?.startsWith('http') ? selectedReport.fileUrl : `/uploads/${selectedReport.fileUrl}`} 
+                    alt="Report File Preview" 
+                    className="max-w-full max-h-full object-contain rounded-lg shadow-sm border border-slate-200 bg-white"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/dummy-report.png";
+                    }}
+                  />
+                ) : (
+                  <iframe 
+                    src={selectedReport.fileUrl?.startsWith('http') ? selectedReport.fileUrl : `/uploads/${selectedReport.fileUrl}`} 
+                    className="w-full h-full min-h-[50vh] border border-slate-200 rounded-lg bg-white" 
+                    title={selectedReport.title} 
+                  />
+                )}
               </div>
             </div>
+
             <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
               <button 
                 onClick={() => setIsViewModalOpen(false)}

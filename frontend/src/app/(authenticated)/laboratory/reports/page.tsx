@@ -23,19 +23,44 @@ const X = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" wid
 const FileUp = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M12 12v6"></path><path d="m15 15-3-3-3 3"></path></svg>;
 const CheckCircle2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>;
 const ChevronDown = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>;
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-// Mock data
-const mockReports = [
-  { id: "REP-9901", patientName: "Rahul Sharma", patientId: "PAT001", title: "Complete Blood Count", category: "Lab Report", date: "11 Jun 2026", size: "1.2 MB", status: "Sent" },
-  { id: "REP-9902", patientName: "Rahul Sharma", patientId: "PAT001", title: "Lipid Profile", category: "Lab Report", date: "10 Jun 2026", size: "0.8 MB", status: "Sent" },
-  { id: "REP-9903", patientName: "Amit Kumar", patientId: "PAT003", title: "HbA1c", category: "Lab Report", date: "10 Jun 2026", size: "0.5 MB", status: "Sent" },
-  { id: "REP-9904", patientName: "Neha Gupta", patientId: "PAT004", title: "Thyroid Panel", category: "Lab Report", date: "09 Jun 2026", size: "1.1 MB", status: "Sent" },
-];
+import { toast } from "sonner";
+
 export default function LaboratoryReportsPage() {
   const [activeTab, setActiveTab] = useState("view"); // "view" | "upload"
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  
+  const [reports, setReports] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Form State
+  const [patientId, setPatientId] = useState("");
+  const [linkedRequestId, setLinkedRequestId] = useState("");
+  const [reportTitle, setReportTitle] = useState("");
+  const [reportCategory, setReportCategory] = useState("Lab Report");
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Fetch Reports
+  const fetchReports = async () => {
+    try {
+      const res = await fetch("/api/laboratory/reports", { headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setReports(data);
+      }
+    } catch (e) {
+      toast.error("Failed to load reports");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
   // View Report Modal State
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
@@ -46,9 +71,10 @@ export default function LaboratoryReportsPage() {
   // Upload state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const filteredReports = mockReports.filter(report => {
-    const matchesSearch = report.patientName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          report.title.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredReports = reports.filter(report => {
+    const matchesSearch = report.patientName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          report.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          report.patientId?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === "All" || report.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
@@ -63,6 +89,51 @@ export default function LaboratoryReportsPage() {
     setSelectedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
+
+  const handleUpload = async () => {
+    if (!patientId.trim() || !reportTitle.trim()) {
+      toast.error("Please fill required fields (Patient ID, Title)");
+      return;
+    }
+    
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("patientId", patientId);
+      if (linkedRequestId) formData.append("linkedRequestId", linkedRequestId);
+      formData.append("title", reportTitle);
+      formData.append("category", reportCategory);
+      if (selectedFile) formData.append("file", selectedFile);
+
+      const res = await fetch("/api/laboratory/reports", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` },
+        body: formData
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to upload report");
+
+      toast.success("Report Uploaded and Sent to Patient!");
+      
+      // Reset form
+      setPatientId("");
+      setLinkedRequestId("");
+      setReportTitle("");
+      setReportCategory("Lab Report");
+      removeFile();
+      
+      // Go back to view tab and refresh
+      setActiveTab("view");
+      fetchReports();
+    } catch (err: any) {
+      toast.error(err.message || "An error occurred");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  if (loading) return <div className="p-12 text-center text-slate-500">Loading reports...</div>;
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen">
       {/* Header */}
@@ -94,7 +165,7 @@ export default function LaboratoryReportsPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
                 <input 
                   type="text" 
-                  placeholder="Search by patient name or report title..." 
+                  placeholder="Search by patient name, ID or report title..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2]"
@@ -205,6 +276,8 @@ export default function LaboratoryReportsPage() {
                   <div className="relative">
                     <input 
                       type="text" 
+                      value={patientId}
+                      onChange={(e) => setPatientId(e.target.value)}
                       placeholder="e.g. PAT001 or Rahul" 
                       className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all"
                     />
@@ -215,6 +288,8 @@ export default function LaboratoryReportsPage() {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Linked Request ID (Optional)</label>
                   <input 
                     type="text" 
+                    value={linkedRequestId}
+                    onChange={(e) => setLinkedRequestId(e.target.value)}
                     placeholder="e.g. TR-1029" 
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all"
                   />
@@ -226,6 +301,8 @@ export default function LaboratoryReportsPage() {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Report Title</label>
                   <input 
                     type="text" 
+                    value={reportTitle}
+                    onChange={(e) => setReportTitle(e.target.value)}
                     placeholder="e.g. Complete Blood Count (CBC)" 
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all"
                   />
@@ -233,7 +310,11 @@ export default function LaboratoryReportsPage() {
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Category</label>
                   <div className="relative">
-                    <select className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all text-slate-700">
+                    <select 
+                      value={reportCategory}
+                      onChange={(e) => setReportCategory(e.target.value)}
+                      className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all text-slate-700"
+                    >
                       {uploadCategories.map(cat => <option key={cat}>{cat}</option>)}
                     </select>
                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
@@ -288,9 +369,11 @@ export default function LaboratoryReportsPage() {
               <div className="pt-4 flex justify-end">
                 <button 
                   type="button"
-                  className="px-8 py-3 bg-[#0891b2] hover:bg-cyan-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm flex items-center gap-2"
+                  onClick={handleUpload}
+                  disabled={isUploading}
+                  className="px-8 py-3 bg-[#0891b2] hover:bg-cyan-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50"
                 >
-                  <UploadCloud className="size-4" /> Upload & Send to Patient
+                  <UploadCloud className="size-4" /> {isUploading ? "Uploading..." : "Upload & Send to Patient"}
                 </button>
               </div>
             </form>

@@ -9,6 +9,9 @@ const MapPin = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg
 const CheckCircle2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>;
 const ChevronDown = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>;
 const File = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path></svg>;
+const Flag = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>;
+const Trash2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
+const AlertTriangle = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>;
 
 
 
@@ -20,30 +23,103 @@ const File = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" 
 
 
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-// Mock Data
-const mockReports = [
-  { id: "REP-2026-001", patient: "Rahul Sharma", type: "Blood Test", facility: "Apex Diagnostic Labs", date: "22 Jun 2026", status: "Verified" },
-  { id: "REP-2026-002", patient: "Amit Kumar", type: "MRI Scan", facility: "City Care Hospital", date: "21 Jun 2026", status: "Verified" },
-  { id: "REP-2026-003", patient: "Priya Singh", type: "X-Ray", facility: "Metro Heart Institute", date: "20 Jun 2026", status: "Pending Review" },
-  { id: "REP-2026-004", patient: "Neha Gupta", type: "Urine Analysis", facility: "City PathLabs", date: "19 Jun 2026", status: "Verified" },
-  { id: "REP-2026-005", patient: "Sanjay Verma", type: "CT Scan", facility: "Carewell Imaging", date: "18 Jun 2026", status: "Verified" },
-];
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 export default function ReportsMonitoringPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState(null);
+  const [selectedReport, setSelectedReport] = useState<any>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [reports, setReports] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/management/admin/reports');
+      if (res.ok) {
+        const data = await res.json();
+        setReports(data);
+      }
+    } catch (e) {
+      console.error('Error fetching reports', e);
+      toast.error('Failed to fetch reports');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const [reportToDelete, setReportToDelete] = useState<string | null>(null);
+
+  const handleFlagReport = async (id: string, currentStatus: string) => {
+    try {
+      const newStatus = currentStatus === 'Flagged' ? 'Available' : 'Flagged';
+      const res = await fetch(`/api/management/admin/reports/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        toast.success(`Report marked as ${newStatus}`);
+        fetchReports();
+      }
+    } catch (e) {
+      toast.error('Error updating report status');
+    }
+  };
+
+  const handleDeleteReport = async () => {
+    if (!reportToDelete) return;
+    try {
+      const res = await fetch(`/api/management/admin/reports/${reportToDelete}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        toast.success('Report permanently deleted');
+        setReportToDelete(null);
+        fetchReports();
+      }
+    } catch (e) {
+      toast.error('Error deleting report');
+    }
+  };
+
   const openViewModal = (report: any) => {
     setSelectedReport(report);
     setIsViewModalOpen(true);
   };
-  const filteredReports = mockReports.filter(rep => 
-    rep.patient.toLowerCase().includes(searchTerm.toLowerCase()) || 
+
+  const filteredReports = reports.filter(rep => 
+    rep.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
     rep.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    rep.facility.toLowerCase().includes(searchTerm.toLowerCase())
+    rep.hospital?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
+  const paginatedReports = filteredReports.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans">
       {/* Header section */}
@@ -77,41 +153,51 @@ export default function ReportsMonitoringPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredReports.map(report => (
+              {paginatedReports.map(report => (
                 <tr key={report.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="px-6 py-4">
-                    <div className="font-bold text-slate-900 group-hover:text-rose-600 transition-colors">{report.id}</div>
+                    <div className="font-bold text-slate-900 group-hover:text-rose-600 transition-colors line-clamp-1">{report.id}</div>
                     <div className="text-xs font-semibold text-slate-500 mt-0.5">{report.type}</div>
                   </td>
-                  <td className="px-6 py-4 font-bold text-slate-700">
-                    {report.patient}
+                  <td className="px-6 py-4 font-bold text-slate-700 line-clamp-1">
+                    {report.patient?.name || 'Unknown Patient'}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1.5 text-slate-600">
                       <MapPin className="size-3.5 text-slate-400" />
-                      <span className="font-medium">{report.facility}</span>
+                      <span className="font-medium line-clamp-1">{report.hospital?.name || 'External'}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1.5 text-slate-600">
                       <Calendar className="size-3.5 text-slate-400" />
-                      <span className="font-medium">{report.date}</span>
+                      <span className="font-medium">{new Date(report.date || report.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    {report.status === "Verified" ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-100">
-                        <CheckCircle2 className="size-3" /> Verified
+                    {report.status === "Flagged" ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-rose-50 text-rose-600 border border-rose-100">
+                        <AlertTriangle className="size-3" /> Flagged
                       </span>
                     ) : (
-                      <span className="inline-flex px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-amber-50 text-amber-600 border border-amber-100">
-                        {report.status}
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-100">
+                        <CheckCircle2 className="size-3" /> Available
                       </span>
                     )}
                   </td>
                   <td className="px-6 py-4 text-right flex justify-end gap-2">
-                    <button onClick={() => openViewModal(report)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                    <button onClick={() => openViewModal(report)} title="View Report" className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
                       <Eye className="size-4" />
+                    </button>
+                    <button 
+                      onClick={() => handleFlagReport(report.id, report.status)} 
+                      title={report.status === 'Flagged' ? "Unflag Report" : "Flag as Suspicious"}
+                      className={`p-2 rounded-lg transition-colors ${report.status === 'Flagged' ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 bg-amber-50' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50'}`}
+                    >
+                      <Flag className="size-4" />
+                    </button>
+                    <button onClick={() => setReportToDelete(report.id)} title="Delete Report" className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                      <Trash2 className="size-4" />
                     </button>
                   </td>
                 </tr>
@@ -127,6 +213,30 @@ export default function ReportsMonitoringPage() {
             </tbody>
           </table>
         </div>
+        
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 bg-slate-50">
+            <p className="text-xs text-slate-500 font-medium">
+              Showing <span className="font-bold text-slate-900">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-slate-900">{Math.min(currentPage * itemsPerPage, filteredReports.length)}</span> of <span className="font-bold text-slate-900">{filteredReports.length}</span> reports
+            </p>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 text-xs font-bold bg-white border border-slate-200 text-slate-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors shadow-sm"
+              >
+                Previous
+              </button>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 text-xs font-bold bg-white border border-slate-200 text-slate-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors shadow-sm"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       {/* View Report Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
@@ -138,17 +248,17 @@ export default function ReportsMonitoringPage() {
             <div className="space-y-5 py-4">
               <div>
                 <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Patient Name</span>
-                <div className="font-semibold text-slate-900 text-base">{selectedReport.patient}</div>
+                <div className="font-semibold text-slate-900 text-base">{selectedReport.patient?.name || 'Unknown'}</div>
               </div>
               <div>
-                <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Report PDF/Image</span>
-                <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-slate-300 transition-colors cursor-pointer group">
-                  <div className="p-2 bg-rose-100 text-rose-600 rounded-lg group-hover:scale-105 transition-transform">
+                <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Report Document</span>
+                <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-slate-300 transition-colors cursor-pointer group" onClick={() => selectedReport.fileUrl && window.open(selectedReport.fileUrl.startsWith('http') ? selectedReport.fileUrl : `/uploads/${selectedReport.fileUrl}`, '_blank')}>
+                  <div className="p-2 bg-white rounded-lg shadow-sm group-hover:scale-105 transition-transform">
                     <FileText className="size-6" />
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-slate-900 line-clamp-1">{selectedReport.id}_{selectedReport.type.replace(/\s+/g, '_')}.pdf</div>
-                    <div className="text-xs text-slate-500 font-medium mt-0.5">1.2 MB • PDF Document</div>
+                    <div className="text-sm font-bold text-slate-900 line-clamp-1">{selectedReport.title || `${selectedReport.type} Report`}.pdf</div>
+                    <div className="text-xs text-slate-500 font-medium mt-0.5">Click to View Document</div>
                   </div>
                   <button className="ml-auto p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
                     <Download className="size-4" />
@@ -158,11 +268,11 @@ export default function ReportsMonitoringPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Uploaded By Lab/Hospital</span>
-                  <div className="font-semibold text-slate-900">{selectedReport.facility}</div>
+                  <div className="font-semibold text-slate-900">{selectedReport.hospital?.name || 'External'}</div>
                 </div>
                 <div>
                   <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Upload Date</span>
-                  <div className="font-semibold text-slate-900">{selectedReport.date}</div>
+                  <div className="font-semibold text-slate-900">{new Date(selectedReport.date || selectedReport.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
                 </div>
               </div>
             </div>
@@ -174,6 +284,22 @@ export default function ReportsMonitoringPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!reportToDelete} onOpenChange={(isOpen) => !isOpen && setReportToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the report from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteReport} className="bg-rose-600 hover:bg-rose-700">Delete Permanently</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

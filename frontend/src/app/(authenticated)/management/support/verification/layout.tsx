@@ -12,9 +12,9 @@ export default function VerificationLayout({
   const pathname = usePathname();
 
   const tabs = [
-    { title: "Verification Requests", path: "/support/verification", exact: true },
-    { title: "Pending Issues", path: "/support/verification/pending", exact: false },
-    { title: "Rejected Cases", path: "/support/verification/rejected", exact: false },
+    { title: "Verification Requests", path: "/management/support/verification", exact: true },
+    { title: "Pending Issues", path: "/management/support/verification/pending", exact: false },
+    { title: "Rejected Cases", path: "/management/support/verification/rejected", exact: false },
   ];
 
   return (

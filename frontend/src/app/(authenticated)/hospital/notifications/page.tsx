@@ -15,31 +15,82 @@ const Activity = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/s
 const User = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
 const Trash2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
 const Hospital = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 7v4"></path><path d="M14 21v-3a2 2 0 0 0-4 0v3"></path><path d="M14 9h-4"></path><path d="M18 11h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h2"></path><path d="M18 21V5a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16"></path></svg>;
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
-// Mock data
-const initialNotifications = [
-  { id: "NOTIF-H01", type: "System", title: "New Doctor Registration", message: "Dr. Alok Verma has completed the onboarding process.", time: "30 mins ago", isRead: false, actionRequired: true },
-  { id: "NOTIF-H02", type: "Alert", title: "High Occupancy Alert", message: "ICU Ward B is currently at 95% occupancy.", time: "2 hours ago", isRead: false, actionRequired: false },
-  { id: "NOTIF-H03", type: "Request", title: "Equipment Maintenance", message: "MRI Machine #2 is due for routine maintenance.", time: "5 hours ago", isRead: true, actionRequired: true },
-  { id: "NOTIF-H04", type: "System", title: "Billing System Update", message: "Monthly revenue reports have been successfully generated.", time: "1 day ago", isRead: true, actionRequired: false },
-];
+
+import { useRouter } from "next/navigation";
+
 export default function HospitalNotificationsPage() {
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const router = useRouter();
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"All" | "Unread" | "Action Required">("All");
+
   const filteredNotifications = notifications.filter(n => {
     if (filter === "Unread") return !n.isRead;
     if (filter === "Action Required") return n.actionRequired;
     return true;
   });
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-    toast.success("All notifications marked as read");
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch("/api/hospital/notifications");
+      if (!res.ok) throw new Error("Failed to load");
+      const data = await res.json();
+      setNotifications(data);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to fetch notifications");
+    } finally {
+      setLoading(false);
+    }
   };
-  const deleteNotification = (id: string) => {
-    setNotifications(notifications.filter(n => n.id !== id));
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const markAllAsRead = async () => {
+    try {
+      await fetch("/api/hospital/notifications/read-all", { method: "PUT" });
+      setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+      toast.success("All notifications marked as read");
+    } catch (err) {
+      toast.error("Failed to mark read");
+    }
   };
+
+  const markAsRead = async (id: string) => {
+    try {
+      await fetch(`/api/hospital/notifications/${id}/read`, { method: "PUT" });
+      setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const deleteNotification = async (id: string, e?: any) => {
+    if (e) e.stopPropagation();
+    try {
+      await fetch(`/api/hospital/notifications/${id}`, { method: "DELETE" });
+      setNotifications(notifications.filter(n => n.id !== id));
+      toast.success("Notification deleted");
+    } catch (err) {
+      toast.error("Failed to delete");
+    }
+  };
+
+  const handleNotificationClick = (notif: any) => {
+    if (!notif.isRead) markAsRead(notif.id);
+    
+    if (notif.type && notif.type.startsWith('PATIENT_APPROVED|')) {
+      const patientId = notif.type.split('|')[1];
+      router.push(`/hospital/patients?patientId=${patientId}`);
+    }
+  };
+
   const getIcon = (type: string) => {
+    if (type?.startsWith('PATIENT_APPROVED')) return <User className="size-5 text-emerald-600" />;
     switch (type) {
       case "System": return <Activity className="size-5 text-cyan-600" />;
       case "Alert": return <ShieldAlert className="size-5 text-red-600" />;
@@ -47,7 +98,9 @@ export default function HospitalNotificationsPage() {
       default: return <Bell className="size-5 text-slate-600" />;
     }
   };
+
   const getIconBg = (type: string) => {
+    if (type?.startsWith('PATIENT_APPROVED')) return "bg-emerald-50";
     switch (type) {
       case "System": return "bg-cyan-50";
       case "Alert": return "bg-red-50";
@@ -55,6 +108,7 @@ export default function HospitalNotificationsPage() {
       default: return "bg-slate-100";
     }
   };
+
   return (
     <div className="p-8 max-w-4xl mx-auto w-full min-h-screen">
       {/* Filters */}
@@ -76,8 +130,18 @@ export default function HospitalNotificationsPage() {
           </button>
         ))}
       </div>
+      
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold text-slate-800">Recent Notifications</h2>
+        <button onClick={markAllAsRead} className="text-sm font-medium text-cyan-600 hover:text-cyan-700 transition-colors">
+          Mark all as read
+        </button>
+      </div>
+
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        {filteredNotifications.length > 0 ? (
+        {loading ? (
+          <div className="p-8 text-center text-slate-500 animate-pulse">Loading notifications...</div>
+        ) : filteredNotifications.length > 0 ? (
           <div className="divide-y divide-slate-100">
             {filteredNotifications.map((notif) => (
               <div 
@@ -97,17 +161,32 @@ export default function HospitalNotificationsPage() {
                     <h3 className={`text-base font-bold truncate ${!notif.isRead ? "text-slate-900" : "text-slate-700"}`}>
                       {notif.title}
                     </h3>
-                    <span className="text-xs font-medium text-slate-400 whitespace-nowrap">{notif.time}</span>
+                    <span className="text-xs font-medium text-slate-400 whitespace-nowrap">
+                      {notif.time || (notif.createdAt && new Date(notif.createdAt).toLocaleDateString()) || 'Just now'}
+                    </span>
                   </div>
                   <p className={`text-sm mb-3 ${!notif.isRead ? "text-slate-700" : "text-slate-500"}`}>
                     {notif.message}
                   </p>
-                  {notif.actionRequired && (
-                    <div className="flex gap-3">
-                      <button className="px-4 py-1.5 bg-[#0891b2] text-white text-xs font-bold rounded-lg hover:bg-cyan-700 transition-colors shadow-sm">
-                        Review
+                  
+                  {notif.type?.startsWith('PATIENT_APPROVED|') && (
+                    <div className="flex gap-3 mt-3">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleNotificationClick(notif); }} 
+                        className="px-4 py-1.5 bg-[#0891b2] text-white text-xs font-bold rounded-lg hover:bg-cyan-700 transition-colors shadow-sm flex items-center gap-1.5"
+                      >
+                        <FileText className="size-3.5" />
+                        View Report
                       </button>
-                      <button className="px-4 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
+                    </div>
+                  )}
+
+                  {notif.actionRequired && !notif.isRead && !notif.type?.startsWith('PATIENT_APPROVED') && (
+                    <div className="flex gap-3 mt-3">
+                      <button onClick={(e) => { e.stopPropagation(); markAsRead(notif.id); }} className="px-4 py-1.5 bg-[#0891b2] text-white text-xs font-bold rounded-lg hover:bg-cyan-700 transition-colors shadow-sm">
+                        Mark Read
+                      </button>
+                      <button onClick={(e) => deleteNotification(notif.id, e)} className="px-4 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
                         Dismiss
                       </button>
                     </div>
@@ -115,7 +194,7 @@ export default function HospitalNotificationsPage() {
                 </div>
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-start">
                   <button 
-                    onClick={() => deleteNotification(notif.id)}
+                    onClick={(e) => deleteNotification(notif.id, e)}
                     className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                     title="Delete Notification"
                   >

@@ -32,34 +32,144 @@ const Edit2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg"
 
 
 
-import React, { useState } from 'react';
-// Mock Data
-const mockHospitals = [
-  { id: "HSP001", name: "City Care Hospital", address: "Sector 14, New Delhi", phone: "+91 11-23456789", type: "Multispecialty", status: "Active", doctors: 145, beds: 500 },
-  { id: "HSP002", name: "Metro Heart Institute", address: "Cyber City, Gurugram", phone: "+91 124-4567890", type: "Cardiology", status: "Active", doctors: 45, beds: 150 },
-  { id: "HSP003", name: "Sunrise Healthcare", address: "MG Road, Pune", phone: "+91 20-25678901", type: "General", status: "Pending Review", doctors: 30, beds: 100 },
-  { id: "HSP004", name: "Apollo Clinics", address: "Anna Nagar, Chennai", phone: "+91 44-23456789", type: "Polyclinic", status: "Active", doctors: 25, beds: 50 },
-  { id: "HSP005", name: "LifeLine Ortho", address: "Bandra, Mumbai", phone: "+91 22-26543210", type: "Orthopedics", status: "Suspended", doctors: 12, beds: 30 },
-];
+import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+
 export default function HospitalManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedHospital, setSelectedHospital] = useState<any>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [hospitals, setHospitals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // New / Edit Hospital Form State
+  const [editingHospitalId, setEditingHospitalId] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [newAddress, setNewAddress] = useState("");
+  const [newLicenseNumber, setNewLicenseNumber] = useState("");
+
+  useEffect(() => {
+    fetchHospitals();
+  }, []);
+
+  const fetchHospitals = async () => {
+    try {
+      const res = await fetch('/api/management/admin/hospitals');
+      if (res.ok) {
+        const data = await res.json();
+        setHospitals(data);
+      }
+    } catch (e) {
+      toast.error('Failed to load hospitals');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveHospital = async (e: any) => {
+    e.preventDefault();
+    try {
+      if (editingHospitalId) {
+        // Edit Mode
+        const res = await fetch(`/api/management/admin/hospitals/${editingHospitalId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newName, email: newEmail, phone: newPhone, address: newAddress, licenseNumber: newLicenseNumber })
+        });
+        if (res.ok) {
+          toast.success("Hospital updated successfully");
+          closeModal();
+          fetchHospitals(); // refresh
+        } else {
+          toast.error("Error updating hospital");
+        }
+      } else {
+        // Create Mode
+        const res = await fetch('/api/management/admin/hospitals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newName, email: newEmail, phone: newPhone, address: newAddress, type: 'General', licenseNumber: newLicenseNumber })
+        });
+        if (res.ok) {
+          toast.success("Hospital added successfully");
+          closeModal();
+          fetchHospitals(); // refresh
+        } else {
+          toast.error("Error adding hospital");
+        }
+      }
+    } catch (e) {
+      toast.error("Error saving hospital");
+    }
+  };
+
+  const closeModal = () => {
+    setIsAddModalOpen(false);
+    setEditingHospitalId(null);
+    setNewName("");
+    setNewEmail("");
+    setNewPhone("");
+    setNewAddress("");
+    setNewLicenseNumber("");
+  };
+
+  const openAddModal = () => {
+    setEditingHospitalId(null);
+    setNewName("");
+    setNewEmail("");
+    setNewPhone("");
+    setNewAddress("");
+    setNewLicenseNumber("");
+    setIsAddModalOpen(true);
+  };
+
+  const handleVerify = async (id: string) => {
+    try {
+      const res = await fetch(`/api/management/admin/hospitals/${id}/verify`, { method: 'PUT' });
+      if (res.ok) {
+        toast.success("Hospital Verified successfully");
+        fetchHospitals();
+      }
+    } catch (e) {
+      toast.error('Error verifying hospital');
+    }
+  };
+
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    try {
+      const res = await fetch(`/api/management/admin/hospitals/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        toast.success(`Hospital status updated to ${newStatus}`);
+        fetchHospitals(); // refresh
+      }
+    } catch (e) {
+      toast.error('Error updating status');
+    }
+  };
+
   const toggleDropdown = (id: string) => {
     if (openDropdownId === id) setOpenDropdownId(null);
     else setOpenDropdownId(id);
   };
-  const filteredHospitals = mockHospitals.filter(hosp => 
+  const filteredHospitals = hospitals.filter(hosp => 
     hosp.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     hosp.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (loading) return <div className="p-8 text-center animate-pulse">Loading hospitals...</div>;
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans">
       {/* Header section */}
       <div className="flex flex-col md:flex-row md:items-center justify-end gap-4 mb-8">
         <button 
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={openAddModal}
           className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center gap-2"
         >
           <Plus className="size-4" />
@@ -69,7 +179,7 @@ export default function HospitalManagementPage() {
       {/* Filters and Search */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-6 flex flex-col sm:flex-row gap-4 justify-between items-center">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-bold text-slate-700">Total Hospitals: {mockHospitals.length}</span>
+          <span className="text-sm font-bold text-slate-700">Total Hospitals: {hospitals.length}</span>
         </div>
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
@@ -105,27 +215,29 @@ export default function HospitalManagementPage() {
                   </span>
                 )}
               </div>
-              <h3 className="text-lg font-bold text-slate-900 leading-tight mb-1">{hospital.name}</h3>
-              <p className="text-xs font-mono text-slate-500 mb-4">{hospital.id} • {hospital.type}</p>
-              <div className="space-y-2.5">
-                <div className="flex items-start gap-2.5 text-sm text-slate-600">
-                  <MapPin className="size-4 text-slate-400 mt-0.5 shrink-0" />
-                  <span className="leading-tight">{hospital.address}</span>
-                </div>
-                <div className="flex items-center gap-2.5 text-sm text-slate-600">
-                  <Phone className="size-4 text-slate-400 shrink-0" />
-                  <span>{hospital.phone}</span>
-                </div>
-              </div>
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 leading-tight mb-1">
+                {hospital.name}
+                {hospital.isVerified ? (
+                  <CheckCircle2 className="size-4 text-blue-500" title="Verified Hospital" />
+                ) : (
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 flex items-center gap-1">
+                    <AlertCircle className="size-3" /> Unverified
+                  </span>
+                )}
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5 mb-4">
+                <MapPin className="size-3" />
+                {hospital.address}
+              </p>
             </div>
             <div className="bg-slate-50 p-4 grid grid-cols-2 gap-4 divide-x divide-slate-200 border-t border-slate-100">
               <div className="text-center">
-                <p className="text-xl font-extrabold text-slate-900">{hospital.doctors}</p>
+                <p className="text-xl font-extrabold text-slate-900">{hospital._count?.doctors || 0}</p>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-0.5">Doctors</p>
               </div>
               <div className="text-center">
-                <p className="text-xl font-extrabold text-slate-900">{hospital.beds}</p>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-0.5">Total Beds</p>
+                <p className="text-xl font-extrabold text-slate-900">{hospital._count?.records || 0}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-0.5">Records</p>
               </div>
             </div>
             <div className="p-3 border-t border-slate-100 flex gap-2">
@@ -146,6 +258,12 @@ export default function HospitalManagementPage() {
                   <div className="absolute right-0 bottom-full mb-2 w-32 bg-white border border-slate-200 shadow-lg rounded-xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
                     <button 
                       onClick={() => {
+                        setEditingHospitalId(hospital.id);
+                        setNewName(hospital.name);
+                        setNewEmail(hospital.email || "");
+                        setNewPhone(hospital.phone);
+                        setNewAddress(hospital.address);
+                        setNewLicenseNumber(hospital.licenseNumber || "");
                         setIsAddModalOpen(true);
                         setOpenDropdownId(null);
                       }}
@@ -154,6 +272,41 @@ export default function HospitalManagementPage() {
                       <Edit2 className="size-4" />
                       Edit
                     </button>
+                    {!hospital.isVerified && (
+                      <button 
+                        onClick={() => {
+                          setOpenDropdownId(null);
+                          handleVerify(hospital.id);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 flex items-center gap-2 border-t border-slate-100"
+                      >
+                        <CheckCircle2 className="size-4" />
+                        Approve & Verify
+                      </button>
+                    )}
+                    {hospital.status !== "Suspended" ? (
+                      <button 
+                        onClick={() => {
+                          setOpenDropdownId(null);
+                          handleStatusChange(hospital.id, "Suspended");
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 border-t border-slate-100"
+                      >
+                        <AlertCircle className="size-4" />
+                        Suspend
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => {
+                          setOpenDropdownId(null);
+                          handleStatusChange(hospital.id, "Active");
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-semibold text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 border-t border-slate-100"
+                      >
+                        <CheckCircle2 className="size-4" />
+                        Activate
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -178,66 +331,60 @@ export default function HospitalManagementPage() {
                   <Building2 className="size-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-lg">Add New Hospital</h3>
-                  <p className="text-xs text-slate-500">Register a new hospital or clinic in the system</p>
+                  <h3 className="font-bold text-slate-900 text-lg">
+                    {editingHospitalId ? "Edit Hospital" : "Add New Hospital"}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {editingHospitalId ? "Update hospital details" : "Register a new hospital or clinic in the system"}
+                  </p>
                 </div>
               </div>
               <button 
-                onClick={() => setIsAddModalOpen(false)}
+                onClick={closeModal}
                 className="text-slate-400 hover:text-slate-700 transition-colors p-1"
               >
                 <X className="size-5" />
               </button>
             </div>
             <div className="p-6 overflow-y-auto flex-1">
-              <form className="space-y-6">
+              <form id="addHospitalForm" onSubmit={handleSaveHospital} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="md:col-span-2">
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Hospital Name *</label>
-                    <input type="text" placeholder="e.g. City Care Hospital" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500" required />
+                    <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. City Care Hospital" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500" required />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Hospital Email *</label>
-                    <input type="email" placeholder="contact@hospital.com" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500" required />
+                    <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="contact@hospital.com" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500" required />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Phone Number *</label>
-                    <input type="tel" placeholder="+91 XXXXX XXXXX" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500" required />
+                    <input type="tel" value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="+91 XXXXX XXXXX" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500" required />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Address *</label>
-                    <input type="text" placeholder="Street Address" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500" required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">City *</label>
-                    <input type="text" placeholder="e.g. New Delhi" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500" required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">State *</label>
-                    <input type="text" placeholder="e.g. Delhi" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500" required />
+                    <input type="text" value={newAddress} onChange={e => setNewAddress(e.target.value)} placeholder="Street Address" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500" required />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">License Number *</label>
-                    <input type="text" placeholder="Medical License ID" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500" required />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Description / Note</label>
-                    <textarea rows={3} placeholder="Any additional details about the facility..." className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 resize-none"></textarea>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">License Number</label>
+                    <input type="text" value={newLicenseNumber} onChange={e => setNewLicenseNumber(e.target.value)} placeholder="Medical License ID" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500" />
                   </div>
                 </div>
               </form>
             </div>
             <div className="p-6 border-t border-slate-100 flex gap-3 shrink-0 bg-slate-50">
               <button 
-                onClick={() => setIsAddModalOpen(false)}
+                onClick={closeModal}
                 className="flex-1 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-sm font-bold transition-colors"
               >
                 Cancel
               </button>
               <button 
+                type="submit"
+                form="addHospitalForm"
                 className="flex-1 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm"
               >
-                Save Hospital
+                {editingHospitalId ? "Update Hospital" : "Save Hospital"}
               </button>
             </div>
           </div>
@@ -253,8 +400,15 @@ export default function HospitalManagementPage() {
                   <Building2 className="size-6" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-xl">{selectedHospital.name}</h3>
-                  <p className="text-sm font-mono text-slate-500">{selectedHospital.id} • {selectedHospital.type}</p>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-slate-900 text-xl">{selectedHospital.name}</h3>
+                    {selectedHospital.isVerified && (
+                      <span className="p-0.5 rounded-full bg-blue-50 text-blue-600 inline-flex items-center" title="Verified Hospital">
+                        <CheckCircle2 className="size-4" />
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm font-mono text-slate-500">{selectedHospital.id} • {selectedHospital.licenseNumber || 'No License Added'}</p>
                 </div>
               </div>
               <button 
@@ -306,16 +460,16 @@ export default function HospitalManagementPage() {
                     </h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
-                        <p className="text-2xl font-extrabold text-slate-900">{selectedHospital.doctors}</p>
+                        <p className="text-2xl font-extrabold text-slate-900">{selectedHospital._count?.doctors || 0}</p>
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-1">Doctors</p>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
-                        <p className="text-2xl font-extrabold text-slate-900">{selectedHospital.beds}</p>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-1">Beds</p>
+                        <p className="text-2xl font-extrabold text-slate-900">{selectedHospital._count?.records || 0}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-1">Records</p>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center col-span-2">
-                        <p className="text-2xl font-extrabold text-slate-900">4,250</p>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-1">Total Patients Handled</p>
+                        <p className="text-2xl font-extrabold text-slate-900">{selectedHospital._count?.invoices || 0}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-1">Total Invoices</p>
                       </div>
                     </div>
                   </div>

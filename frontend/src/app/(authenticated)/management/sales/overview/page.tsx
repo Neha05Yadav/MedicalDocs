@@ -1,5 +1,11 @@
+"use client";
+
 import dynamic from 'next/dynamic';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from "next/link";
+import RevenueTrendChartClient from "./RevenueTrendChartClient";
+import SubscriptionOverviewChartClient from "./SubscriptionOverviewChartClient";
+
 const IndianRupee = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3h12"></path><path d="M6 8h12"></path><path d="m6 13 8.5 8"></path><path d="M6 13h3"></path><path d="M9 13c6.667 0 6.667-10 0-10"></path></svg>;
 const Bookmark = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"></path></svg>;
 const RefreshCw = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>;
@@ -14,82 +20,63 @@ const ChevronDown = (props: any) => <svg {...props} xmlns="http://www.w3.org/200
 const ArrowUp = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"></path><path d="M12 19V5"></path></svg>;
 const ArrowDown = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="m19 12-7 7-7-7"></path></svg>;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-import Link from "next/link";
-import RevenueTrendChartClient from "./RevenueTrendChartClient";
-import SubscriptionOverviewChartClient from "./SubscriptionOverviewChartClient";
-const revenueData = [
-  { name: '20 May', value: 50000 },
-  { name: '27 May', value: 90000 },
-  { name: '3 Jun', value: 85000 },
-  { name: '10 Jun', value: 130000 },
-  { name: '17 Jun', value: 120000 },
-  { name: '20 Jun', value: 160000 },
-];
-const subscriptionData = [
-  { name: 'Hospital Plans', value: 42, color: '#3b82f6' }, // blue-500
-  { name: 'Doctor Plans', value: 156, color: '#10b981' },  // emerald-500
-  { name: 'Lab Plans', value: 27, color: '#f59e0b' },      // amber-500
-];
-const kpiData = [
-  { title: "Total Revenue", value: "₹ 12,45,000", change: "+18.5%", isPositive: true, icon: IndianRupee, bgColor: "bg-indigo-600" },
-  { title: "Active Subscriptions", value: "245", change: "+12.4%", isPositive: true, icon: Bookmark, bgColor: "bg-blue-500" },
-  { title: "Subscription Renewals", value: "68", change: "+15.3%", isPositive: true, icon: RefreshCw, bgColor: "bg-emerald-500" },
-  { title: "Expired Subscriptions", value: "16", change: "-5.2%", isPositive: false, icon: Hourglass, bgColor: "bg-orange-500" },
-  { title: "New Registrations", value: "35", change: "+20.1%", isPositive: true, icon: Users, bgColor: "bg-amber-500" },
-];
-const recentPayments = [
-  { id: "INV-1001", customer: "City Hospital", amount: "₹ 15,000", date: "20 Jun 2025", status: "Paid" },
-  { id: "INV-1002", customer: "Dr. Rahul Sharma", amount: "₹ 2,500", date: "19 Jun 2025", status: "Paid" },
-  { id: "INV-1003", customer: "Life Care Lab", amount: "₹ 5,000", date: "19 Jun 2025", status: "Pending" },
-  { id: "INV-1004", customer: "Health Plus Hospital", amount: "₹ 20,000", date: "18 Jun 2025", status: "Paid" },
-  { id: "INV-1005", customer: "Dr. Neha Verma", amount: "₹ 1,500", date: "18 Jun 2025", status: "Failed" },
-];
-const recentActivity = [
-  { title: "City Hospital purchased Premium Plan", time: "20 Jun 2025, 11:30 AM", icon: Building2, color: "text-emerald-600", bgColor: "bg-emerald-50" },
-  { title: "Dr. Rahul Sharma renewed subscription", time: "20 Jun 2025, 10:15 AM", icon: UserRound, color: "text-blue-600", bgColor: "bg-blue-50" },
-  { title: "Life Care Lab subscription expired", time: "20 Jun 2025, 09:45 AM", icon: FlaskConical, color: "text-orange-600", bgColor: "bg-orange-50" },
-  { title: "New Hospital Sunshine Hospital registered", time: "20 Jun 2025, 09:20 AM", icon: Building2, color: "text-purple-600", bgColor: "bg-purple-50" },
-  { title: "Dr. Priya Patel purchased Basic Plan", time: "19 Jun 2025, 04:30 PM", icon: UserRound, color: "text-blue-600", bgColor: "bg-blue-50" },
-];
 export default function SalesOverviewPage() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/management/sales/overview')
+      .then(res => res.json())
+      .then(json => {
+        setData(json);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to load sales overview", err);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading || !data) {
+    return (
+      <div className="p-8 flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  // Map icons to the dynamic KPI data
+  const icons = [IndianRupee, Bookmark, RefreshCw, Hourglass, Users];
+  const bgColors = ["bg-indigo-600", "bg-blue-500", "bg-emerald-500", "bg-orange-500", "bg-amber-500"];
+
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto w-full min-h-screen bg-slate-50/50 font-sans">
-      {/* Header section removed to avoid redundancy */}
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 mb-8">
-        {kpiData.map((stat, idx) => (
-          <div key={idx} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow">
-            <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white shrink-0 ${stat.bgColor}`}>
-              <stat.icon className="size-6" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-500">{stat.title}</p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-0.5">{stat.value}</h3>
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className={`text-xs font-bold flex items-center ${stat.isPositive ? 'text-emerald-500' : 'text-rose-500'}`}>
-                  {stat.isPositive ? <ArrowUp className="size-3 mr-0.5" /> : <ArrowDown className="size-3 mr-0.5" />}
-                  {stat.change.replace(/[+-]/, '')}
-                </span>
-                <span className="text-xs text-slate-400">vs last month</span>
+        {data.kpiData.map((stat: any, idx: number) => {
+          const IconComponent = icons[idx % icons.length];
+          const bgColor = bgColors[idx % bgColors.length];
+          return (
+            <div key={idx} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow">
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white shrink-0 ${bgColor}`}>
+                <IconComponent className="size-6" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-500">{stat.title}</p>
+                <h3 className="text-2xl font-bold text-slate-900 mt-0.5">{stat.value}</h3>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className={`text-xs font-bold flex items-center ${stat.isPositive ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    {stat.isPositive ? <ArrowUp className="size-3 mr-0.5" /> : <ArrowDown className="size-3 mr-0.5" />}
+                    {stat.change.replace(/[+-]/, '')}
+                  </span>
+                  <span className="text-xs text-slate-400">vs last month</span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
+      
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* Revenue Trend Line Chart */}
@@ -102,15 +89,16 @@ export default function SalesOverviewPage() {
             </button>
           </div>
           <div className="h-[300px] w-full">
-            <RevenueTrendChartClient data={revenueData} />
+            <RevenueTrendChartClient data={data.revenueData} />
           </div>
         </div>
         {/* Subscription Overview Donut Chart */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
           <h3 className="text-lg font-bold text-slate-900 mb-6">Subscription Overview</h3>
-          <SubscriptionOverviewChartClient data={subscriptionData} />
+          <SubscriptionOverviewChartClient data={data.subscriptionData} />
         </div>
       </div>
+      
       {/* Bottom Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Payments Table */}
@@ -128,7 +116,7 @@ export default function SalesOverviewPage() {
                 </tr>
               </thead>
               <tbody>
-                {recentPayments.map((payment, idx) => (
+                {data.recentPayments.map((payment: any, idx: number) => (
                   <tr key={idx} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50">
                     <td className="px-4 py-4 font-medium text-slate-700">{payment.id}</td>
                     <td className="px-4 py-4 text-slate-600">{payment.customer}</td>
@@ -148,29 +136,36 @@ export default function SalesOverviewPage() {
               </tbody>
             </table>
           </div>
-          <Link href="/sales/payments" className="mt-4 w-full py-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors block text-center">
+          <Link href="/management/sales/payments" className="mt-4 w-full py-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors block text-center">
             View All Payments
           </Link>
         </div>
+        
         {/* Recent Subscription Activity List */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
           <h3 className="text-lg font-bold text-slate-900 mb-6">Recent Subscription Activity</h3>
           <div className="space-y-6 flex-1">
-            {recentActivity.map((activity, idx) => (
-              <div key={idx} className="flex items-start gap-4">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${activity.bgColor}`}>
-                  <activity.icon className={`size-5 ${activity.color}`} />
+            {data.recentActivity.map((activity: any, idx: number) => {
+              const IconComp = activity.type === 'hospital' ? Building2 : activity.type === 'lab' ? FlaskConical : UserRound;
+              const colorClass = activity.type === 'hospital' ? 'text-emerald-600' : activity.type === 'lab' ? 'text-orange-600' : 'text-blue-600';
+              const bgClass = activity.type === 'hospital' ? 'bg-emerald-50' : activity.type === 'lab' ? 'bg-orange-50' : 'bg-blue-50';
+              
+              return (
+                <div key={idx} className="flex items-start gap-4">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${bgClass}`}>
+                    <IconComp className={`size-5 ${colorClass}`} />
+                  </div>
+                  <div className="flex-1 mt-0.5">
+                    <p className="text-sm font-medium text-slate-700">{activity.title}</p>
+                  </div>
+                  <div className="shrink-0 text-right mt-0.5">
+                    <p className="text-xs text-slate-500">{activity.time}</p>
+                  </div>
                 </div>
-                <div className="flex-1 mt-0.5">
-                  <p className="text-sm font-medium text-slate-700">{activity.title}</p>
-                </div>
-                <div className="shrink-0 text-right mt-0.5">
-                  <p className="text-xs text-slate-500">{activity.time}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-          <Link href="/sales/subscriptions" className="mt-6 pt-4 border-t border-slate-100 w-full py-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors block text-center">
+          <Link href="/management/sales/subscriptions" className="mt-6 pt-4 border-t border-slate-100 w-full py-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors block text-center">
             View All Activity
           </Link>
         </div>

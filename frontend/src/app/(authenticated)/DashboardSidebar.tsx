@@ -1,6 +1,8 @@
+"use client";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { allNavs } from "./navConfig";
-import { SidebarActiveHighlighter } from "./SidebarActiveHighlighter";
+import { SidebarLink } from "./SidebarLink";
 
 // JSX-based icon map
 const IconMap: Record<string, React.FC<{ className?: string }>> = {
@@ -30,11 +32,33 @@ const IconMap: Record<string, React.FC<{ className?: string }>> = {
 };
 
 export default function DashboardSidebar() {
+  const pathname = usePathname() || "";
+  const path = pathname.toLowerCase();
+  
+  const activeGroup = 
+    path.includes("/management/super-admin") ? "superAdmin" : 
+    path.includes("/management/sales") ? "sales" : 
+    path.includes("/management/accounts") ? "accounts" : 
+    path.includes("/management/admin") ? "admin" : 
+    path.includes("/management/support") ? "support" : 
+    path.startsWith("/hospital") ? "hospital" : 
+    path.startsWith("/clinic") ? "clinic" : 
+    path.startsWith("/laboratory") ? "laboratory" : "patient";
+    
+  const title = 
+    activeGroup === "superAdmin" ? "Super Admin Dashboard" : 
+    activeGroup === "sales" ? "Sales Dashboard" : 
+    activeGroup === "accounts" ? "Accounts Dashboard" : 
+    activeGroup === "admin" ? "Admin Dashboard" : 
+    activeGroup === "support" ? "Support Dashboard" : 
+    activeGroup === "hospital" ? "Hospital Dashboard" : 
+    activeGroup === "clinic" ? "Clinic Dashboard" : 
+    activeGroup === "laboratory" ? "Laboratory Dashboard" : "Patient Dashboard";
+
   return (
     <aside
       className="hidden md:flex shrink-0 border-r border-border bg-gradient-to-br from-blue-50 to-white flex-col transition-all duration-300 relative h-full w-64"
     >
-      <SidebarActiveHighlighter />
       <div className="h-16 border-b border-border flex items-center px-4 gap-3 shrink-0">
         <div className="size-8 bg-brand rounded-lg flex items-center justify-center shrink-0">
           <div className="size-4 bg-background rounded-sm" />
@@ -42,7 +66,7 @@ export default function DashboardSidebar() {
         <div className="flex flex-col">
            <span className="font-semibold tracking-tight leading-none mt-1">MediDoc</span>
            <span id="sidebar-group-title" className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-0.5">
-             Loading...
+             {title}
            </span>
         </div>
       </div>
@@ -50,18 +74,11 @@ export default function DashboardSidebar() {
       <nav className="flex-1 p-3 overflow-y-auto no-scrollbar group">
         <div className="space-y-1">
           {Object.entries(allNavs).map(([groupName, navItems]) => (
-            <div key={groupName} className={`nav-group nav-group-${groupName} hidden`}>
+            <div key={groupName} className={`nav-group ${groupName === activeGroup ? 'block' : 'hidden'}`}>
               {navItems.map((item) => {
                 const Icon = IconMap[item.iconName] || IconMap.LayoutDashboard;
                 return (
-                  <Link 
-                    key={item.url} 
-                    href={item.url}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:bg-muted hover:text-foreground nav-link"
-                  >
-                     <Icon className="size-4 shrink-0" />
-                     <span className="title-span">{item.title}</span>
-                  </Link>
+                  <SidebarLink key={item.url} href={item.url} title={item.title} icon={Icon} />
                 );
               })}
             </div>
@@ -71,6 +88,18 @@ export default function DashboardSidebar() {
 
       <div className="p-3 border-t border-border bg-gradient-to-br from-blue-50 to-white shrink-0 mt-auto">
         <button
+          onClick={() => {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+            
+            const managementDashboards = ['superAdmin', 'admin', 'support', 'sales', 'accounts'];
+            if (managementDashboards.includes(activeGroup)) {
+              window.location.href = "/management";
+            } else {
+              window.location.href = "/";
+            }
+          }}
           className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors w-full"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4 shrink-0"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>

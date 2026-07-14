@@ -34,24 +34,189 @@ const TestTube2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/
 
 
 
-import React, { useState } from 'react';
-// Mock Data
-const mockLabs = [
-  { id: "LAB001", name: "Apex Diagnostic Labs", address: "Connaught Place, New Delhi", phone: "+91 11-23456000", type: "Pathology & Imaging", status: "Active", testsPerDay: 450, staff: 25 },
-  { id: "LAB002", name: "City PathLabs", address: "Andheri West, Mumbai", phone: "+91 22-26543000", type: "Pathology", status: "Active", testsPerDay: 320, staff: 18 },
-  { id: "LAB003", name: "GenX Diagnostics", address: "Koramangala, Bengaluru", phone: "+91 80-25678000", type: "Genetics & Molecular", status: "Pending Review", testsPerDay: 150, staff: 40 },
-  { id: "LAB004", name: "Carewell Imaging", address: "Salt Lake, Kolkata", phone: "+91 33-23456000", type: "Radiology", status: "Active", testsPerDay: 200, staff: 12 },
-];
+import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+
 export default function LabManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLab, setSelectedLab] = useState<any>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [labs, setLabs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Dynamic Details State
+  const [selectedLabStaff, setSelectedLabStaff] = useState<any[]>([]);
+  const [selectedLabServices, setSelectedLabServices] = useState<any[]>([]);
+
+  // New / Edit Lab Form State
+  const [editingLabId, setEditingLabId] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [newAddress, setNewAddress] = useState("");
+  const [newLicenseNumber, setNewLicenseNumber] = useState("");
+
+  useEffect(() => {
+    fetchLabs();
+  }, []);
+
+  useEffect(() => {
+    if (selectedLab) {
+      fetchLabDetails(selectedLab.id);
+    }
+  }, [selectedLab]);
+
+  const fetchLabDetails = async (id: string) => {
+    try {
+      const [staffRes, servicesRes] = await Promise.all([
+        fetch(`/api/management/admin/labs/${id}/staff`),
+        fetch(`/api/management/admin/labs/${id}/services`)
+      ]);
+      if (staffRes.ok) setSelectedLabStaff(await staffRes.json());
+      if (servicesRes.ok) setSelectedLabServices(await servicesRes.json());
+    } catch (e) {
+      console.error('Error fetching details', e);
+    }
+  };
+
+  const fetchLabs = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/management/admin/labs');
+      const data = await res.json();
+      setLabs(data);
+    } catch (e) {
+      toast.error('Failed to load labs');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveLab = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingLabId) {
+        // Edit Mode
+        const res = await fetch(`/api/management/admin/labs/${editingLabId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newName, email: newEmail, phone: newPhone, address: newAddress, licenseNumber: newLicenseNumber })
+        });
+        if (res.ok) {
+          toast.success("Lab updated successfully");
+          closeModal();
+          fetchLabs();
+        } else {
+          toast.error("Error updating lab");
+        }
+      } else {
+        // Create Mode
+        const res = await fetch('/api/management/admin/labs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newName, email: newEmail, phone: newPhone, address: newAddress, type: 'LAB', licenseNumber: newLicenseNumber })
+        });
+        if (res.ok) {
+          toast.success("Lab added successfully");
+          closeModal();
+          fetchLabs();
+        } else {
+          toast.error("Error adding lab");
+        }
+      }
+    } catch (e) {
+      toast.error('Error saving lab');
+    }
+  };
+
+  const closeModal = () => {
+    setIsAddModalOpen(false);
+    setEditingLabId(null);
+    setNewName("");
+    setNewEmail("");
+    setNewPhone("");
+    setNewAddress("");
+    setNewLicenseNumber("");
+  };
+
+  const openAddModal = () => {
+    setEditingLabId(null);
+    setNewName("");
+    setNewEmail("");
+    setNewPhone("");
+    setNewAddress("");
+    setNewLicenseNumber("");
+    setIsAddModalOpen(true);
+  };
+
+  const handleVerify = async (id: string) => {
+    try {
+      const res = await fetch(`/api/management/admin/labs/${id}/verify`, { method: 'PUT' });
+      if (res.ok) {
+        toast.success("Lab Verified successfully");
+        fetchLabs();
+      }
+    } catch (e) {
+      toast.error('Error verifying lab');
+    }
+  };
+
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    try {
+      const res = await fetch(`/api/management/admin/labs/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        toast.success(`Lab status updated to ${newStatus}`);
+        fetchLabs();
+      }
+    } catch (e) {
+      toast.error('Error updating status');
+    }
+  };
+
   const toggleDropdown = (id: string) => {
     if (openDropdownId === id) setOpenDropdownId(null);
     else setOpenDropdownId(id);
   };
-  const filteredLabs = mockLabs.filter(lab => 
+
+  const handleStaffStatus = async (userId: string, currentStatus: string) => {
+    try {
+      const newStatus = currentStatus === 'Active' ? 'Blocked' : 'Active';
+      const res = await fetch(`/api/management/admin/users/${userId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        toast.success(`Staff ${newStatus}`);
+        if (selectedLab) fetchLabDetails(selectedLab.id);
+      }
+    } catch (e) {
+      toast.error('Error updating staff status');
+    }
+  };
+
+  const handleServiceStatus = async (serviceId: string, newStatus: string) => {
+    try {
+      const res = await fetch(`/api/management/admin/labs/services/${serviceId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        toast.success(`Service ${newStatus}`);
+        if (selectedLab) fetchLabDetails(selectedLab.id);
+      }
+    } catch (e) {
+      toast.error('Error updating service status');
+    }
+  };
+
+  const filteredLabs = labs.filter(lab => 
     lab.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     lab.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -70,7 +235,7 @@ export default function LabManagementPage() {
       {/* Filters and Search */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-6 flex flex-col sm:flex-row gap-4 justify-between items-center">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-bold text-slate-700">Total Labs: {mockLabs.length}</span>
+          <span className="text-sm font-bold text-slate-700">Total Labs: {labs.length}</span>
         </div>
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
@@ -106,8 +271,17 @@ export default function LabManagementPage() {
                   </span>
                 )}
               </div>
-              <h3 className="text-lg font-bold text-slate-900 leading-tight mb-1">{lab.name}</h3>
-              <p className="text-xs font-mono text-slate-500 mb-4">{lab.id} • {lab.type}</p>
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 leading-tight mb-1">
+                {lab.name}
+                {lab.isVerified ? (
+                  <CheckCircle2 className="size-4 text-blue-500" title="Verified Lab" />
+                ) : (
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 flex items-center gap-1">
+                    <AlertCircle className="size-3" /> Unverified
+                  </span>
+                )}
+              </h3>
+              <p className="text-xs font-mono text-slate-500 mb-4">{lab.id}</p>
               <div className="space-y-2.5">
                 <div className="flex items-start gap-2.5 text-sm text-slate-600">
                   <MapPin className="size-4 text-slate-400 mt-0.5 shrink-0" />
@@ -121,11 +295,11 @@ export default function LabManagementPage() {
             </div>
             <div className="bg-slate-50 p-4 grid grid-cols-2 gap-4 divide-x divide-slate-200 border-t border-slate-100">
               <div className="text-center">
-                <p className="text-xl font-extrabold text-slate-900">{lab.testsPerDay}</p>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-0.5">Tests / Day</p>
+                <p className="text-xl font-extrabold text-slate-900">{lab._count?.testRequests || 0}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-0.5">Test Requests</p>
               </div>
               <div className="text-center">
-                <p className="text-xl font-extrabold text-slate-900">{lab.staff}</p>
+                <p className="text-xl font-extrabold text-slate-900">{lab._count?.users || 0}</p>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-0.5">Lab Staff</p>
               </div>
             </div>
@@ -147,6 +321,12 @@ export default function LabManagementPage() {
                   <div className="absolute right-0 bottom-full mb-2 w-32 bg-white border border-slate-200 shadow-lg rounded-xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
                     <button 
                       onClick={() => {
+                        setEditingLabId(lab.id);
+                        setNewName(lab.name);
+                        setNewEmail(lab.email || "");
+                        setNewPhone(lab.phone);
+                        setNewAddress(lab.address);
+                        setNewLicenseNumber(lab.licenseNumber || "");
                         setIsAddModalOpen(true);
                         setOpenDropdownId(null);
                       }}
@@ -155,6 +335,41 @@ export default function LabManagementPage() {
                       <Edit2 className="size-4" />
                       Edit
                     </button>
+                    {!lab.isVerified && (
+                      <button 
+                        onClick={() => {
+                          setOpenDropdownId(null);
+                          handleVerify(lab.id);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 flex items-center gap-2 border-t border-slate-100"
+                      >
+                        <CheckCircle2 className="size-4" />
+                        Approve & Verify
+                      </button>
+                    )}
+                    {lab.status !== "Suspended" ? (
+                      <button 
+                        onClick={() => {
+                          setOpenDropdownId(null);
+                          handleStatusChange(lab.id, 'Suspended');
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 border-t border-slate-100"
+                      >
+                        <AlertCircle className="size-4" />
+                        Suspend Lab
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => {
+                          setOpenDropdownId(null);
+                          handleStatusChange(lab.id, 'Active');
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-semibold text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 border-t border-slate-100"
+                      >
+                        <CheckCircle2 className="size-4" />
+                        Activate Lab
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -179,8 +394,15 @@ export default function LabManagementPage() {
                   <Microscope className="size-6" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-xl">{selectedLab.name}</h3>
-                  <p className="text-sm font-mono text-slate-500">{selectedLab.id} • {selectedLab.type}</p>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-slate-900 text-xl">{selectedLab.name}</h3>
+                    {selectedLab.isVerified && (
+                      <span className="p-0.5 rounded-full bg-blue-50 text-blue-600 inline-flex items-center" title="Verified Lab">
+                        <CheckCircle2 className="size-4" />
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm font-mono text-slate-500">{selectedLab.id} • {selectedLab.licenseNumber || 'No License Added'}</p>
                 </div>
               </div>
               <button 
@@ -232,16 +454,16 @@ export default function LabManagementPage() {
                     </h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
-                        <p className="text-2xl font-extrabold text-slate-900">{selectedLab.testsPerDay}</p>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-1">Tests / Day</p>
+                        <p className="text-2xl font-extrabold text-slate-900">{selectedLab._count?.testRequests || 0}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-1">Test Requests</p>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
-                        <p className="text-2xl font-extrabold text-slate-900">{selectedLab.staff}</p>
+                        <p className="text-2xl font-extrabold text-slate-900">{selectedLab._count?.users || 0}</p>
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-1">Total Staff</p>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center col-span-2">
-                        <p className="text-2xl font-extrabold text-slate-900">12,450</p>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-1">Tests Processed This Month</p>
+                        <p className="text-2xl font-extrabold text-slate-900">{selectedLab._count?.samples || 0}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-1">Samples Processed</p>
                       </div>
                     </div>
                   </div>
@@ -256,12 +478,33 @@ export default function LabManagementPage() {
                         Available Test Types
                       </h4>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {["Blood & Hematology", "Biochemistry", "Microbiology", "Immunology", "Molecular Diagnostics", "Histopathology"].map((test, i) => (
-                        <span key={i} className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-lg text-xs font-bold border border-purple-100">
-                          {test}
-                        </span>
-                      ))}
+                    <div className="space-y-3">
+                      {selectedLabServices.length > 0 ? selectedLabServices.map((service, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">{service.name}</p>
+                            <p className="text-xs text-slate-500 font-mono">₹{service.price}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {service.status === 'Approved' ? (
+                              <span className="px-2 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-md text-[10px] font-bold uppercase">Approved</span>
+                            ) : service.status === 'Rejected' ? (
+                              <span className="px-2 py-1 bg-rose-50 text-rose-600 border border-rose-100 rounded-md text-[10px] font-bold uppercase">Rejected</span>
+                            ) : (
+                              <div className="flex gap-1">
+                                <button onClick={() => handleServiceStatus(service.id, 'Approved')} className="p-1 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-md" title="Approve">
+                                  <CheckCircle2 className="size-4" />
+                                </button>
+                                <button onClick={() => handleServiceStatus(service.id, 'Rejected')} className="p-1 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-md" title="Reject">
+                                  <X className="size-4" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )) : (
+                        <p className="text-xs text-slate-400 italic">No services listed yet.</p>
+                      )}
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -274,23 +517,27 @@ export default function LabManagementPage() {
                         </h4>
                       </div>
                       <div className="space-y-3">
-                        {[
-                          { name: "Dr. Arvind Pathak", role: "Chief Pathologist" },
-                          { name: "Sunita Reddy", role: "Lab Technician" },
-                          { name: "Rahul Dev", role: "Lab Manager" },
-                        ].map((staff, i) => (
+                        {selectedLabStaff.length > 0 ? selectedLabStaff.map((staff, i) => (
                           <div key={i} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50">
                             <div className="flex items-center gap-3">
-                              <div className="size-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-xs">
+                              <div className="size-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs">
                                 {staff.name.charAt(0)}
                               </div>
                               <div>
-                                <p className="text-sm font-bold text-slate-900">{staff.name}</p>
-                                <p className="text-xs font-medium text-slate-500">{staff.role}</p>
+                                <p className="text-sm font-bold text-slate-900 line-clamp-1">{staff.name}</p>
+                                <p className="text-xs font-medium text-slate-500">{staff.role.replace('_', ' ')}</p>
                               </div>
                             </div>
+                            <button 
+                              onClick={() => handleStaffStatus(staff.id, staff.status)}
+                              className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase border ${staff.status === 'Active' ? 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'}`}
+                            >
+                              {staff.status === 'Active' ? 'Block' : 'Unblock'}
+                            </button>
                           </div>
-                        ))}
+                        )) : (
+                          <p className="text-xs text-slate-400 italic">No staff found.</p>
+                        )}
                       </div>
                     </div>
                     {/* Recent Activity */}
@@ -347,69 +594,41 @@ export default function LabManagementPage() {
               </button>
             </div>
             <div className="p-6 overflow-y-auto flex-1">
-              <form className="space-y-6">
+              <form className="space-y-6" onSubmit={handleSaveLab}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="md:col-span-2">
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Laboratory Name *</label>
-                    <input type="text" placeholder="e.g. Apex Diagnostic Labs" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Lab Type *</label>
-                    <select className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" required>
-                      <option value="">Select Lab Type</option>
-                      <option value="Pathology">Pathology</option>
-                      <option value="Radiology">Radiology & Imaging</option>
-                      <option value="Genetics">Genetics & Molecular</option>
-                      <option value="Multispecialty">Multispecialty Lab</option>
-                    </select>
+                    <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Apex Diagnostic Labs" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" required />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">License Number *</label>
-                    <input type="text" placeholder="Medical License ID" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" required />
+                    <input type="text" value={newLicenseNumber} onChange={e => setNewLicenseNumber(e.target.value)} placeholder="Medical License ID" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" required />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Email *</label>
-                    <input type="email" placeholder="contact@lab.com" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Phone *</label>
-                    <input type="tel" placeholder="+91 XXXXX XXXXX" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" required />
+                    <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="contact@lab.com" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" required />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Address *</label>
-                    <input type="text" placeholder="Street Address" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">City *</label>
-                    <input type="text" placeholder="e.g. New Delhi" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Lab Manager Name *</label>
-                    <input type="text" placeholder="Name of Manager" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" required />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Status *</label>
-                    <select className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" required>
-                      <option value="Active">Active</option>
-                      <option value="Pending Review">Pending Review</option>
-                      <option value="Suspended">Suspended</option>
-                    </select>
+                    <input type="text" value={newAddress} onChange={e => setNewAddress(e.target.value)} placeholder="Street Address" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" required />
                   </div>
                 </div>
+                <div className="p-6 border-t border-slate-100 flex gap-3 shrink-0 bg-slate-50 -mx-6 -mb-6 mt-6">
+                  <button 
+                    type="button"
+                    onClick={() => setIsAddModalOpen(false)}
+                    className="flex-1 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-sm font-bold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm"
+                  >
+                    Save Laboratory
+                  </button>
+                </div>
               </form>
-            </div>
-            <div className="p-6 border-t border-slate-100 flex gap-3 shrink-0 bg-slate-50">
-              <button 
-                onClick={() => setIsAddModalOpen(false)}
-                className="flex-1 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-sm font-bold transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                className="flex-1 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm"
-              >
-                Save Laboratory
-              </button>
             </div>
           </div>
         </div>

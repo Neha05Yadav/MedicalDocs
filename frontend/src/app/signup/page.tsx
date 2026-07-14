@@ -7,29 +7,87 @@ import ArrowLeft from "lucide-react/dist/esm/icons/arrow-left.mjs";
 import Shield from "lucide-react/dist/esm/icons/shield.mjs";
 import User from "lucide-react/dist/esm/icons/user.mjs";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-export default function SignupPage() {
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+
+// Role → dashboard path mapping (single source of truth)
+const ROLE_DASHBOARD: Record<string, string> = {
+  PATIENT:   "/patient",
+  HOSPITAL:  "/hospital",
+  LAB:       "/laboratory",
+  CLINIC:    "/clinic",
+  DOCTOR:    "/clinic",
+  ADMIN:     "/super-admin",
+  SUPER_ADMIN: "/super-admin",
+};
+
+// Role options shown in UI
+const ROLE_OPTIONS = [
+  { value: "PATIENT",  label: "Patient" },
+  { value: "HOSPITAL", label: "Hospital" },
+  { value: "LAB",      label: "Lab" },
+  { value: "CLINIC",   label: "Clinic" },
+];
+
+function SignupForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("PATIENT");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Pre-select role from URL query param e.g. /signup?role=HOSPITAL
+  useEffect(() => {
+    const queryRole = searchParams.get("role")?.toUpperCase();
+    if (queryRole && ROLE_DASHBOARD[queryRole]) {
+      setRole(queryRole);
+    }
+  }, [searchParams]);
+
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
-    // Mock signup for UI testing
-    setTimeout(() => {
+
+    try {
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, name, role }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Signup failed");
+      }
+
+      // Save auth data and set cookie for middleware
+      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      document.cookie = `token=${data.access_token}; path=/; max-age=86400`;
+
+      toast.success(`Welcome to MediDoc, ${data.user.name}!`);
+
+      // Redirect based on role returned from backend (preferred) or selected role
+      const userRole: string = data.user?.role || role;
+      const destination = ROLE_DASHBOARD[userRole] ?? "/patient";
+      router.push(destination);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to connect to server");
+    } finally {
       setIsLoading(false);
-      toast.success("Account created successfully!");
-      router.push("/auth");
-    }, 800);
+    }
   }
+
   async function handleGoogleSignup() {
-    toast.success("Redirecting to Google...");
+    toast.info("Google sign-up coming soon!");
   }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -47,6 +105,7 @@ export default function SignupPage() {
           <h1 className="text-2xl font-bold tracking-tight">Create your account</h1>
           <p className="text-sm text-muted-foreground mt-1">Join MediDoc to manage your health records securely.</p>
         </div>
+
         <button
           onClick={handleGoogleSignup}
           className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-card border border-border rounded-xl text-sm font-medium hover:bg-muted transition-colors mb-6"
@@ -59,6 +118,7 @@ export default function SignupPage() {
           </svg>
           Sign up with Google
         </button>
+
         <div className="relative mb-6">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-border" />
@@ -67,7 +127,30 @@ export default function SignupPage() {
             <span className="bg-background px-2 text-muted-foreground">or sign up with email</span>
           </div>
         </div>
+
         <form onSubmit={handleSignup} className="space-y-4">
+          {/* Role Selector */}
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">I am a</label>
+            <div className="grid grid-cols-4 gap-2">
+              {ROLE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setRole(opt.value)}
+                  className={`py-2 px-1 rounded-xl border text-xs font-semibold transition-all ${
+                    role === opt.value
+                      ? "bg-brand text-background border-brand"
+                      : "bg-card border-border text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Full Name */}
           <div>
             <label className="text-sm font-medium mb-1.5 block">Full Name</label>
             <div className="relative">
@@ -82,6 +165,8 @@ export default function SignupPage() {
               />
             </div>
           </div>
+
+          {/* Email */}
           <div>
             <label className="text-sm font-medium mb-1.5 block">Email</label>
             <div className="relative">
@@ -96,6 +181,8 @@ export default function SignupPage() {
               />
             </div>
           </div>
+
+          {/* Password */}
           <div>
             <label className="text-sm font-medium mb-1.5 block">Password</label>
             <div className="relative">
@@ -105,7 +192,7 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-10 pr-10 py-2.5 bg-card border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
-                placeholder="Create a password"
+                placeholder="Create a password (min. 6 chars)"
                 required
                 minLength={6}
               />
@@ -118,14 +205,16 @@ export default function SignupPage() {
               </button>
             </div>
           </div>
+
           <button
             type="submit"
             disabled={isLoading}
             className="w-full py-2.5 bg-brand text-background rounded-xl text-sm font-semibold hover:brightness-110 transition-all disabled:opacity-50 mt-2"
           >
-            {isLoading ? "Creating account..." : "Create Account"}
+            {isLoading ? "Creating account..." : `Create ${ROLE_OPTIONS.find(r => r.value === role)?.label || ""} Account`}
           </button>
         </form>
+
         <p className="text-center text-sm text-muted-foreground mt-6">
           Already have an account?{" "}
           <Link href="/auth" className="text-brand font-medium hover:underline">
@@ -134,5 +223,13 @@ export default function SignupPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div></div>}>
+      <SignupForm />
+    </Suspense>
   );
 }

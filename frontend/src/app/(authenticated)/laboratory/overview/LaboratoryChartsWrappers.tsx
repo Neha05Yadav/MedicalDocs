@@ -15,12 +15,20 @@ function ChartPlaceholder() {
   );
 }
 
+function DonutPlaceholder() {
+  return (
+    <div className="w-full h-full flex items-center justify-center">
+      <div className="w-[140px] h-[140px] rounded-full border-[25px] border-muted/20 animate-pulse"></div>
+    </div>
+  );
+}
+
 export function TestRequestDonutChartWrapper({ data }: { data: any[] }) {
   const [load, setLoad] = useState(false);
   if (!load) {
     return (
-      <div className="absolute inset-0 z-10 cursor-pointer group" onMouseEnter={() => setLoad(true)} onTouchStart={() => setLoad(true)} onClick={() => setLoad(true)}>
-        <ChartPlaceholder />
+      <div className="absolute inset-0 z-10 cursor-pointer group flex items-center justify-center" onMouseEnter={() => setLoad(true)} onTouchStart={() => setLoad(true)} onClick={() => setLoad(true)}>
+        <DonutPlaceholder />
       </div>
     );
   }
@@ -31,8 +39,8 @@ export function ReportsSummaryDonutChartWrapper({ data }: { data: any[] }) {
   const [load, setLoad] = useState(false);
   if (!load) {
     return (
-      <div className="absolute inset-0 z-10 cursor-pointer group" onMouseEnter={() => setLoad(true)} onTouchStart={() => setLoad(true)} onClick={() => setLoad(true)}>
-        <ChartPlaceholder />
+      <div className="absolute inset-0 z-10 cursor-pointer group flex items-center justify-center" onMouseEnter={() => setLoad(true)} onTouchStart={() => setLoad(true)} onClick={() => setLoad(true)}>
+        <DonutPlaceholder />
       </div>
     );
   }

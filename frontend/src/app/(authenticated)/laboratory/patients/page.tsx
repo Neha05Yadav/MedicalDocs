@@ -29,43 +29,123 @@ const X = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" wid
 const FileText = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>;
 const Download = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg>;
 const Eye = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path><circle cx="12" cy="12" r="3"></circle></svg>;
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
-// Mock Data
-const labPatients = [
-  { id: "PAT001", name: "Rahul Sharma", age: 45, gender: "Male", phone: "+91 9876543210", email: "rahul@example.com", lastTest: "11 Jun 2026", status: "Authorized" },
-  { id: "PAT002", name: "Priya Singh", age: 32, gender: "Female", phone: "+91 9876543211", email: "priya@example.com", lastTest: "10 Jun 2026", status: "Authorized" },
-  { id: "PAT003", name: "Amit Kumar", age: 58, gender: "Male", phone: "+91 9876543212", email: "amit@example.com", lastTest: "09 Jun 2026", status: "Unauthorized" },
-  { id: "PAT004", name: "Neha Gupta", age: 29, gender: "Female", phone: "+91 9876543213", email: "neha@example.com", lastTest: "08 Jun 2026", status: "Unauthorized" },
-  { id: "PAT005", name: "Sanjay Verma", age: 50, gender: "Male", phone: "+91 9876543214", email: "sanjay@example.com", lastTest: "07 Jun 2026", status: "Authorized" },
-];
+import { useRouter } from "next/navigation";
+
 export default function LabPatientsPage() {
+  const router = useRouter();
+  const [labPatients, setLabPatients] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterTab, setFilterTab] = useState<"All" | "Authorized" | "Unauthorized">("All");
+  const [filterTab, setFilterTab] = useState<"All" | "Authorized" | "Unauthorized" | "Pending">("All");
+  const [loading, setLoading] = useState(true);
+
   // Modal state
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
   const [selectedPatientForAccess, setSelectedPatientForAccess] = useState<any>(null);
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
   const [selectedPatientForReports, setSelectedPatientForReports] = useState<any>(null);
+  const [patientRecords, setPatientRecords] = useState<any[]>([]);
+  const [loadingRecords, setLoadingRecords] = useState(false);
+
+  useEffect(() => {
+    fetchPatients();
+  }, [router]);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (searchTerm.length >= 3) {
+        searchPatients(searchTerm);
+      } else if (searchTerm.length === 0) {
+        fetchPatients();
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
+
+  const fetchPatients = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return router.push("/auth");
+      const res = await fetch("/api/laboratory/patients", { headers: { "Authorization": `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setLabPatients(data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const searchPatients = async (query: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/laboratory/patients/search?q=${query}`, { headers: { "Authorization": `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setLabPatients(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const filteredPatients = labPatients.filter(patient => {
-    const matchesSearch = patient.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          patient.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          patient.phone.includes(searchTerm);
     const matchesTab = filterTab === "All" || patient.status === filterTab;
-    return matchesSearch && matchesTab;
+    return matchesTab;
   });
-  const handleRequestAccess = (e: React.FormEvent) => {
+
+  const handleRequestAccess = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsAccessModalOpen(false);
-    toast.success(`Access request sent to ${selectedPatientForAccess?.name}`);
+    if (!selectedPatientForAccess) return;
+    
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/laboratory/patients/request-access", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ patientId: selectedPatientForAccess.id })
+      });
+      if (res.ok) {
+        toast.success(`Access request sent to ${selectedPatientForAccess.name}`);
+        setIsAccessModalOpen(false);
+        fetchPatients();
+      } else {
+        toast.error("Failed to send request");
+      }
+    } catch (e) {
+      toast.error("Error sending request");
+    }
   };
   const openAccessModal = (patient: any) => {
     setSelectedPatientForAccess(patient);
     setIsAccessModalOpen(true);
   };
-  const openReportsModal = (patient: any) => {
+  const openReportsModal = async (patient: any) => {
     setSelectedPatientForReports(patient);
     setIsReportsModalOpen(true);
+    setLoadingRecords(true);
+    setPatientRecords([]);
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/laboratory/patients/${patient.id}/records`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPatientRecords(data);
+      } else {
+        toast.error("Failed to load records");
+      }
+    } catch (e) {
+      toast.error("Error loading records");
+    } finally {
+      setLoadingRecords(false);
+    }
   };
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen">
@@ -248,34 +328,38 @@ export default function LabPatientsPage() {
             </div>
             <div className="p-6 overflow-y-auto flex-1">
               <div className="space-y-4">
-                {[
-                  { id: "R1", name: "Complete Blood Count", date: "11 Jun 2026", facility: "Apex Labs", type: "Blood Test" },
-                  { id: "R2", name: "Lipid Profile", date: "05 May 2026", facility: "City Hospital", type: "Blood Test" },
-                  { id: "R3", name: "Chest X-Ray", date: "20 Jan 2026", facility: "Care Hospital", type: "Imaging" },
-                ].map(report => (
-                  <div key={report.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-xl hover:border-slate-200 hover:shadow-sm transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className="size-10 rounded-lg bg-red-50 text-red-500 flex items-center justify-center">
-                        <FileText className="size-5" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900">{report.name}.pdf</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 uppercase tracking-wider">{report.type}</span>
-                          <span className="text-xs font-medium text-slate-500">{report.date} • {report.facility}</span>
+                {loadingRecords ? (
+                  <div className="flex justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0891b2]"></div></div>
+                ) : patientRecords.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500">No past reports found for this patient.</div>
+                ) : (
+                  patientRecords.map(report => (
+                    <div key={report.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-xl hover:border-slate-200 hover:shadow-sm transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className="size-10 rounded-lg bg-red-50 text-red-500 flex items-center justify-center">
+                          <FileText className="size-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900">{report.name}.pdf</h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 uppercase tracking-wider">{report.type}</span>
+                            <span className="text-xs font-medium text-slate-500">{report.date} • {report.facility}</span>
+                          </div>
                         </div>
                       </div>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => window.open(report.fileUrl.startsWith('http') ? report.fileUrl : `/uploads/${report.fileUrl}`, "_blank")}
+                          className="p-1.5 border border-[#0891b2]/20 text-[#0891b2] hover:bg-cyan-50 rounded-md inline-flex items-center justify-center transition-colors shadow-sm" title="View">
+                          <Eye className="size-4" />
+                        </button>
+                        <button className="p-2 text-slate-400 hover:text-[#0891b2] hover:bg-cyan-50 rounded-lg transition-colors" title="Download">
+                          <Download className="size-4" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button className="p-2 text-slate-400 hover:text-[#0891b2] hover:bg-cyan-50 rounded-lg transition-colors" title="View">
-                        <Eye className="size-4" />
-                      </button>
-                      <button className="p-2 text-slate-400 hover:text-[#0891b2] hover:bg-cyan-50 rounded-lg transition-colors" title="Download">
-                        <Download className="size-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>

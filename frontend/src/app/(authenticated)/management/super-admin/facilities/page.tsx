@@ -1,137 +1,305 @@
 "use client";
-const Hospital = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 7v4"></path><path d="M14 21v-3a2 2 0 0 0-4 0v3"></path><path d="M14 9h-4"></path><path d="M18 11h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h2"></path><path d="M18 21V5a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16"></path></svg>;
-const FlaskConical = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"></path><path d="M6.453 15h11.094"></path><path d="M8.5 2h7"></path></svg>;
-const Search = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>;
-const Filter = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"></path></svg>;
-const CheckCircle2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>;
-const AlertCircle = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>;
-const XCircle = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>;
-const MoreVertical = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>;
+import React, { useState, useEffect } from 'react';
+import { toast } from "sonner";
 
+// Inline SVGs to replace lucide-react (prevents import/runtime errors in Next.js)
+const Search = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+const CheckCircle2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>;
+const XCircle = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>;
+const AlertCircle = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
+const Trash2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
+const Power = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>;
+const Check = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+const X = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>;
+const Eye = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>;
+const FileCheck = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>;
+const ShieldCheck = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>;
+const User = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+const MapPin = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>;
+const Mail = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>;
+const Phone = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>;
+const Calendar = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
+const HospitalIcon = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="5" y="5" rx="2" ry="2"/><path d="M12 9v6"/><path d="M9 12h6"/></svg>;
+const FlaskConical = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a2 2 0 0 0 1.8 2.95h10.96a2 2 0 0 0 1.8-2.95L14.21 10.42a2 2 0 0 1-.21-.896V2"/><path d="M8.5 2h7"/><path d="M14 16.5 9 11"/></svg>;
 
-
-
-
-
-
-
-
-import React, { useState } from 'react';
-const mockFacilities = [
-  { id: "FAC-001", name: "City Care Hospital", type: "Hospital", status: "Active", joined: "12 May 2026", location: "Delhi" },
-  { id: "FAC-002", name: "Apex Labs", type: "Laboratory", status: "Pending Approval", joined: "14 May 2026", location: "Mumbai" },
-  { id: "FAC-003", name: "Apollo Hospital", type: "Hospital", status: "Active", joined: "01 Jan 2026", location: "Bangalore" },
-  { id: "FAC-004", name: "Dr. Lal PathLabs", type: "Laboratory", status: "Active", joined: "15 Feb 2026", location: "Kolkata" },
-  { id: "FAC-005", name: "Carewell Clinic", type: "Hospital", status: "Suspended", joined: "20 May 2026", location: "Delhi" },
-  { id: "FAC-006", name: "MediLife Diagnostics", type: "Laboratory", status: "Active", joined: "22 May 2026", location: "Chennai" },
-];
 export default function FacilityManagementPage() {
-  const tabs = ["All Facilities", "Hospitals", "Laboratories", "Pending Approvals", "Suspended"];
-  const [activeTab, setActiveTab] = useState("All Facilities");
   const [searchTerm, setSearchTerm] = useState("");
-  const filteredFacilities = mockFacilities.filter(facility => {
+  const [activeTab, setActiveTab] = useState("All Facilities");
+  const [facilities, setFacilities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Modal State
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [selectedFacility, setSelectedFacility] = useState<any>(null);
+
+  const tabs = ["All Facilities", "Hospitals", "Labs", "Pending Approvals", "Suspended"];
+
+  useEffect(() => {
+    fetchFacilities();
+  }, []);
+
+  const fetchFacilities = async () => {
+    try {
+      const res = await fetch('/api/management/super-admin/facilities');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setFacilities(data);
+      } else {
+        toast.error(data.error || "Failed to fetch facilities");
+        setFacilities([]);
+      }
+    } catch (error) {
+      toast.error("Failed to fetch facilities");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApproveReject = async (facilityId: string, action: string) => {
+    const previous = [...facilities];
+    
+    // Optimistic Update
+    if (action === 'Rejected') {
+      setFacilities(facilities.filter(f => f.id !== facilityId));
+    } else {
+      setFacilities(facilities.map(f => f.id === facilityId ? { ...f, status: action, isVerified: true } : f));
+    }
+
+    try {
+      const res = await fetch('/api/management/super-admin/facilities', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: facilityId, status: action, isVerified: action === 'Active' })
+      });
+      if (res.ok) {
+        toast.success(`Facility ${action === 'Active' ? 'approved' : 'rejected'} successfully.`);
+      } else throw new Error();
+    } catch (error) {
+      setFacilities(previous);
+      toast.error(`Failed to ${action === 'Active' ? 'approve' : 'reject'} facility.`);
+    }
+  };
+
+  const handleVerify = async (facilityId: string) => {
+    const previous = [...facilities];
+    setFacilities(facilities.map(f => f.id === facilityId ? { ...f, isVerified: true, status: 'Active' } : f));
+    
+    try {
+      const res = await fetch('/api/management/super-admin/facilities', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: facilityId, isVerified: true, status: 'Active' })
+      });
+      if (res.ok) {
+        toast.success("Facility verified and activated successfully.");
+        if (selectedFacility?.id === facilityId) {
+          setSelectedFacility({ ...selectedFacility, isVerified: true, status: 'Active' });
+        }
+      } else throw new Error();
+    } catch (error) {
+      setFacilities(previous);
+      toast.error("Failed to verify facility.");
+    }
+  };
+
+  const handleToggleStatus = async (facilityId: string, currentStatus: string) => {
+    const newStatus = currentStatus === "Active" ? "Suspended" : "Active";
+    const previous = [...facilities];
+    
+    // Optimistic Update
+    setFacilities(facilities.map(f => f.id === facilityId ? { ...f, status: newStatus } : f));
+
+    try {
+      const res = await fetch('/api/management/super-admin/facilities', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: facilityId, status: newStatus })
+      });
+      if (res.ok) {
+        toast.success(`Facility access ${newStatus === 'Active' ? 'restored' : 'suspended'}.`);
+      } else throw new Error();
+    } catch (error) {
+      setFacilities(previous);
+      toast.error("Failed to update status.");
+    }
+  };
+
+  const handleDelete = async (facilityId: string) => {
+    if (!window.confirm("Are you sure you want to delete this facility completely?")) return;
+
+    const previous = [...facilities];
+    setFacilities(facilities.filter(f => f.id !== facilityId));
+
+    try {
+      const res = await fetch(`/api/management/super-admin/facilities?id=${facilityId}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success("Facility deleted successfully.");
+      } else throw new Error();
+    } catch (error) {
+      setFacilities(previous);
+      toast.error("Failed to delete facility.");
+    }
+  };
+
+  const filteredFacilities = facilities.filter(facility => {
     let matchesTab = true;
     if (activeTab === "Hospitals") matchesTab = facility.type === "Hospital";
-    else if (activeTab === "Laboratories") matchesTab = facility.type === "Laboratory";
-    else if (activeTab === "Pending Approvals") matchesTab = facility.status === "Pending Approval";
-    else if (activeTab === "Suspended") matchesTab = facility.status === "Suspended";
-    const matchesSearch = facility.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          facility.id.toLowerCase().includes(searchTerm.toLowerCase());
+    else if (activeTab === "Labs") matchesTab = facility.type === "Labs";
+    else if (activeTab === "Pending Approvals") matchesTab = facility.status === "Pending";
+    else if (activeTab === "Suspended") matchesTab = facility.status === "Suspended" || facility.status === "Inactive";
+    
+    const matchesSearch = (facility.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) || 
+                          (facility.email?.toLowerCase() || "").includes(searchTerm.toLowerCase());
+                          
     return matchesTab && matchesSearch;
   });
+
   return (
-    <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans">
-      {/* Tabs and Search */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-6">
-        <div className="flex flex-col xl:flex-row gap-4 justify-between items-center">
-          <div className="flex bg-slate-100 p-1 rounded-xl w-full xl:w-auto overflow-x-auto no-scrollbar">
-            {tabs.map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 xl:flex-none whitespace-nowrap px-5 py-2 rounded-lg text-sm font-bold transition-all ${
-                  activeTab === tab ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-          <div className="relative w-full xl:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="Search facilities..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-            />
-          </div>
+    <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans space-y-6">
+      <div>
+        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Facility Management</h1>
+        <p className="text-sm text-slate-500 mt-1 font-medium">Manage and verify hospitals, clinics, and laboratories on the platform.</p>
+      </div>
+
+      {/* Filters Bar */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col xl:flex-row gap-4 justify-between items-center">
+        {/* Tabs */}
+        <div className="flex flex-wrap gap-2 w-full xl:w-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-sm ${
+                activeTab === tab
+                  ? "bg-slate-900 text-white"
+                  : "bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* Search */}
+        <div className="relative w-full xl:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+          <input 
+            type="text" 
+            placeholder="Search facilities..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+          />
         </div>
       </div>
+
+      {/* Facilities Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full min-w-[800px] text-sm text-left">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="px-6 py-4">Facility Name</th>
-                <th className="px-6 py-4">Type</th>
-                <th className="px-6 py-4">Location</th>
-                <th className="px-6 py-4">Registration Date</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="px-6 py-4 whitespace-nowrap">Facility Name</th>
+                <th className="px-6 py-4 whitespace-nowrap">Type</th>
+                <th className="px-6 py-4 whitespace-nowrap">Location</th>
+                <th className="px-6 py-4 whitespace-nowrap">Registration Date</th>
+                <th className="px-6 py-4 whitespace-nowrap">Status</th>
+                <th className="px-6 py-4 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredFacilities.length > 0 ? filteredFacilities.map(facility => (
-                <tr key={facility.id} className="hover:bg-slate-50/50 transition-colors group">
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500 font-medium animate-pulse">
+                    Loading facilities...
+                  </td>
+                </tr>
+              ) : filteredFacilities.length > 0 ? filteredFacilities.map(facility => (
+                <tr key={facility.id} className={`hover:bg-slate-50/50 transition-colors group ${facility.status === 'Suspended' || facility.status === 'Inactive' ? 'opacity-70' : ''}`}>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-lg ${facility.type === 'Hospital' ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'}`}>
-                        {facility.type === 'Hospital' ? <Hospital className="size-4" /> : <FlaskConical className="size-4" />}
+                        {facility.type === 'Hospital' ? <HospitalIcon className="size-4" /> : <FlaskConical className="size-4" />}
                       </div>
                       <div>
                         <div className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{facility.name}</div>
-                        <div className="text-xs text-slate-500 font-medium">ID: {facility.id}</div>
+                        <div className="text-xs text-slate-500 font-medium">{facility.email} • {facility.id?.slice(0,8)}...</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="inline-flex px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-slate-100 text-slate-600">
+                    <span className="inline-flex px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-slate-100 text-slate-600 whitespace-nowrap border border-slate-200">
                       {facility.type}
                     </span>
                   </td>
-                  <td className="px-6 py-4 font-medium text-slate-600">
+                  <td className="px-6 py-4 font-medium text-slate-600 whitespace-nowrap text-xs">
                     {facility.location}
                   </td>
-                  <td className="px-6 py-4 font-medium text-slate-600">
+                  <td className="px-6 py-4 font-medium text-slate-600 whitespace-nowrap text-xs">
                     {facility.joined}
                   </td>
                   <td className="px-6 py-4">
                     {facility.status === "Active" ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-100">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-100 whitespace-nowrap">
                         <CheckCircle2 className="size-3" /> Active
                       </span>
-                    ) : facility.status === "Suspended" ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-rose-50 text-rose-600 border border-rose-100">
-                        <XCircle className="size-3" /> Suspended
+                    ) : facility.status === "Pending" ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-amber-50 text-amber-600 border border-amber-100 whitespace-nowrap">
+                        <AlertCircle className="size-3" /> Pending
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-amber-50 text-amber-600 border border-amber-100">
-                        <AlertCircle className="size-3" /> Pending
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-rose-50 text-rose-600 border border-rose-100 whitespace-nowrap">
+                        <XCircle className="size-3" /> Suspended
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                      <MoreVertical className="size-5" />
+                  <td className="px-6 py-4 text-right flex justify-end gap-1.5">
+                    <button 
+                      onClick={() => { setSelectedFacility(facility); setIsProfileModalOpen(true); }}
+                      className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors" 
+                      title="View Details"
+                    >
+                      <Eye className="size-4" />
+                    </button>
+                    {facility.status === 'Pending' ? (
+                      <>
+                        <button 
+                          onClick={() => handleApproveReject(facility.id, 'Active')}
+                          className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                          title="Approve"
+                        >
+                          <Check className="size-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleApproveReject(facility.id, 'Rejected')}
+                          className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                          title="Reject"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <button 
+                        onClick={() => handleToggleStatus(facility.id, facility.status)}
+                        className={`p-2 rounded-lg transition-colors ${facility.status === 'Active' ? 'text-amber-500 hover:bg-amber-50' : 'text-emerald-500 hover:bg-emerald-50'}`}
+                        title={facility.status === 'Active' ? 'Suspend' : 'Activate'}
+                      >
+                        <Power className="size-4" />
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => handleDelete(facility.id)}
+                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors" 
+                      title="Delete Facility"
+                    >
+                      <Trash2 className="size-4" />
                     </button>
                   </td>
                 </tr>
               )) : (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center">
-                    <Hospital className="size-10 text-slate-300 mx-auto mb-3" />
+                    <HospitalIcon className="size-10 text-slate-300 mx-auto mb-3" />
                     <p className="text-slate-500 font-medium">No facilities found matching your criteria.</p>
                   </td>
                 </tr>
@@ -140,6 +308,100 @@ export default function FacilityManagementPage() {
           </table>
         </div>
       </div>
+
+      {/* Profile & Verification Modal */}
+      {isProfileModalOpen && selectedFacility && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                  {selectedFacility.type === 'Hospital' ? <HospitalIcon className="size-6" /> : <FlaskConical className="size-6" />}
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    {selectedFacility.name}
+                    {selectedFacility.isVerified && <ShieldCheck className="size-5 text-emerald-500" />}
+                  </h3>
+                  <p className="text-sm text-slate-500 font-medium mt-0.5">{selectedFacility.id?.slice(0,8)}... • {selectedFacility.type}</p>
+                </div>
+              </div>
+              <button onClick={() => setIsProfileModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-xl transition-colors">
+                <X className="size-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto space-y-8">
+              {/* Contact & Legal */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Contact Info</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-sm">
+                      <Mail className="size-4 text-slate-400" />
+                      <span className="font-medium text-slate-700">{selectedFacility.email}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm">
+                      <Phone className="size-4 text-slate-400" />
+                      <span className="font-medium text-slate-700">{selectedFacility.phone || "Not provided"}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Location & Joined</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-sm">
+                      <MapPin className="size-4 text-slate-400" />
+                      <span className="font-medium text-slate-700">{selectedFacility.location}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm">
+                      <Calendar className="size-4 text-slate-400" />
+                      <span className="font-medium text-slate-700">Joined: {selectedFacility.joined}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* KYC & Documents */}
+              <div className="space-y-4 pt-6 border-t border-slate-100">
+                <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">KYC & Documents</h4>
+                {selectedFacility.documents && selectedFacility.documents.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {selectedFacility.documents.map((doc: string, idx: number) => (
+                      <div key={idx} className="flex items-center justify-between p-4 border border-slate-200 rounded-xl bg-slate-50">
+                        <div className="flex items-center gap-3">
+                          <FileCheck className="size-5 text-indigo-500" />
+                          <span className="text-sm font-bold text-slate-700">{doc}</span>
+                        </div>
+                        <button className="text-xs font-bold text-indigo-600 hover:underline">View</button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 border border-dashed border-slate-300 rounded-xl text-center text-sm font-medium text-slate-500">
+                    No documents uploaded yet.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
+              <button onClick={() => setIsProfileModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">Close</button>
+              
+              {!selectedFacility.isVerified && (
+                <button 
+                  onClick={() => handleVerify(selectedFacility.id)} 
+                  className="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-colors flex items-center gap-2"
+                >
+                  <ShieldCheck className="size-4" />
+                  Verify Documents & Activate
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

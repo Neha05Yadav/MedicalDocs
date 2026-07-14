@@ -29,26 +29,59 @@ const Ear = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" w
 const Eye = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path><circle cx="12" cy="12" r="3"></circle></svg>;
 const User = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
 const FileText = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>;
-import { useState } from "react";
-const kpiData = [
-  { title: "Total Departments", value: "8", subtitle: "All departments", icon: Building2, color: "text-cyan-500", bg: "bg-cyan-50", line: "bg-cyan-500" },
-  { title: "Total Doctors", value: "42", subtitle: "Across all departments", icon: UserCheck, color: "text-emerald-500", bg: "bg-white", line: "bg-white0" },
-  { title: "Total Patients", value: "1,248", subtitle: "Across all departments", icon: Users, color: "text-purple-500", bg: "bg-purple-50", line: "bg-purple-500" },
-  { title: "Reports Generated", value: "356", subtitle: "This month", icon: Activity, color: "text-orange-500", bg: "bg-orange-50", line: "bg-orange-500" },
-];
-const departmentsData = [
-  { name: "Cardiology", doctors: 12, patients: 142, reports: 85, icon: Heart, iconColor: "text-red-500", iconBg: "bg-red-50" },
-  { name: "Neurology", doctors: 8, patients: 98, reports: 62, icon: Brain, iconColor: "text-purple-500", iconBg: "bg-purple-50" },
-  { name: "Orthopedics", doctors: 6, patients: 76, reports: 54, icon: Bone, iconColor: "text-amber-500", iconBg: "bg-amber-50" },
-  { name: "Pediatrics", doctors: 10, patients: 124, reports: 71, icon: Baby, iconColor: "text-pink-500", iconBg: "bg-pink-50" },
-  { name: "General Medicine", doctors: 14, patients: 210, reports: 96, icon: Stethoscope, iconColor: "text-cyan-500", iconBg: "bg-cyan-50" },
-  { name: "Dermatology", doctors: 5, patients: 68, reports: 38, icon: Sparkles, iconColor: "text-emerald-500", iconBg: "bg-white" },
-  { name: "ENT", doctors: 4, patients: 55, reports: 28, icon: Ear, iconColor: "text-pink-500", iconBg: "bg-pink-50" },
-  { name: "Ophthalmology", doctors: 3, patients: 45, reports: 22, icon: Eye, iconColor: "text-purple-500", iconBg: "bg-purple-50" },
-];
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+
+const getIconForDepartment = (name: string) => {
+  const normalized = name.toLowerCase();
+  if (normalized.includes('cardio')) return { icon: Heart, iconColor: "text-red-500", iconBg: "bg-red-50" };
+  if (normalized.includes('neuro')) return { icon: Brain, iconColor: "text-purple-500", iconBg: "bg-purple-50" };
+  if (normalized.includes('ortho')) return { icon: Bone, iconColor: "text-amber-500", iconBg: "bg-amber-50" };
+  if (normalized.includes('pedia')) return { icon: Baby, iconColor: "text-pink-500", iconBg: "bg-pink-50" };
+  if (normalized.includes('derma')) return { icon: Sparkles, iconColor: "text-emerald-500", iconBg: "bg-white" };
+  if (normalized.includes('ent')) return { icon: Ear, iconColor: "text-pink-500", iconBg: "bg-pink-50" };
+  if (normalized.includes('ophtha')) return { icon: Eye, iconColor: "text-purple-500", iconBg: "bg-purple-50" };
+  
+  // Default for General Medicine and others
+  return { icon: Stethoscope, iconColor: "text-cyan-500", iconBg: "bg-cyan-50" };
+};
+
+const getKpiIcon = (type: string) => {
+  if (type === 'departments') return { icon: Building2, color: "text-cyan-500", bg: "bg-cyan-50", line: "bg-cyan-500" };
+  if (type === 'doctors') return { icon: UserCheck, color: "text-emerald-500", bg: "bg-white", line: "bg-emerald-500" };
+  if (type === 'patients') return { icon: Users, color: "text-purple-500", bg: "bg-purple-50", line: "bg-purple-500" };
+  if (type === 'reports') return { icon: Activity, color: "text-orange-500", bg: "bg-orange-50", line: "bg-orange-500" };
+  return { icon: Building2, color: "text-cyan-500", bg: "bg-cyan-50", line: "bg-cyan-500" };
+};
 export default function DepartmentsPage() {
   const [selectedDepartment, setSelectedDepartment] = useState("All Departments");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  
+  const [kpiData, setKpiData] = useState<any[]>([]);
+  const [departmentsData, setDepartmentsData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/hospital/departments")
+      .then(res => res.json())
+      .then(data => {
+        setKpiData(data.kpiData || []);
+        
+        // Map icons dynamically
+        const mappedDepts = (data.departmentsData || []).map((d: any) => ({
+          ...d,
+          ...getIconForDepartment(d.name)
+        }));
+        
+        setDepartmentsData(mappedDepts);
+      })
+      .catch(err => {
+        console.error(err);
+        toast.error("Failed to load departments data");
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
   const filteredDepartments = selectedDepartment === "All Departments" 
     ? departmentsData 
     : departmentsData.filter(d => d.name === selectedDepartment);
@@ -56,19 +89,26 @@ export default function DepartmentsPage() {
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen">
       {/* Top KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpiData.map((kpi) => (
+        {loading ? (
+           [...Array(4)].map((_, i) => (
+             <div key={i} className="bg-slate-50 animate-pulse rounded-2xl border border-slate-200 h-32"></div>
+           ))
+        ) : kpiData.map((kpi) => {
+          const ui = getKpiIcon(kpi.type);
+          const Icon = ui.icon;
+          return (
           <div key={kpi.title} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex items-start gap-4 hover:shadow-md transition-shadow">
-            <div className={`p-3 rounded-full ${kpi.bg} ${kpi.color}`}>
-              <kpi.icon className="size-6" />
+            <div className={`p-3 rounded-full ${ui.bg} ${ui.color}`}>
+              <Icon className="size-6" />
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-500">{kpi.title}</p>
               <h3 className="text-3xl font-bold text-slate-900 mt-1 mb-1">{kpi.value}</h3>
               <p className="text-xs text-slate-500">{kpi.subtitle}</p>
-              <div className={`h-1 w-4 rounded-full ${kpi.line} mt-4`}></div>
+              <div className={`h-1 w-4 rounded-full ${ui.line} mt-4`}></div>
             </div>
           </div>
-        ))}
+        )})}
       </div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-10 mb-6 gap-4">
         <h2 className="text-xl font-bold text-slate-900">Departments Overview</h2>
@@ -104,10 +144,16 @@ export default function DepartmentsPage() {
       </div>
       {/* Department Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {filteredDepartments.map((dept) => (
+        {loading ? (
+          [...Array(4)].map((_, i) => (
+            <div key={i} className="bg-slate-50 animate-pulse rounded-2xl border border-slate-200 h-64"></div>
+          ))
+        ) : filteredDepartments.length > 0 ? filteredDepartments.map((dept) => {
+          const DeptIcon = dept.icon;
+          return (
           <div key={dept.name} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 hover:shadow-md transition-shadow flex flex-col items-center">
             <div className={`size-16 rounded-full ${dept.iconBg} ${dept.iconColor} flex items-center justify-center mb-4`}>
-              <dept.icon className="size-8" strokeWidth={1.5} />
+              <DeptIcon className="size-8" strokeWidth={1.5} />
             </div>
             <h3 className="text-base font-bold text-slate-900 mb-6">{dept.name}</h3>
             <div className="w-full flex justify-between px-2 mb-4">
@@ -139,7 +185,11 @@ export default function DepartmentsPage() {
               </span>
             </div>
           </div>
-        ))}
+        )}) : (
+          <div className="col-span-4 text-center py-12 text-slate-500">
+            No departments found. Please add doctors with specializations.
+          </div>
+        )}
       </div>
     </div>
   );

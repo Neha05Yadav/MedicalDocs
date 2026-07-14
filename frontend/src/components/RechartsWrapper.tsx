@@ -12,8 +12,10 @@ export {
 
 export const ResponsiveContainer = ({ children, ...props }: any) => {
   return (
-    <RechartsResponsiveContainer {...props}>
-      {children}
-    </RechartsResponsiveContainer>
+    <DelayedRender>
+      <RechartsResponsiveContainer {...props}>
+        {children}
+      </RechartsResponsiveContainer>
+    </DelayedRender>
   );
 };

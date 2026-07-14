@@ -10,30 +10,77 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+// Role → dashboard mapping (single source of truth, same as signup page)
+const ROLE_DASHBOARD: Record<string, string> = {
+  PATIENT:     "/patient/overview",
+  HOSPITAL:    "/hospital/overview",
+  LAB:         "/laboratory/overview",
+  CLINIC:      "/clinic/overview",
+  DOCTOR:      "/clinic/overview",
+};
+
 export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
-    // Mock authentication for testing - allow any credentials
-    setTimeout(() => {
-      setIsLoading(false);
-      const emailLower = email.toLowerCase();
-      if (emailLower.includes("hospital")) {
-        toast.success("Welcome to Hospital Dashboard!");
-        router.push("/hospital");
-      } else if (emailLower.includes("clinic") || emailLower.includes("dr") || emailLower.includes("doctor")) {
-        toast.success("Welcome to Clinic Dashboard!");
-        router.push("/clinic");
-      } else {
-        toast.success("Welcome back!");
-        router.push("/patient");
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        let errorMessage = "Login failed";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          if (response.status === 500 || response.status === 502) {
+            errorMessage = "Backend server is offline or unreachable.";
+          }
+        }
+        throw new Error(errorMessage);
       }
-    }, 800);
+
+      const data = await response.json();
+      const userRole = (data.user?.role || "").toUpperCase();
+
+      // Prevent management accounts from logging in via /auth
+      if (
+        userRole.includes("ADMIN") ||
+        userRole.includes("SUPER") ||
+        userRole.includes("SALE") ||
+        userRole.includes("SUPPORT") ||
+        userRole.includes("ACCOUNT")
+      ) {
+        toast.error("Management accounts must log in via the Management Portal.");
+        router.push("/management");
+        return; // Do not save token or proceed
+      }
+
+      // Save token in localStorage and cookies for middleware
+      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      document.cookie = `token=${data.access_token}; path=/; max-age=86400`;
+
+      toast.success(`Welcome back, ${data.user.name}!`);
+
+      // Redirect based on role from backend response (no hardcoding)
+      const destination = ROLE_DASHBOARD[userRole] ?? "/patient/overview";
+      router.push(destination);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to connect to server");
+    } finally {
+      setIsLoading(false);
+    }
   }
   async function handleGoogleLogin() {
     const { error } = await supabase.auth.signInWithOAuth({

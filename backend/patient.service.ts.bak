@@ -1,0 +1,345 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { MysqlService } from '../mysql.service';
+import { v4 as uuidv4 } from 'uuid';
+
+@Injectable()
+export class PatientService {
+  constructor(private db: MysqlService) {}
+
+  private generatePatientId(name: string, phone: string, year: string) {
+    const initials = name.split(' ').map(n => n[0] || '').join('').toUpperCase().substring(0, 2);
+    const safePhone = phone || '000';
+    const last3Phone = safePhone.length >= 3 ? safePhone.slice(-3) : safePhone.padStart(3, '0');
+    const last2Year = year.slice(-2);
+    return `${initials}${last3Phone}${last2Year}`;
+  }
+
+  async getOverview(userEmail: string) {
+    let patient = await this.db.queryOne('SELECT * FROM patient WHERE email = ?', [userEmail]);
+
+    if (!patient) {
+      const user = await this.db.queryOne('SELECT * FROM user WHERE email = ?', [userEmail]);
+      const year = new Date().getFullYear().toString();
+      const newId = this.generatePatientId(user ? user.name : 'Unknown', '', year);
+      await this.db.query(
+        'INSERT INTO patient (id, email, name, phone, bloodGroup, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
+        [newId, userEmail, user ? user.name : 'Unknown', '', 'Unknown', new Date()]
+      );
+      patient = await this.db.queryOne('SELECT * FROM patient WHERE id = ?', [newId]);
+    }
+
+    const appointments = await this.db.query(`
+      SELECT a.*, d.name as doctorName, d.specialization as doctorSpecialization, h.name as hospitalName 
+      FROM appointment a
+      LEFT JOIN doctor d ON a.doctorId = d.id
+      LEFT JOIN hospital h ON a.hospitalId = h.id
+      WHERE a.patientId = ?
+      ORDER BY a.dateTime DESC LIMIT 5
+    `, [patient.id]);
+
+    const records = await this.db.query('SELECT * FROM medicalrecord WHERE patientId = ? ORDER BY date DESC LIMIT 5', [patient.id]);
+
+    let age = 'N/A';
+    if (patient.dateOfBirth) {
+      const dob = new Date(patient.dateOfBirth);
+      const diff = Date.now() - dob.getTime();
+      age = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25)).toString();
+    }
+
+    let lastVisitStr = 'No visits yet';
+    const lastAppointment = appointments.find(a => a.status === 'COMPLETED');
+    if (lastAppointment) {
+      lastVisitStr = new Date(lastAppointment.dateTime).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    } else if (records.length > 0) {
+      lastVisitStr = new Date(records[0].date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    const timelineEvents: any[] = [];
+    appointments.forEach(apt => {
+      const d = new Date(apt.dateTime);
+      timelineEvents.push({
+        id: 'apt-' + apt.id,
+        date: d,
+        dateStr: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        title: `${apt.doctorSpecialization || 'General'} Consultation`,
+        desc: apt.notes || `Appointment at ${apt.hospitalName || 'Hospital'}`,
+        type: 'APPOINTMENT'
+      });
+    });
+
+    records.forEach(rec => {
+      const d = new Date(rec.date);
+      timelineEvents.push({
+        id: 'rec-' + rec.id,
+        date: d,
+        dateStr: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        title: rec.title,
+        desc: rec.description || rec.type,
+        type: 'RECORD'
+      });
+    });
+
+    timelineEvents.sort((a, b) => b.date.getTime() - a.date.getTime());
+    const recentTimeline = timelineEvents.slice(0, 4);
+
+    return {
+      patientInfo: {
+        id: patient.id,
+        name: patient.name,
+        age: age,
+        bloodGroup: patient.bloodGroup || 'Not Specified',
+        lastVisit: lastVisitStr,
+        gender: patient.gender || 'Not Specified',
+      },
+      timeline: recentTimeline,
+      testResultsStats: {
+        completed: records.filter(r => r.type === 'LAB_REPORT').length,
+        pending: appointments.filter(a => a.status === 'SCHEDULED').length,
+        abnormal: 0,
+      },
+      recentReports: records.slice(0, 3).map(r => ({
+        id: r.id,
+        name: r.title,
+        date: new Date(r.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        type: r.type,
+        size: '1.2 MB'
+      }))
+    };
+  }
+
+  async getRecords(userEmail: string) {
+    const patient = await this.db.queryOne('SELECT id FROM patient WHERE email = ?', [userEmail]);
+    if (!patient) return { myUploads: [] };
+
+    const records = await this.db.query(`
+      SELECT m.*, h.name as hospitalName, h.type as hospitalType 
+      FROM medicalrecord m
+      LEFT JOIN hospital h ON m.hospitalId = h.id
+      WHERE m.patientId = ? AND m.type != 'PRESCRIPTION'
+      ORDER BY m.date DESC
+    `, [patient.id]);
+
+    const formattedRecords = records.map(r => {
+      let fileType = 'pdf';
+      if (r.fileUrl && (r.fileUrl.endsWith('.jpg') || r.fileUrl.endsWith('.png'))) {
+        fileType = 'jpg';
+      }
+
+      let typeColor = 'text-slate-600 bg-slate-50';
+      if (r.type === 'LAB_REPORT' || r.type === 'Blood Test') typeColor = 'text-red-600 bg-red-50';
+      else if (r.type === 'PRESCRIPTION') typeColor = 'text-emerald-600 bg-emerald-50';
+      else if (r.type === 'XRAY' || r.type === 'X-Ray') typeColor = 'text-cyan-600 bg-cyan-50';
+      
+      return {
+        id: r.id,
+        fileName: r.title,
+        type: r.type,
+        uploadDate: new Date(r.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        size: '1.5 MB',
+        fileType: fileType,
+        typeColor: typeColor,
+        fileUrl: r.fileUrl,
+        hospitalName: r.hospitalName || "Uploaded by Patient",
+        hospitalType: r.hospitalType || null
+      };
+    });
+
+    return { myUploads: formattedRecords };
+  }
+
+  async uploadRecord(userEmail: string, file: any, body: any) {
+    const patient = await this.db.queryOne('SELECT id FROM patient WHERE email = ?', [userEmail]);
+    if (!patient) throw new Error("Patient not found");
+
+    const newId = uuidv4();
+    const now = new Date();
+    await this.db.query(
+      'INSERT INTO medicalrecord (id, patientId, title, type, fileUrl, date, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [newId, patient.id, body.reportName || file.originalname, body.reportType || 'DOCUMENT', file.filename, now, now]
+    );
+
+    return { id: newId };
+  }
+
+  async getProfile(userEmail: string) {
+    const patient = await this.db.queryOne('SELECT * FROM patient WHERE email = ?', [userEmail]);
+    if (!patient) {
+      return {
+        name: '', email: userEmail, phone: '', dateOfBirth: '', bloodGroup: '', gender: ''
+      };
+    }
+    
+    return {
+      id: patient.id,
+      name: patient.name,
+      email: patient.email,
+      phone: patient.phone,
+      dateOfBirth: patient.dateOfBirth ? new Date(patient.dateOfBirth).toISOString().split('T')[0] : '',
+      bloodGroup: patient.bloodGroup,
+      gender: patient.gender,
+    };
+  }
+
+  async updateProfile(userEmail: string, data: any) {
+    let patient = await this.db.queryOne('SELECT id FROM patient WHERE email = ?', [userEmail]);
+    const dob = data.dateOfBirth ? new Date(data.dateOfBirth) : null;
+    
+    if (patient) {
+      await this.db.query(
+        'UPDATE patient SET name = ?, phone = ?, bloodGroup = ?, gender = ?, dateOfBirth = ? WHERE id = ?',
+        [data.name, data.phone, data.bloodGroup, data.gender, dob, patient.id]
+      );
+      await this.db.query('UPDATE user SET name = ? WHERE email = ?', [data.name, userEmail]);
+    } else {
+      const year = new Date().getFullYear().toString();
+      const newId = this.generatePatientId(data.name, data.phone, year);
+      await this.db.query(
+        'INSERT INTO patient (id, email, name, phone, bloodGroup, gender, dateOfBirth, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [newId, userEmail, data.name, data.phone, data.bloodGroup, data.gender, dob, new Date()]
+      );
+      patient = { id: newId };
+    }
+    return patient;
+  }
+
+  async getPrescriptions(userEmail: string) {
+    const patient = await this.db.queryOne('SELECT id FROM patient WHERE email = ?', [userEmail]);
+    if (!patient) return [];
+
+    const records = await this.db.query(`
+      SELECT m.*, h.name as hospitalName, h.type as hospitalType 
+      FROM medicalrecord m
+      LEFT JOIN hospital h ON m.hospitalId = h.id
+      WHERE m.patientId = ? AND m.type = 'PRESCRIPTION'
+      ORDER BY m.date DESC
+    `, [patient.id]);
+
+    const formattedRecords = records.map(r => ({
+      id: r.title,
+      doctor: r.description || 'Unknown Doctor',
+      date: new Date(r.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      status: 'Active',
+      hospitalName: r.hospitalName || null,
+      hospitalType: r.hospitalType || null,
+      fileUrl: r.fileUrl || null
+    }));
+
+    const doctorPrescriptions = await this.db.query(`
+      SELECT p.*, h.name as hospitalName, h.type as hospitalType, d.name as doctorName
+      FROM prescription p
+      LEFT JOIN hospital h ON p.hospitalId = h.id
+      LEFT JOIN doctor d ON p.doctorId = d.id
+      WHERE p.patientId = ?
+      ORDER BY p.createdAt DESC
+    `, [patient.id]);
+
+    const formattedDoctorPrescriptions = doctorPrescriptions.map(p => ({
+      id: 'RX-' + p.id.substring(0, 4).toUpperCase(),
+      doctor: p.doctorName ? 'Dr. ' + p.doctorName : 'Unknown Doctor',
+      date: new Date(p.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      status: p.status || 'Active',
+      hospitalName: p.hospitalName || null,
+      hospitalType: p.hospitalType || null,
+      medicine: p.medicine,
+      dosage: p.dosage,
+      duration: p.duration
+    }));
+
+    const allPrescriptions = [...formattedRecords, ...formattedDoctorPrescriptions];
+    allPrescriptions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return allPrescriptions;
+  }
+
+  async createPrescription(userEmail: string, data: any) {
+    const patient = await this.db.queryOne('SELECT id FROM patient WHERE email = ?', [userEmail]);
+    if (!patient) throw new Error("Patient not found");
+
+    const newId = uuidv4();
+    const d = data.date ? new Date(data.date) : new Date();
+    await this.db.query(
+      "INSERT INTO medicalrecord (id, patientId, type, title, description, date, updatedAt) VALUES (?, ?, 'PRESCRIPTION', ?, ?, ?, ?)",
+      [newId, patient.id, data.id, data.doctor, d, new Date()]
+    );
+
+    return {
+      id: data.id,
+      doctor: data.doctor,
+      date: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      status: 'Active',
+    };
+  }
+
+  async getAccessRequests(userEmail: string) {
+    const patient = await this.db.queryOne('SELECT id, name FROM patient WHERE email = ?', [userEmail]);
+    if (!patient) return [];
+
+    const requests = await this.db.query(`
+      SELECT r.*, h.name as hospitalName, d.name as doctorName
+      FROM accessrequest r
+      LEFT JOIN hospital h ON r.hospitalId = h.id
+      LEFT JOIN doctor d ON r.doctorId = d.id
+      WHERE r.patientId = ?
+      ORDER BY r.requestDate DESC
+    `, [patient.id]);
+
+    return requests.map(req => ({
+      id: req.id,
+      hospital: req.hospitalName,
+      doctor: req.doctorName || "Lab Admin",
+      purpose: req.reason || "Routine Checkup",
+      reportTypes: req.reportTypes || "All Reports",
+      priority: req.priority || "Normal",
+      duration: req.duration || "24 Hours",
+      date: new Date(req.requestDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      status: req.status,
+    }));
+  }
+
+  async updateAccessRequestStatus(userEmail: string, id: string, status: string) {
+    const patient = await this.db.queryOne('SELECT id, name FROM patient WHERE email = ?', [userEmail]);
+    if (!patient) throw new NotFoundException("Patient not found");
+
+    const req = await this.db.queryOne('SELECT * FROM accessrequest WHERE id = ?', [id]);
+    if (!req || req.patientId !== patient.id) throw new NotFoundException("Request not found");
+
+    await this.db.query('UPDATE accessrequest SET status = ?, updatedAt = ? WHERE id = ?', [status, new Date(), id]);
+
+    if (status === 'APPROVED') {
+      const notifId = `NOTIF-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      await this.db.query(
+        'INSERT INTO notification (id, hospitalId, type, title, message, isRead, actionRequired, severity, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, false, false, "Low", ?, ?)',
+        [notifId, req.hospitalId, `PATIENT_APPROVED|${patient.id}`, "Access Request Approved", `${patient.name} has approved your request to access their medical records.`, new Date(), new Date()]
+      );
+    }
+    return { success: true };
+  }
+
+  async getNotifications(userEmail: string) {
+    const user = await this.db.queryOne('SELECT id FROM user WHERE email = ?', [userEmail]);
+    if (!user) return [];
+    
+    const notifications = await this.db.query('SELECT * FROM notification WHERE userId = ? ORDER BY createdAt DESC', [user.id]);
+    
+    return notifications.map(n => ({
+      id: n.id,
+      title: n.title,
+      message: n.message,
+      time: new Date(n.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      read: n.isRead ? true : false
+    }));
+  }
+
+  async markNotificationAsRead(userEmail: string, id: string) {
+    await this.db.query('UPDATE notification SET isRead = true WHERE id = ?', [id]);
+    return { success: true };
+  }
+
+  async markAllNotificationsAsRead(userEmail: string) {
+    const user = await this.db.queryOne('SELECT id FROM user WHERE email = ?', [userEmail]);
+    if (!user) return { success: false };
+    
+    await this.db.query('UPDATE notification SET isRead = true WHERE userId = ?', [user.id]);
+    return { success: true };
+  }
+}

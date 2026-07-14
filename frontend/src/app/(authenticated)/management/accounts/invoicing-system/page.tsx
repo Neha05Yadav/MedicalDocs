@@ -20,19 +20,29 @@ const X = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" wid
 
 
 
-import React, { useState } from 'react';
-const mockInvoices = [
-  { id: "INV-2026-099", client: "City Care Hospital", date: "22 Jun 2026", baseAmount: "₹45,000", tax: "₹8,100 (18%)", totalAmount: "₹53,100", status: "Paid" },
-  { id: "INV-2026-098", client: "Dr. Priya Patel", date: "21 Jun 2026", baseAmount: "₹5,000", tax: "₹900 (18%)", totalAmount: "₹5,900", status: "Unpaid" },
-  { id: "INV-2026-097", client: "Apex Laboratories", date: "20 Jun 2026", baseAmount: "₹12,500", tax: "₹2,250 (18%)", totalAmount: "₹14,750", status: "Partial" },
-  { id: "INV-2026-096", client: "Sunrise Clinic", date: "19 Jun 2026", baseAmount: "₹25,000", tax: "₹4,500 (18%)", totalAmount: "₹29,500", status: "Paid" },
-  { id: "INV-2026-095", client: "Metro Health", date: "15 Jun 2026", baseAmount: "₹85,000", tax: "₹15,300 (18%)", totalAmount: "₹100,300", status: "Unpaid" },
-];
+import React, { useState, useEffect } from 'react';
+
 export default function InvoicingSystemPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const filteredInvoices = mockInvoices.filter(inv => {
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/management/accounts/invoices')
+      .then(res => res.json())
+      .then(data => {
+        setInvoices(data.invoices || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to load invoices", err);
+        setLoading(false);
+      });
+  }, []);
+
+  const filteredInvoices = invoices.filter(inv => {
     const matchesSearch = inv.client.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           inv.id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "All" || inv.status === statusFilter;
@@ -92,7 +102,15 @@ export default function InvoicingSystemPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredInvoices.map((inv, idx) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <div className="flex justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredInvoices.map((inv, idx) => (
                 <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="font-bold text-slate-900">{inv.id}</div>

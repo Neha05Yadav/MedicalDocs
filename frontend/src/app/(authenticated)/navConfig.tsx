@@ -4,6 +4,7 @@ export const patientNav = [
   { title: "Prescriptions", subtitle: "View and download your digital prescriptions.", url: "/patient/prescriptions", iconName: "Pill" },
   { title: "Access Requests", subtitle: "Manage hospital requests to access your health records.", url: "/patient/access-requests", iconName: "ShieldCheck" },
   { title: "Notifications", subtitle: "View your latest notifications and alerts.", url: "/patient/notifications", iconName: "Bell" },
+  { title: "Help & Support", subtitle: "Raise complaints and track support tickets.", url: "/patient/support", iconName: "HelpCircle" },
   { title: "Profile", subtitle: "Manage your personal and medical information.", url: "/patient/profile", iconName: "User" },
 ];
 
@@ -13,6 +14,7 @@ export const clinicNav = [
   { title: "Prescriptions", subtitle: "View active prescriptions or issue new ones to your patients.", url: "/clinic/prescriptions", iconName: "Pill" },
   { title: "Reports", subtitle: "View patient shared reports or upload new medical reports.", url: "/clinic/reports", iconName: "ClipboardList" },
   { title: "Notifications", subtitle: "Stay updated on patient access approvals and appointments.", url: "/clinic/notifications", iconName: "Bell" },
+  { title: "Help & Support", subtitle: "Raise complaints and track support tickets.", url: "/clinic/support", iconName: "HelpCircle" },
   { title: "Profile", subtitle: "Manage your personal details, credentials, and contact information.", url: "/clinic/profile", iconName: "Settings" },
 ];
 
@@ -25,6 +27,8 @@ export const hospitalNav = [
   { title: "Departments", subtitle: "Hospital departments and their statistics.", url: "/hospital/departments", iconName: "Hospital" },
   { title: "Notifications", subtitle: "Hospital alerts, staff updates, and system notifications.", url: "/hospital/notifications", iconName: "Bell" },
   { title: "Analytics", subtitle: "Hospital performance and patient statistics.", url: "/hospital/analytics", iconName: "BarChart3" },
+  { title: "Help & Support", subtitle: "Raise complaints and track support tickets.", url: "/hospital/support", iconName: "HelpCircle" },
+  { title: "Profile", subtitle: "Manage hospital profile and settings.", url: "/hospital/profile", iconName: "Settings" },
 ];
 
 export const laboratoryNav = [
@@ -34,6 +38,7 @@ export const laboratoryNav = [
   { title: "Sample Management", subtitle: "Track physical samples from collection to analysis.", url: "/laboratory/sample-management", iconName: "Activity" },
   { title: "Patients", subtitle: "Manage patient records and request access to medical history.", url: "/laboratory/patients", iconName: "Users" },
   { title: "Notifications", subtitle: "Stay updated on new test requests and alerts.", url: "/laboratory/notifications", iconName: "Bell" },
+  { title: "Help & Support", subtitle: "Raise complaints and track support tickets.", url: "/laboratory/support", iconName: "HelpCircle" },
   { title: "Profile", subtitle: "Manage your facility's details, licenses, and contact information.", url: "/laboratory/profile", iconName: "Settings" },
 ];
 
@@ -44,17 +49,18 @@ export const adminNav = [
   { title: "Lab Management", subtitle: "View and manage laboratory facilities.", url: "/management/admin/labs", iconName: "FlaskConical" },
   { title: "Reports Monitoring", subtitle: "Global view of all uploaded medical reports.", url: "/management/admin/reports", iconName: "ClipboardList" },
   { title: "Notifications", subtitle: "System alerts and notifications.", url: "/management/admin/notifications", iconName: "Bell" },
+  { title: "Assigned Escalations", subtitle: "Review and resolve cases assigned by Support.", url: "/management/admin/assigned-escalations", iconName: "AlertTriangle" },
   { title: "Analytics", subtitle: "System-wide growth and performance analytics.", url: "/management/admin/analytics", iconName: "BarChart3" },
   { title: "Settings", subtitle: "System configurations, roles, and security.", url: "/management/admin/settings", iconName: "Settings" },
 ];
 
 export const superAdminNav = [
   { title: "Dashboard", subtitle: "Platform overview and key performance metrics.", url: "/management/super-admin/overview", iconName: "LayoutDashboard" },
-  { title: "Team Management", subtitle: "Manage system administrators and their permissions.", url: "/management/super-admin/admins", iconName: "ShieldCheck" },
+  { title: "Team Management", subtitle: "Manage system administrators and their permissions.", url: "/management/super-admin/team", iconName: "ShieldCheck" },
   { title: "User Management", subtitle: "Global oversight of all platform users.", url: "/management/super-admin/users", iconName: "Users" },
   { title: "Facility Management", subtitle: "Manage and verify all registered facilities.", url: "/management/super-admin/facilities", iconName: "Hospital" },
   { title: "Subscriptions", subtitle: "Manage plans, active subscriptions, and revenue.", url: "/management/super-admin/subscriptions", iconName: "CreditCard" },
-  { title: "Reports & Tests", subtitle: "System-wide reporting and test tracking.", url: "/management/super-admin/reports", iconName: "ClipboardList" },
+  { title: "Platform Analytics", subtitle: "Track business growth, API usage, and system health.", url: "/management/super-admin/analytics", iconName: "BarChart3" },
   { title: "Notifications", subtitle: "Global announcements and system alerts.", url: "/management/super-admin/notifications", iconName: "Bell" },
   { title: "Audit Logs", subtitle: "Security logs and system activity tracking.", url: "/management/super-admin/audit", iconName: "FileText" },
   { title: "Settings", subtitle: "Global platform configuration and API settings.", url: "/management/super-admin/settings", iconName: "Settings" },
@@ -76,6 +82,7 @@ export const accountsNav = [
   { title: "Invoicing System", subtitle: "Generate, manage, and track invoices.", url: "/management/accounts/invoicing-system", iconName: "FileText" },
   { title: "Billing Records", subtitle: "View individual client billing histories and balances.", url: "/management/accounts/billing-records", iconName: "ClipboardList" },
   { title: "Refunds", subtitle: "Manage and process client refund requests.", url: "/management/accounts/refunds", iconName: "RefreshCw" },
+  { title: "Assigned Escalations", subtitle: "Process billing and refund escalations.", url: "/management/accounts/assigned-escalations", iconName: "AlertTriangle" },
   { title: "Notifications", subtitle: "Stay updated with billing, payments, and invoices.", url: "/management/accounts/notifications", iconName: "Bell" },
   { title: "Settings", subtitle: "Configure gateways, banks, and currency settings.", url: "/management/accounts/settings", iconName: "Settings" },
 ];

@@ -1,0 +1,75 @@
+import { Controller, Get, Post, Put, Body, UseGuards, Request, UploadedFile, UseInterceptors, Param } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { PatientService } from './patient.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+@Controller('patient')
+@UseGuards(JwtAuthGuard)
+export class PatientController {
+  constructor(private readonly patientService: PatientService) {}
+
+  @Get('overview')
+  async getOverview(@Request() req: any) {
+    return this.patientService.getOverview(req.user.email);
+  }
+
+  @Get('records')
+  async getRecords(@Request() req: any) {
+    return this.patientService.getRecords(req.user.email);
+  }
+
+  @Post('records/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadRecord(@Request() req: any, @UploadedFile() file: Express.Multer.File, @Body() body: any) {
+    return this.patientService.uploadRecord(req.user.email, file, body);
+  }
+
+  @Get('profile')
+  async getProfile(@Request() req: any) {
+    return this.patientService.getProfile(req.user.email);
+  }
+
+  @Put('profile')
+  async updateProfile(@Request() req: any, @Body() data: any) {
+    return this.patientService.updateProfile(req.user.email, data);
+  }
+
+  @Get('prescriptions')
+  async getPrescriptions(@Request() req: any) {
+    return this.patientService.getPrescriptions(req.user.email);
+  }
+
+  @Post('prescriptions')
+  async createPrescription(@Request() req: any, @Body() data: any) {
+    return this.patientService.createPrescription(req.user.email, data);
+  }
+
+  @Get('access-requests')
+  async getAccessRequests(@Request() req: any) {
+    return this.patientService.getAccessRequests(req.user.email);
+  }
+
+  @Put('access-requests/:id')
+  async updateAccessRequestStatus(
+    @Request() req: any, 
+    @Param('id') id: string,
+    @Body('status') status: string
+  ) {
+    return this.patientService.updateAccessRequestStatus(req.user.email, id, status);
+  }
+
+  @Get('notifications')
+  async getNotifications(@Request() req: any) {
+    return this.patientService.getNotifications(req.user.email);
+  }
+
+  @Put('notifications/read-all')
+  async markAllNotificationsAsRead(@Request() req: any) {
+    return this.patientService.markAllNotificationsAsRead(req.user.email);
+  }
+
+  @Put('notifications/:id/read')
+  async markNotificationAsRead(@Request() req: any, @Param('id') id: string) {
+    return this.patientService.markNotificationAsRead(req.user.email, id);
+  }
+}

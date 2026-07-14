@@ -25,6 +25,12 @@ export default function ReportsPage() {
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
   const [viewingReport, setViewingReport] = useState<string | null>(null);
   const [dateRanges, setDateRanges] = useState<Record<number, string>>({});
+  
+  const handleDownload = (reportTitle: string, format: 'pdf' | 'csv') => {
+    // Open the download endpoint in a new tab/window
+    window.open(`/api/management/sales/reports/download?format=${format}&report=${encodeURIComponent(reportTitle)}`, '_blank');
+  };
+
   const reports = [
     { title: "Sales Report", desc: "Detailed breakdown of all sales, plans, and revenue generated.", icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50" },
     { title: "Subscription Report", desc: "Data on active, expired, and overall subscription metrics.", icon: Users, color: "text-indigo-600", bg: "bg-indigo-50" },
@@ -80,12 +86,18 @@ export default function ReportsPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Export PDF */}
-                <button className="flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 transition-colors">
+                <button 
+                  onClick={() => handleDownload(report.title, 'pdf')}
+                  className="flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 transition-colors"
+                >
                   <Download className="size-4 text-rose-500" />
                   Export PDF
                 </button>
                 {/* Export Excel */}
-                <button className="flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 transition-colors">
+                <button 
+                  onClick={() => handleDownload(report.title, 'csv')}
+                  className="flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 transition-colors"
+                >
                   <FileSpreadsheet className="size-4 text-emerald-500" />
                   Export Excel
                 </button>
@@ -138,7 +150,10 @@ export default function ReportsPage() {
               >
                 Close Preview
               </button>
-              <button className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center gap-2">
+              <button 
+                onClick={() => viewingReport && handleDownload(viewingReport, 'pdf')}
+                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center gap-2"
+              >
                 <Download className="size-4" /> Download PDF
               </button>
             </div>

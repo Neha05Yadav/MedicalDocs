@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function RedirectToOverview() {
-  redirect('/support/overview');
+  redirect('/management/support/overview');
 }

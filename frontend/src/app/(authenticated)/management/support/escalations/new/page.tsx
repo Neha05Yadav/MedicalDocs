@@ -19,6 +19,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 export default function NewEscalationPage() {
   const [selectedTeam, setSelectedTeam] = useState("accounts");
   const [notes, setNotes] = useState("Customer has been charged twice for the same subscription renewal. Payment ID: pay_123456789. Requesting refund and root cause check.");
@@ -56,7 +57,7 @@ export default function NewEscalationPage() {
     <div className="p-8 max-w-5xl mx-auto min-h-screen">
       {/* Breadcrumbs */}
       <div className="flex items-center text-sm mb-6">
-        <Link href="/support/escalations" className="text-blue-600 font-medium hover:underline">Escalations</Link>
+        <Link href="/management/support/escalations" className="text-blue-600 font-medium hover:underline">Escalations</Link>
         <span className="text-slate-400 mx-2">{">"}</span>
         <span className="text-slate-600">Escalate New Issue</span>
       </div>
@@ -66,7 +67,7 @@ export default function NewEscalationPage() {
           <h1 className="text-2xl font-bold text-slate-900 mb-1">Escalate Issue</h1>
           <p className="text-slate-500 text-sm">Escalate this issue to the appropriate team for further investigation.</p>
         </div>
-        <Link href="/support/tickets" className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 flex items-center gap-2 transition-colors">
+        <Link href="/management/support/tickets" className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 flex items-center gap-2 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to Ticket
         </Link>
       </div>
@@ -174,14 +175,24 @@ export default function NewEscalationPage() {
           {/* Attachments */}
           <div>
             <label className="text-sm font-semibold text-slate-900 block mb-2">Attachments (Optional)</label>
+            <input 
+              type="file" 
+              id="escalation-attachment-new" 
+              className="hidden" 
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  setAttachment(e.target.files[0].name);
+                }
+              }} 
+            />
             <div className="border-2 border-dashed border-purple-200 bg-purple-50/30 rounded-xl p-6 flex flex-col sm:flex-row items-center justify-center gap-6">
-              <div className="flex items-center gap-3">
-                <UploadCloud className="w-6 h-6 text-purple-600" />
+              <label htmlFor="escalation-attachment-new" className="flex items-center gap-3 cursor-pointer group">
+                <UploadCloud className="w-6 h-6 text-purple-600 group-hover:scale-110 transition-transform" />
                 <div>
-                  <p className="text-sm font-medium"><span className="text-purple-600 cursor-pointer hover:underline">Click to upload</span> <span className="text-slate-500">or drag and drop</span></p>
+                  <p className="text-sm font-medium"><span className="text-purple-600 group-hover:underline">Click to upload</span> <span className="text-slate-500">or drag and drop</span></p>
                   <p className="text-xs text-slate-400">PDF, PNG, JPG (Max 10MB)</p>
                 </div>
-              </div>
+              </label>
               {attachment && (
                 <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-lg p-3 pr-4 shadow-sm w-full sm:w-auto mt-4 sm:mt-0">
                   <div className="p-2 bg-purple-100 rounded-md text-purple-600">
@@ -189,7 +200,7 @@ export default function NewEscalationPage() {
                   </div>
                   <div className="flex-1 mr-4">
                     <p className="text-xs font-semibold text-slate-900 truncate max-w-[150px]">{attachment}</p>
-                    <p className="text-[10px] text-slate-500">1.2 MB</p>
+                    <p className="text-[10px] text-slate-500">Uploaded</p>
                   </div>
                   <button onClick={() => setAttachment(null)} className="text-slate-400 hover:text-red-500 transition-colors">
                     <X className="w-4 h-4" />
@@ -200,12 +211,23 @@ export default function NewEscalationPage() {
           </div>
           {/* Buttons */}
           <div className="flex justify-end items-center gap-3 pt-4 border-t border-slate-100">
-            <Link href="/support/escalations">
+            <Link href="/management/support/escalations">
               <button className="px-6 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 transition-colors">
                 Cancel
               </button>
             </Link>
-            <button className="px-6 py-2.5 rounded-lg text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 flex items-center gap-2 transition-colors shadow-sm">
+            <button 
+              onClick={() => {
+                const selTeamObj = teams.find(t => t.id === selectedTeam);
+                toast.success(`Issue escalated successfully to ${selTeamObj?.name}!`);
+                setAttachment(null);
+                setNotes("");
+                setTimeout(() => {
+                  window.location.href = "/management/support/escalations";
+                }, 1000);
+              }}
+              className="px-6 py-2.5 rounded-lg text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 flex items-center gap-2 transition-colors shadow-sm"
+            >
               <Send className="w-4 h-4" /> Escalate Issue
             </button>
           </div>

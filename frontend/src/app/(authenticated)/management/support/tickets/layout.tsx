@@ -19,7 +19,7 @@ export default function TicketsLayout({ children }: { children: React.ReactNode 
                 ? "" 
                 : "/" + tab.toLowerCase().replace(" ", "-");
               
-              const href = `/support/tickets${tabSlug}`;
+              const href = `/management/support/tickets${tabSlug}`;
               const isActive = pathname === href || pathname === `${href}/`;
 
               return (

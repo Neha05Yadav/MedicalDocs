@@ -94,9 +94,29 @@ export default function UploadReportClient() {
                 Cancel
               </button>
               <button 
-                onClick={() => {
-                  toast.success("Report uploaded successfully!");
-                  setIsUploadModalOpen(false);
+                onClick={async () => {
+                  if (!selectedFile) {
+                    toast.error("Please select a file to upload");
+                    return;
+                  }
+                  try {
+                    const formData = new FormData();
+                    formData.append("file", selectedFile);
+                    formData.append("reportName", selectedFile.name);
+                    formData.append("reportType", "DOCUMENT");
+                    const res = await fetch("/api/patient/records/upload", {
+                      method: "POST",
+                      headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` },
+                      body: formData
+                    });
+                    if (!res.ok) throw new Error("Upload failed");
+                    toast.success("Report uploaded successfully!");
+                    setIsUploadModalOpen(false);
+                    // Reload window to see the new upload in records
+                    setTimeout(() => window.location.reload(), 1000);
+                  } catch (e) {
+                    toast.error("Error uploading report");
+                  }
                 }}
                 className="px-6 py-2 bg-[#0891b2] hover:bg-cyan-700 text-white rounded-lg text-sm font-bold transition-colors shadow-sm flex items-center gap-2"
               >
