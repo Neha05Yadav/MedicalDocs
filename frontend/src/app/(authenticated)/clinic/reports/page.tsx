@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { authHeaders } from "@/lib/auth-fetch";
 
 const FileText = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>;
 const Search = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>;
@@ -46,7 +47,7 @@ export default function DoctorReportsPage() {
 
   const fetchReports = async () => {
     try {
-      const res = await fetch("/api/clinic/reports");
+      const res = await fetch("/api/clinic/reports", { headers: authHeaders() });
       const data = await res.json();
       if (Array.isArray(data)) {
         setReports(data);
@@ -63,7 +64,7 @@ export default function DoctorReportsPage() {
 
   const fetchLabReports = async () => {
     try {
-      const res = await fetch("/api/clinic/reports/lab-reports");
+      const res = await fetch("/api/clinic/reports/lab-reports", { headers: authHeaders() });
       const data = await res.json();
       if (Array.isArray(data)) {
         setLabReports(data);
@@ -119,7 +120,6 @@ export default function DoctorReportsPage() {
     }
 
     try {
-      const token = localStorage.getItem("token");
       const formData = new FormData();
       formData.append("patientId", patientId);
       formData.append("title", reportTitle);
@@ -127,15 +127,13 @@ export default function DoctorReportsPage() {
       if (selectedFile) {
         formData.append("file", selectedFile);
       } else {
-        // We can pass a dummy fileUrl string or handle it differently.
-        formData.append("fileUrl", "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=600");
+        toast.error("Please choose a report file.");
+        return;
       }
 
       const res = await fetch("/api/clinic/reports", {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        },
+        headers: authHeaders(),
         body: formData
       });
 
@@ -515,15 +513,13 @@ export default function DoctorReportsPage() {
               {/* Right Side: File Preview */}
               <div className="w-full md:w-2/3 bg-slate-100 flex items-center justify-center p-4 overflow-hidden relative min-h-[300px]">
                 {!selectedReport.fileUrl ? (
-                  <img src="/dummy-report.png" alt="Dummy Medical Report" className="max-w-full max-h-full object-contain rounded-lg shadow-sm border border-slate-200 bg-white" />
+                  <div className="rounded-xl border border-slate-200 bg-white px-8 py-10 text-center text-slate-500">No file is attached to this report.</div>
                 ) : selectedReport.fileUrl?.match(/\.(jpeg|jpg|gif|png)$/i) || selectedReport.fileUrl?.startsWith('http') ? (
                   <img 
                     src={selectedReport.fileUrl?.startsWith('http') ? selectedReport.fileUrl : `/uploads/${selectedReport.fileUrl}`} 
                     alt="Report File Preview" 
                     className="max-w-full max-h-full object-contain rounded-lg shadow-sm border border-slate-200 bg-white"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/dummy-report.png";
-                    }}
+                    onError={(event) => { event.currentTarget.hidden = true; }}
                   />
                 ) : (
                   <iframe 

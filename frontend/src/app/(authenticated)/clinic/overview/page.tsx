@@ -36,16 +36,22 @@ import { toast } from "sonner";
 export default function DoctorDashboard() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/clinic/overview")
-      .then(res => res.json())
+    const token = localStorage.getItem("token") || "";
+    fetch("/api/clinic/overview", { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => {
+        if (!res.ok) throw new Error("Clinic overview could not be loaded from the server.");
+        return res.json();
+      })
       .then(resData => {
         setData(resData);
       })
       .catch(err => {
         console.error(err);
-        toast.error("Failed to load clinic overview");
+        setError(err instanceof Error ? err.message : "Failed to load clinic overview");
+        toast.error("Failed to load live clinic overview");
       })
       .finally(() => setLoading(false));
   }, []);
@@ -54,28 +60,13 @@ export default function DoctorDashboard() {
     return <div className="p-8 text-center text-slate-500 animate-pulse">Loading clinic dashboard...</div>;
   }
 
-  const defaultKpis = [
-    { label: "Total Patients", value: "1,248" },
-    { label: "Pending Reports", value: "5" },
-    { label: "Reviewed Reports", value: "87" },
-    { label: "Prescriptions Issued", value: "342" },
-  ];
+  if (error) {
+    return <div className="grid min-h-[55vh] place-items-center p-8 text-center"><div><h2 className="text-xl font-bold text-slate-900">Live clinic data is unavailable</h2><p className="mt-2 text-base text-slate-500">{error}</p><button onClick={() => window.location.reload()} className="mt-5 rounded-xl bg-cyan-700 px-5 py-3 font-semibold text-white">Try again</button></div></div>;
+  }
 
-  const defaultPatients = [
-    { id: "1", name: "Rahul Sharma", age: 45, condition: "Hypertension", last_visit: "2026-06-05T10:00:00Z" },
-    { id: "2", name: "Priya Singh", age: 32, condition: "Migraine", last_visit: "2026-06-08T10:00:00Z" },
-    { id: "3", name: "Amit Kumar", age: 58, condition: "Type 2 Diabetes", last_visit: "2026-05-20T10:00:00Z" },
-  ];
-
-  const defaultAppointments = [
-    { id: "1", patient_name: "Neha Gupta", time: "10:30 AM", type: "Follow up" },
-    { id: "2", patient_name: "Vikas Verma", time: "11:15 AM", type: "First Visit" },
-    { id: "3", patient_name: "Sunil Das", time: "02:00 PM", type: "Consultation" },
-  ];
-
-  const kpis = data?.kpis?.length > 0 ? data.kpis : defaultKpis;
-  const patients = data?.recentPatients?.length > 0 ? data.recentPatients : defaultPatients;
-  const appointments = data?.appointments?.length > 0 ? data.appointments : defaultAppointments;
+  const kpis = Array.isArray(data?.kpis) ? data.kpis : [];
+  const patients: Array<{ id: string; name: string; age: number | string; condition?: string; last_visit?: string }> = Array.isArray(data?.recentPatients) ? data.recentPatients : [];
+  const appointments = Array.isArray(data?.appointments) ? data.appointments : [];
 
   const kpiCards = [
     { label: kpis[0]?.label || "Total Patients", value: kpis[0]?.value || "0", icon: Users, color: "border-[#0891b2]", bgColor: "bg-cyan-50 text-[#0891b2]" },
@@ -120,6 +111,7 @@ export default function DoctorDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
+                {patients.length === 0 && <tr><td colSpan={4} className="px-6 py-14 text-center text-base text-slate-500">No patient activity has been recorded yet.</td></tr>}
                 {patients.map((patient) => (
                   <tr key={patient.id} className="group hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
@@ -131,11 +123,11 @@ export default function DoctorDashboard() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-slate-900">{patient.condition}</div>
+                      <div className="text-sm font-medium text-slate-900">{patient.condition || "Not recorded"}</div>
                       <div className="text-xs text-slate-500">{patient.age} yrs</div>
                     </td>
                     <td className="px-6 py-4 text-slate-600 font-medium">
-                      {new Date(patient.last_visit).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      {patient.last_visit ? new Date(patient.last_visit).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" }) : "No visit yet"}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-3 transition-opacity">

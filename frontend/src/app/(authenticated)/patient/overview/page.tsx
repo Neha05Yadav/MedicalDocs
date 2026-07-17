@@ -109,31 +109,31 @@ export default function PatientDashboard() {
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-8 font-sans">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen p-4 font-sans md:p-8 xl:p-10">
+      <div className="w-full space-y-7">
         {/* Header */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 items-stretch gap-7 xl:grid-cols-12">
           {/* LEFT COLUMN */}
-          <div className="xl:col-span-4 space-y-6">
+          <div className="grid gap-7 xl:contents">
             {/* 1. Patient Summary Card */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200/60 shadow-sm relative overflow-hidden group">
+            <div className="group relative h-full overflow-hidden rounded-3xl border border-slate-200/70 bg-white p-7 shadow-[0_16px_45px_-30px_rgba(15,23,42,.28)] xl:col-span-4 xl:row-start-1 2xl:p-8">
               <div className="absolute top-0 right-0 p-32 bg-gradient-to-bl from-cyan-100/50 to-transparent rounded-bl-full -mr-16 -mt-16 transition-transform duration-500 group-hover:scale-110 pointer-events-none"></div>
-              <div className="flex items-center gap-4 mb-4 relative z-10">
-                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-cyan-500/20 text-xl font-bold uppercase">
+              <div className="relative z-10 mb-5 flex items-center gap-5">
+                <div className="flex size-[4.5rem] items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-indigo-600 text-2xl font-bold uppercase text-white shadow-lg shadow-cyan-500/20">
                   {patientInfo.name.charAt(0)}
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">{patientInfo.name}</h2>
-                  <p className="text-sm font-medium text-slate-500">{patientInfo.age !== 'N/A' ? `${patientInfo.age} yrs • ` : ''}{patientInfo.gender}</p>
+                  <h2 className="text-[clamp(1.4rem,1.35vw,1.8rem)] font-extrabold tracking-tight text-slate-900">{patientInfo.name}</h2>
+                  <p className="mt-1 text-[clamp(.95rem,.82vw,1.1rem)] font-medium text-slate-500">{patientInfo.age !== 'N/A' ? `${patientInfo.age} yrs • ` : ''}{patientInfo.gender}</p>
                 </div>
               </div>
               {/* Patient ID Badge */}
               {patientInfo.id && (
                 <div className="mb-5 relative z-10">
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-cyan-50 to-indigo-50 border border-cyan-200 rounded-xl">
+                  <div className="flex items-center gap-2 rounded-xl border border-cyan-200 bg-gradient-to-r from-cyan-50 to-indigo-50 px-3.5 py-2.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse shrink-0"></div>
-                    <span className="text-xs text-slate-500 font-medium shrink-0">Patient ID:</span>
-                    <span className="text-xs font-mono font-bold text-cyan-700 tracking-wider truncate flex-1" title={patientInfo.id}>{patientInfo.id}</span>
+                    <span className="shrink-0 text-[clamp(.9rem,.76vw,1rem)] font-medium text-slate-500">Patient ID:</span>
+                    <span className="flex-1 truncate font-mono text-[clamp(.9rem,.76vw,1rem)] font-bold tracking-wider text-cyan-700" title={patientInfo.id}>{patientInfo.id}</span>
                     <button
                       onClick={() => { navigator.clipboard.writeText(patientInfo.id); }}
                       title="Copy Patient ID"
@@ -144,20 +144,20 @@ export default function PatientDashboard() {
                   </div>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <p className="text-xs text-slate-500 mb-1 flex items-center gap-1"><Droplet className="size-3 text-red-500"/> Blood Group</p>
-                  <p className="font-semibold text-slate-800">{patientInfo.bloodGroup}</p>
+              <div className="relative z-10 mb-7 grid grid-cols-2 gap-4">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                  <p className="mb-1.5 flex items-center gap-1.5 text-[clamp(.9rem,.76vw,1rem)] text-slate-500"><Droplet className="size-4 text-red-500"/> Blood Group</p>
+                  <p className="text-[clamp(1rem,.9vw,1.2rem)] font-bold text-slate-800">{patientInfo.bloodGroup}</p>
                 </div>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <p className="text-xs text-slate-500 mb-1 flex items-center gap-1"><Calendar className="size-3 text-cyan-500"/> Last Record Updated</p>
-                  <p className="font-semibold text-slate-800">{patientInfo.lastVisit}</p>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                  <p className="mb-1.5 flex items-center gap-1.5 text-[clamp(.9rem,.76vw,1rem)] text-slate-500"><Calendar className="size-4 text-cyan-500"/> Last Record Updated</p>
+                  <p className="text-[clamp(1rem,.9vw,1.2rem)] font-bold text-slate-800">{patientInfo.lastVisit}</p>
                 </div>
               </div>
               <div className="relative z-10">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Health Records</p>
+                <p className="mb-3 text-[clamp(.85rem,.72vw,.95rem)] font-bold uppercase tracking-wider text-slate-500">Health Records</p>
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-4 py-2 text-[clamp(.95rem,.82vw,1.1rem)] font-semibold text-indigo-700">
                     <FileText className="size-4" />
                     {testResultsStats.completed + testResultsStats.pending} Reports Stored
                   </span>
@@ -165,10 +165,10 @@ export default function PatientDashboard() {
               </div>
             </div>
             {/* 5. Medical Timeline */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200/60 shadow-sm">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Medical Timeline</h3>
-                <Link href="/patient/records" className="text-xs font-semibold text-cyan-600 hover:text-cyan-700">View All</Link>
+            <div className="min-h-[32rem] rounded-3xl border border-slate-200/70 bg-white p-7 shadow-[0_16px_45px_-30px_rgba(15,23,42,.28)] xl:col-span-4 xl:row-start-2 2xl:p-8">
+              <div className="mb-7 flex items-center justify-between">
+                <h3 className="text-[clamp(1rem,.95vw,1.25rem)] font-extrabold uppercase tracking-wider text-slate-900">Medical Timeline</h3>
+                <Link href="/patient/records" className="text-[clamp(.9rem,.76vw,1rem)] font-semibold text-cyan-600 hover:text-cyan-700">View All</Link>
               </div>
               
               {timeline.length === 0 ? (
@@ -183,10 +183,10 @@ export default function PatientDashboard() {
                         <div className={`absolute left-0 w-4 h-4 rounded-full border-2 bg-white ${colors.border} -ml-2 mt-1.5 z-10`}></div>
                         <div className="pl-4 flex-1">
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1">
-                            <h4 className="text-sm font-bold text-slate-900">{item.title}</h4>
-                            <time className="text-xs font-medium text-slate-500">{item.dateStr}</time>
+                            <h4 className="text-[clamp(1rem,.88vw,1.15rem)] font-bold text-slate-900">{item.title}</h4>
+                            <time className="text-[clamp(.8rem,.68vw,.9rem)] font-medium text-slate-500">{item.dateStr}</time>
                           </div>
-                          <p className="text-sm text-slate-600 mb-2">{item.desc}</p>
+                          <p className="mb-2 text-[clamp(.9rem,.78vw,1.05rem)] leading-6 text-slate-600">{item.desc}</p>
                           <div className={`inline-flex items-center justify-center p-1.5 rounded-lg ${colors.bg} ${colors.color}`}>
                             <Icon className="size-4" />
                           </div>
@@ -199,76 +199,93 @@ export default function PatientDashboard() {
             </div>
           </div>
           {/* RIGHT COLUMN */}
-          <div className="xl:col-span-8 space-y-6">
+          <div className="grid gap-7 xl:contents">
             {/* 2. Health Stats Section (Charts) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-7 md:grid-cols-2 xl:contents">
               {/* Blood Pressure */}
-              <div className="bg-white rounded-2xl p-6 border border-slate-200/60 shadow-sm col-span-1 md:col-span-2">
+              <div className="relative col-span-1 flex h-full min-h-52 flex-col overflow-hidden rounded-3xl border border-slate-200/70 bg-white p-7 shadow-[0_16px_45px_-30px_rgba(15,23,42,.28)] md:col-span-2 xl:col-span-8 xl:row-start-1 2xl:p-8">
+                <div className="pointer-events-none absolute -right-16 -top-24 size-80 rounded-full bg-cyan-100/60 blur-3xl" />
                 <div className="flex items-center justify-between">
-                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                    <Activity className="size-5 text-rose-500" />
+                  <h3 className="flex items-center gap-2.5 text-[clamp(1.15rem,1.05vw,1.4rem)] font-extrabold text-slate-900">
+                    <Activity className="size-6 text-rose-500" />
                     Blood Pressure
                   </h3>
-                  <span className="px-2.5 py-1 bg-white text-emerald-700 text-xs font-bold rounded-md">Normal</span>
+                  <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[clamp(.85rem,.72vw,.95rem)] font-bold text-emerald-700">Normal</span>
                 </div>
-                <div className="mt-6 flex flex-col">
-                  <span className="text-4xl font-extrabold text-slate-800 tracking-tight">
-                    120/80 <span className="text-base font-semibold text-slate-500 tracking-normal">mmHg</span>
-                  </span>
+                <div className="relative mt-8 grid flex-1 items-end gap-8 sm:grid-cols-[.7fr_1.3fr]">
+                  <div>
+                    <span className="block text-[clamp(3.4rem,3.3vw,4.6rem)] font-extrabold tracking-tight text-slate-800">
+                      120/80 <span className="text-[clamp(1.1rem,1vw,1.35rem)] font-semibold tracking-normal text-slate-500">mmHg</span>
+                    </span>
+                    <span className="mt-4 block text-[clamp(.9rem,.76vw,1rem)] font-semibold text-slate-500">Latest recorded measurement</span>
+                  </div>
+                  <div className="hidden h-28 items-end sm:flex" aria-hidden="true">
+                    <svg viewBox="0 0 560 120" className="h-full w-full overflow-visible" fill="none">
+                      <defs>
+                        <linearGradient id="pressure-fill" x1="0" y1="0" x2="0" y2="1">
+                          <stop stopColor="#22d3ee" stopOpacity=".28" />
+                          <stop offset="1" stopColor="#22d3ee" stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+                      <path d="M0 90 C45 86 62 72 96 76 S150 94 188 75 S235 48 276 62 S332 95 372 72 S431 34 470 54 S521 78 560 43 V120 H0Z" fill="url(#pressure-fill)" />
+                      <path d="M0 90 C45 86 62 72 96 76 S150 94 188 75 S235 48 276 62 S332 95 372 72 S431 34 470 54 S521 78 560 43" stroke="#06b6d4" strokeWidth="4" strokeLinecap="round" />
+                      <circle cx="560" cy="43" r="7" fill="#06b6d4" stroke="white" strokeWidth="4" />
+                    </svg>
+                  </div>
                 </div>
               </div>
             </div>
             {/* Middle Row: Test Results & Recent Reports */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-7 md:grid-cols-2 xl:contents">
               {/* 4. Test Results Overview */}
-              <div className="bg-white rounded-2xl p-6 border border-slate-200/60 shadow-sm flex flex-col">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-base font-bold text-slate-900">Test Results</h3>
-                  <Link href="/patient/records" className="text-xs font-semibold text-cyan-600 hover:text-cyan-700 flex items-center">
+              <div className="flex min-h-[29rem] flex-col rounded-3xl border border-slate-200/70 bg-white p-7 shadow-[0_16px_45px_-30px_rgba(15,23,42,.28)] xl:col-span-4 xl:row-start-2 2xl:p-8">
+                <div className="mb-7 flex items-center justify-between">
+                  <h3 className="text-[clamp(1.15rem,1.05vw,1.4rem)] font-extrabold text-slate-900">Test Results</h3>
+                  <Link href="/patient/records" className="flex items-center text-[clamp(.9rem,.76vw,1rem)] font-semibold text-cyan-600 hover:text-cyan-700">
                     View All <ChevronRight className="size-3 ml-0.5" />
                   </Link>
                 </div>
-                <div className="grid grid-cols-3 gap-3 mb-6">
-                  <div className="bg-amber-50 p-3 rounded-xl border border-amber-100/50 text-center">
-                    <p className="text-2xl font-extrabold text-amber-600">{testResultsStats.pending}</p>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 mt-1">Pending</p>
+                <div className="mb-7 grid grid-cols-3 gap-3">
+                  <div className="rounded-2xl border border-amber-100/50 bg-amber-50 p-5 text-center">
+                    <p className="text-[clamp(1.8rem,1.7vw,2.3rem)] font-extrabold text-amber-600">{testResultsStats.pending}</p>
+                    <p className="mt-1 text-[clamp(.72rem,.62vw,.82rem)] font-bold uppercase tracking-wider text-amber-700">Pending</p>
                   </div>
-                  <div className="bg-white p-3 rounded-xl border border-emerald-100/50 text-center">
-                    <p className="text-2xl font-extrabold text-emerald-600">{testResultsStats.completed}</p>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 mt-1">Completed</p>
+                  <div className="rounded-2xl border border-emerald-100/50 bg-white p-5 text-center">
+                    <p className="text-[clamp(1.8rem,1.7vw,2.3rem)] font-extrabold text-emerald-600">{testResultsStats.completed}</p>
+                    <p className="mt-1 text-[clamp(.72rem,.62vw,.82rem)] font-bold uppercase tracking-wider text-emerald-700">Completed</p>
                   </div>
-                  <div className="bg-rose-50 p-3 rounded-xl border border-rose-100/50 text-center">
-                    <p className="text-2xl font-extrabold text-rose-600">{testResultsStats.abnormal}</p>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-rose-700 mt-1">Abnormal</p>
+                  <div className="rounded-2xl border border-rose-100/50 bg-rose-50 p-5 text-center">
+                    <p className="text-[clamp(1.8rem,1.7vw,2.3rem)] font-extrabold text-rose-600">{testResultsStats.abnormal}</p>
+                    <p className="mt-1 text-[clamp(.72rem,.62vw,.82rem)] font-bold uppercase tracking-wider text-rose-700">Abnormal</p>
                   </div>
                 </div>
                 <div className="flex-1">
-                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Recent Highlights</h4>
+                  <h4 className="mb-4 text-[clamp(.85rem,.72vw,.95rem)] font-bold uppercase tracking-wider text-slate-500">Recent Highlights</h4>
                   {testResultsStats.completed === 0 ? (
                     <div className="text-sm text-slate-500 text-center py-4">No recent test results</div>
                   ) : (
                     <ul className="space-y-3">
-                      <li className="group cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md flex items-center justify-between p-3 rounded-xl border bg-slate-50/50 border-slate-100 hover:border-slate-300 hover:shadow-slate-500/5">
+                      <li className="group flex cursor-pointer items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/50 p-4 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md hover:shadow-slate-500/5">
                         <div className="flex items-center gap-3">
                           <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-600">
                             <CheckCircle2 className="size-4" />
                           </div>
                           <div>
-                            <p className="text-sm font-semibold transition-colors text-slate-800 group-hover:text-cyan-700">Hemoglobin</p>
-                            <p className="text-xs font-medium text-slate-500">Normal</p>
+                            <p className="text-[clamp(1rem,.88vw,1.15rem)] font-semibold text-slate-800 transition-colors group-hover:text-cyan-700">Hemoglobin</p>
+                            <p className="text-[clamp(.85rem,.72vw,.95rem)] font-medium text-slate-500">Normal</p>
                           </div>
                         </div>
-                        <span className="text-sm font-bold text-slate-900">14.2 g/dL</span>
+                        <span className="text-[clamp(1rem,.88vw,1.15rem)] font-bold text-slate-900">14.2 g/dL</span>
                       </li>
                     </ul>
                   )}
                 </div>
               </div>
               {/* 3. Recent Reports */}
-              <div className="bg-white rounded-2xl p-6 border border-slate-200/60 shadow-sm flex flex-col">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-base font-bold text-slate-900">Recent Reports</h3>
-                  <Link href="/patient/records" className="text-xs font-semibold text-cyan-600 hover:text-cyan-700 flex items-center">
+              <div className="flex min-h-[29rem] flex-col rounded-3xl border border-slate-200/70 bg-white p-7 shadow-[0_16px_45px_-30px_rgba(15,23,42,.28)] xl:col-span-4 xl:row-start-2 2xl:p-8">
+                <div className="mb-7 flex items-center justify-between">
+                  <h3 className="text-[clamp(1.15rem,1.05vw,1.4rem)] font-extrabold text-slate-900">Recent Reports</h3>
+                  <Link href="/patient/records" className="flex items-center text-[clamp(.9rem,.76vw,1rem)] font-semibold text-cyan-600 hover:text-cyan-700">
                     View All <ChevronRight className="size-3 ml-0.5" />
                   </Link>
                 </div>
@@ -277,17 +294,17 @@ export default function PatientDashboard() {
                     <div className="text-sm text-slate-500 text-center py-4">No records uploaded yet</div>
                   ) : (
                     recentReports.map((report: any) => (
-                      <div key={report.id} className="group flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-white hover:border-cyan-200 hover:shadow-md hover:shadow-cyan-500/5 transition-all">
+                      <div key={report.id} className="group flex items-center justify-between rounded-2xl border border-slate-100 bg-white p-4 transition-all hover:border-cyan-200 hover:shadow-md hover:shadow-cyan-500/5">
                         <div className="flex items-center gap-3.5">
-                          <div className="h-10 w-10 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center shrink-0">
-                            {report.type === 'LAB_REPORT' ? <FileText className="size-5" /> : <FileBarChart className="size-5" />}
+                          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
+                            {report.type === 'LAB_REPORT' ? <FileText className="size-6" /> : <FileBarChart className="size-6" />}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-slate-800 group-hover:text-cyan-700 transition-colors line-clamp-1">{report.name}</p>
+                            <p className="line-clamp-1 text-[clamp(1rem,.88vw,1.15rem)] font-bold text-slate-800 transition-colors group-hover:text-cyan-700">{report.name}</p>
                             <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[11px] font-medium text-slate-500">{report.date}</span>
+                              <span className="text-[clamp(.78rem,.66vw,.88rem)] font-medium text-slate-500">{report.date}</span>
                               <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                              <span className="text-[11px] font-medium text-slate-500">{report.size}</span>
+                              <span className="text-[clamp(.78rem,.66vw,.88rem)] font-medium text-slate-500">{report.size}</span>
                             </div>
                           </div>
                         </div>

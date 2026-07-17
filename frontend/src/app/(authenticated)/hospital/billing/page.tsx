@@ -30,6 +30,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 export default function BillingPage() {
+  const authHeaders = (json = false) => ({ ...(json ? { "Content-Type": "application/json" } : {}), Authorization: `Bearer ${localStorage.getItem("token") || ""}` });
   const [activeTab, setActiveTab] = useState<"generate" | "history">("generate");
   
   // Data State
@@ -47,19 +48,55 @@ export default function BillingPage() {
 
   const totalAmount = (Number(consultationFee) || 0) + (Number(testFee) || 0);
   useEffect(() => {
-    fetch("/api/hospital/billing/patients")
-      .then(res => res.json())
-      .then(data => setPatients(data))
-      .catch(err => console.error(err));
+    fetch("/api/hospital/billing/patients", { headers: authHeaders() })
+      .then(async res => {
+        if (res.status === 401) {
+          localStorage.removeItem("token");
+          window.location.href = "/login";
+          return null;
+        }
+        return res.json();
+      })
+      .then(data => {
+        if (!data) return;
+        if (Array.isArray(data)) {
+          setPatients(data);
+        } else {
+          console.error("Failed to load patients:", data);
+          setPatients([]);
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        setPatients([]);
+      });
   }, []);
 
   useEffect(() => {
     if (activeTab === "history") {
       setLoadingHistory(true);
-      fetch("/api/hospital/billing/invoices")
-        .then(res => res.json())
-        .then(data => setHistory(data))
-        .catch(err => console.error(err))
+      fetch("/api/hospital/billing/invoices", { headers: authHeaders() })
+        .then(async res => {
+          if (res.status === 401) {
+            localStorage.removeItem("token");
+            window.location.href = "/login";
+            return null;
+          }
+          return res.json();
+        })
+        .then(data => {
+          if (!data) return;
+          if (Array.isArray(data)) {
+            setHistory(data);
+          } else {
+            console.error("Failed to load history:", data);
+            setHistory([]);
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          setHistory([]);
+        })
         .finally(() => setLoadingHistory(false));
     }
   }, [activeTab]);
@@ -89,7 +126,7 @@ export default function BillingPage() {
     try {
       const res = await fetch("/api/hospital/billing/invoice", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(true),
         body: JSON.stringify({
           patientId: selectedPatientId,
           consultationFee: Number(consultationFee) || 0,

@@ -1,5 +1,13 @@
 import { IsEmail, IsString, MinLength, IsOptional, IsIn } from 'class-validator';
 
+export const PUBLIC_SIGNUP_ROLES = [
+  'PATIENT',
+  'HOSPITAL',
+  'LAB',
+  'CLINIC',
+  'DOCTOR',
+] as const;
+
 export class SignupDto {
   @IsEmail({}, { message: 'Valid email address dena zaroori hai' })
   email!: string;
@@ -9,7 +17,9 @@ export class SignupDto {
   password!: string;
 
   @IsOptional()
-  @IsIn(['PATIENT', 'HOSPITAL', 'LAB', 'CLINIC', 'DOCTOR', 'ADMIN', 'SUPER_ADMIN', 'STAFF'], { message: 'Role valid nahi hai' })
+  @IsIn(PUBLIC_SIGNUP_ROLES, {
+    message: 'Invalid email or password',
+  })
   role?: string;
 
   @IsString({ message: 'Name required hai' })

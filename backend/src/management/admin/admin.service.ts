@@ -158,51 +158,22 @@ export class AdminService {
   }
 
   async getAnalytics() {
-    const patientsCountRow = await this.db.queryOne('SELECT COUNT(*) as c FROM patient');
-    const doctorsCountRow = await this.db.queryOne('SELECT COUNT(*) as c FROM doctor');
-    const hospitalsCountRow = await this.db.queryOne('SELECT COUNT(*) as c FROM hospital WHERE type = "Hospital"');
-    const labsCountRow = await this.db.queryOne('SELECT COUNT(*) as c FROM hospital WHERE type = "Independent Lab"');
-
     const requestedTests = await this.db.query('SELECT testType, COUNT(id) as c FROM testrequest GROUP BY testType ORDER BY c DESC LIMIT 6');
-
-    // Default status fallback to simple count logic
-    const reports = await this.db.query('SELECT status, COUNT(*) as c FROM medicalrecord GROUP BY status');
-    let verifiedReportsCount = 0, pendingReportsCount = 0, flaggedReportsCount = 0;
-    reports.forEach(r => {
-      if (r.status === 'Verified') verifiedReportsCount = Number(r.c);
-      if (r.status === 'Pending') pendingReportsCount = Number(r.c);
-      if (r.status === 'Flagged') flaggedReportsCount = Number(r.c);
-    });
-
     const requestedTestsData = requestedTests.map(t => ({
       name: t.testType,
       count: Number(t.c)
     }));
-
-    const patientsCount = Number(patientsCountRow.c);
-    const doctorsCount = Number(doctorsCountRow.c);
-    const hospitalsCount = Number(hospitalsCountRow.c);
-    const labsCount = Number(labsCountRow.c);
-    
-    const currentMonthData = { month: 'Jun', patients: patientsCount, doctors: doctorsCount, hospitals: hospitalsCount, labs: labsCount };
-    const growthData = [
-      { month: 'Jan', patients: Math.round(patientsCount * 0.2), doctors: Math.round(doctorsCount * 0.3), hospitals: Math.round(hospitalsCount * 0.2), labs: Math.round(labsCount * 0.2) },
-      { month: 'Feb', patients: Math.round(patientsCount * 0.35), doctors: Math.round(doctorsCount * 0.4), hospitals: Math.round(hospitalsCount * 0.4), labs: Math.round(labsCount * 0.4) },
-      { month: 'Mar', patients: Math.round(patientsCount * 0.5), doctors: Math.round(doctorsCount * 0.6), hospitals: Math.round(hospitalsCount * 0.6), labs: Math.round(labsCount * 0.6) },
-      { month: 'Apr', patients: Math.round(patientsCount * 0.7), doctors: Math.round(doctorsCount * 0.8), hospitals: Math.round(hospitalsCount * 0.8), labs: Math.round(labsCount * 0.7) },
-      { month: 'May', patients: Math.round(patientsCount * 0.85), doctors: Math.round(doctorsCount * 0.9), hospitals: Math.round(hospitalsCount * 0.9), labs: Math.round(labsCount * 0.9) },
-      currentMonthData
-    ];
-
-    const totalUploaded = verifiedReportsCount + pendingReportsCount + flaggedReportsCount;
-    const reportStatsData = [
-      { name: 'Jan', uploaded: Math.round(totalUploaded * 0.2), verified: Math.round(verifiedReportsCount * 0.15) },
-      { name: 'Feb', uploaded: Math.round(totalUploaded * 0.35), verified: Math.round(verifiedReportsCount * 0.3) },
-      { name: 'Mar', uploaded: Math.round(totalUploaded * 0.5), verified: Math.round(verifiedReportsCount * 0.45) },
-      { name: 'Apr', uploaded: Math.round(totalUploaded * 0.7), verified: Math.round(verifiedReportsCount * 0.65) },
-      { name: 'May', uploaded: Math.round(totalUploaded * 0.85), verified: Math.round(verifiedReportsCount * 0.8) },
-      { name: 'Jun', uploaded: totalUploaded, verified: verifiedReportsCount }
-    ];
+    const [patientMonths, doctorMonths, facilityMonths, reportMonths] = await Promise.all([
+      this.db.query(`SELECT DATE_FORMAT(createdAt, '%Y-%m') AS monthKey, COUNT(*) AS count FROM patient WHERE createdAt >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 5 MONTH) GROUP BY DATE_FORMAT(createdAt, '%Y-%m')`),
+      this.db.query(`SELECT DATE_FORMAT(createdAt, '%Y-%m') AS monthKey, COUNT(*) AS count FROM doctor WHERE createdAt >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 5 MONTH) GROUP BY DATE_FORMAT(createdAt, '%Y-%m')`),
+      this.db.query(`SELECT DATE_FORMAT(createdAt, '%Y-%m') AS monthKey, SUM(CASE WHEN UPPER(type) IN ('LAB','LABORATORY','INDEPENDENT LAB') THEN 0 ELSE 1 END) AS hospitals, SUM(CASE WHEN UPPER(type) IN ('LAB','LABORATORY','INDEPENDENT LAB') THEN 1 ELSE 0 END) AS labs FROM hospital WHERE createdAt >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 5 MONTH) GROUP BY DATE_FORMAT(createdAt, '%Y-%m')`),
+      this.db.query(`SELECT DATE_FORMAT(date, '%Y-%m') AS monthKey, COUNT(*) AS uploaded, SUM(CASE WHEN UPPER(COALESCE(status,'')) = 'VERIFIED' THEN 1 ELSE 0 END) AS verified FROM medicalrecord WHERE date >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 5 MONTH) GROUP BY DATE_FORMAT(date, '%Y-%m')`),
+    ]);
+    const toMap = (rows: any[]) => new Map(rows.map(row => [row.monthKey, row]));
+    const patientMap = toMap(patientMonths), doctorMap = toMap(doctorMonths), facilityMap = toMap(facilityMonths), reportMap = toMap(reportMonths);
+    const months = Array.from({ length: 6 }, (_, index) => { const date = new Date(); date.setDate(1); date.setMonth(date.getMonth() - (5 - index)); return { key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`, label: date.toLocaleDateString('en-US', { month: 'short' }) }; });
+    const growthData = months.map(month => ({ month: month.label, patients: Number(patientMap.get(month.key)?.count || 0), doctors: Number(doctorMap.get(month.key)?.count || 0), hospitals: Number(facilityMap.get(month.key)?.hospitals || 0), labs: Number(facilityMap.get(month.key)?.labs || 0) }));
+    const reportStatsData = months.map(month => ({ name: month.label, uploaded: Number(reportMap.get(month.key)?.uploaded || 0), verified: Number(reportMap.get(month.key)?.verified || 0) }));
 
     return { growthData, requestedTestsData, reportStatsData };
   }

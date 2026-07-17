@@ -4,9 +4,6 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react", "recharts"],
   },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   async rewrites() {
     return [
       {

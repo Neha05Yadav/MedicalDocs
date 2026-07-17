@@ -1,10 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { MysqlService } from '../mysql.service';
 import { v4 as uuidv4 } from 'uuid';
+import { RedisService } from '../redis/redis.service';
 
 @Injectable()
 export class LaboratoryService {
-  constructor(private db: MysqlService) {}
+  constructor(
+    private db: MysqlService,
+    private redisService: RedisService,
+  ) {}
 
 
   private async getHospitalContext(userEmail?: string): Promise<any> {
@@ -12,18 +16,15 @@ export class LaboratoryService {
     if (userEmail) {
       hospital = await this.db.queryOne('SELECT * FROM hospital WHERE email = ? AND type IN ("LABORATORY", "LAB")', [userEmail]);
     }
-    if (!hospital) {
-      hospital = await this.db.queryOne('SELECT * FROM hospital WHERE type IN ("LABORATORY", "LAB") LIMIT 1');
-    }
-    if (!hospital) {
-      hospital = await this.db.queryOne('SELECT * FROM hospital LIMIT 1');
-    }
-    if (!hospital) throw new Error("No lab context found");
+    if (!hospital) throw new UnauthorizedException('No laboratory workspace is linked to this identity.');
     return hospital;
   }
 
   async getOverview(userEmail?: string) {
     const hospital = await this.getHospitalContext(userEmail);
+    const cacheKey = `lab:overview:${hospital.id}`;
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) return cached;
 
     const currentMonth = new Date().getMonth();
     
@@ -60,11 +61,12 @@ export class LaboratoryService {
       status: r.status
     }));
 
-    // Patients count mockup
     const totalPatientsRow = await this.db.queryOne('SELECT COUNT(DISTINCT patientId) as c FROM testrequest WHERE hospitalId = ?', [hospital.id]);
     const totalPatients = Number(totalPatientsRow.c);
+    const reportTypeRows = await this.db.query(`SELECT COALESCE(testType, 'Other') AS name, COUNT(*) AS value FROM testrequest WHERE hospitalId = ? GROUP BY testType ORDER BY value DESC LIMIT 6`, [hospital.id]);
+    const reportColors = ['#3b82f6', '#10b981', '#f59e0b', '#6366f1', '#ec4899', '#14b8a6'];
 
-    return {
+    const result = {
       kpis: {
         totalRequests,
         completedReports: completedTests,
@@ -77,20 +79,22 @@ export class LaboratoryService {
         { name: 'In Progress', value: inProgressTests, color: '#a855f7' },
         { name: 'Completed', value: completedTests, color: '#10b981' }
       ],
-      reportsSummaryData: [
-        { name: 'Blood Test', value: 45, color: '#3b82f6' },
-        { name: 'X-Ray', value: 25, color: '#10b981' },
-        { name: 'MRI', value: 15, color: '#f59e0b' },
-        { name: 'Urine Test', value: 15, color: '#6366f1' }
-      ],
+      reportsSummaryData: reportTypeRows.map((row, index) => ({ name: row.name, value: Number(row.value), color: reportColors[index % reportColors.length] })),
       recentTestRequests: recentRequests,
       recentNotifications: []
     };
+
+    await this.redisService.set(cacheKey, result, 300);
+    return result;
   }
 
   async getTestRequests(userEmail?: string) {
     try {
       const hospital = await this.getHospitalContext(userEmail);
+      const cacheKey = `lab:testrequests:${hospital.id}`;
+      const cached = await this.redisService.get(cacheKey);
+      if (cached) return cached;
+
       const reqs = await this.db.query(`
         SELECT t.*, p.name as patientName, p.phone as patientPhone, p.dateOfBirth as patientDob, p.gender as patientGender, 
                rh.name as refHospitalName, rh.type as refHospitalType,
@@ -103,7 +107,7 @@ export class LaboratoryService {
         ORDER BY t.createdAt DESC
       `, [hospital.id]);
 
-      return reqs.map(r => ({
+      const result = reqs.map(r => ({
         id: r.id,
         patientId: r.patientId,
         patientName: r.patientName,
@@ -120,6 +124,8 @@ export class LaboratoryService {
         clinicType: r.refHospitalType || 'HOSPITAL',
         referringHospitalId: r.referringHospitalId
       }));
+      await this.redisService.set(cacheKey, result, 300);
+      return result;
     } catch (error: any) {
       console.error('getTestRequests ERROR:', error);
       throw error;
@@ -152,30 +158,9 @@ export class LaboratoryService {
       } else if (status === 'Completed') {
         await this.db.query(
           'INSERT INTO notification (id, hospitalId, type, title, message, isRead, actionRequired, severity, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, false, false, ?, ?, ?)',
-          [uuidv4(), testReq.referringHospitalId, 'LAB_RESULT', 'Lab Result Ready', `The ${testReq.testType} result for patient ${patientName} is ready from ${hospital.name}.`, 'High', new Date(), new Date()]
+          [uuidv4(), testReq.referringHospitalId, 'LAB_STATUS', 'Lab Test Completed', `${hospital.name} completed the ${testReq.testType} test for ${patientName}. The verified report will appear after file upload.`, 'Medium', new Date(), new Date()]
         );
 
-        const fileUrl = "dummy_lab_report.pdf";
-        await this.db.query(`
-          INSERT INTO medicalrecord (id, patientId, hospitalId, title, description, type, fileUrl, date, createdAt, updatedAt)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
-          uuidv4(), testReq.patientId, testReq.referringHospitalId, testReq.testType + ' Report', `From ${hospital.name}: Lab Report`, 'LAB_REPORT', fileUrl, new Date(), new Date(), new Date()
-        ]);
-
-        await this.db.query(`
-          INSERT INTO medicalrecord (id, patientId, hospitalId, title, description, type, fileUrl, date, createdAt, updatedAt)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
-          uuidv4(), testReq.patientId, hospital.id, testReq.testType + ' Report', `Sent to referring hospital`, 'LAB_REPORT', fileUrl, new Date(), new Date(), new Date()
-        ]);
-
-        await this.db.query(`
-          INSERT INTO notification (id, userId, title, message, type, isRead, actionRequired, createdAt, updatedAt)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
-          uuidv4(), testReq.patientId, 'Lab Report Ready', `Your lab report for ${testReq.testType} is ready.`, 'Report', false, false, new Date(), new Date()
-        ]);
       } else if (status === 'Cancelled') {
         await this.db.query(
           'INSERT INTO notification (id, hospitalId, type, title, message, isRead, actionRequired, severity, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, false, true, ?, ?, ?)',
@@ -183,6 +168,11 @@ export class LaboratoryService {
         );
       }
     }
+    
+    await this.redisService.del(`lab:overview:${hospital.id}`);
+    await this.redisService.del(`lab:testrequests:${hospital.id}`);
+    await this.redisService.del(`lab:samples:${hospital.id}`);
+    
     return { success: true };
   }
 
@@ -205,18 +195,21 @@ export class LaboratoryService {
       date: new Date(r.date).toLocaleDateString(),
       size: '1.2 MB',
       status: 'Sent'
+      ,fileUrl: r.fileUrl
     }));
   }
 
   async uploadReport(userEmail: string | undefined, data: any, file?: Express.Multer.File) {
     const hospital = await this.getHospitalContext(userEmail);
+    const fileUrl = file?.filename || String(data.fileUrl || '').trim();
+    if (!fileUrl) throw new BadRequestException('A real report file is required.');
     let patient = await this.db.queryOne('SELECT * FROM patient WHERE id = ? OR name = ?', [data.patientId, data.patientId]);
     if (!patient) throw new Error("Patient not found. Please verify the ID or Name.");
 
     const recId = uuidv4();
     await this.db.query(
       'INSERT INTO medicalrecord (id, patientId, hospitalId, title, type, description, fileUrl, date, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [recId, patient.id, hospital.id, data.title, 'LAB_REPORT', data.category, file?.filename || data.fileUrl || "dummy_report.pdf", new Date(), new Date()]
+      [recId, patient.id, hospital.id, data.title, 'LAB_REPORT', data.category, fileUrl, new Date(), new Date()]
     );
 
     let linkedRequest: any = null;
@@ -250,10 +243,11 @@ export class LaboratoryService {
       // 3. Also save the report in the REFERRING hospital's medicalrecord so their doctor can see it
       await this.db.query(
         'INSERT INTO medicalrecord (id, patientId, hospitalId, title, type, description, fileUrl, date, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [uuidv4(), patient.id, linkedRequest.referringHospitalId, data.title, 'LAB_REPORT', `From ${hospital.name}: ${data.category || 'Lab Report'}`, data.fileUrl || "dummy_report.pdf", new Date(), new Date()]
+        [uuidv4(), patient.id, linkedRequest.referringHospitalId, data.title, 'LAB_REPORT', `From ${hospital.name}: ${data.category || 'Lab Report'}`, fileUrl, new Date(), new Date()]
       );
     }
 
+    await this.redisService.del(`lab:overview:${hospital.id}`);
     return { id: recId };
   }
 
@@ -272,7 +266,7 @@ export class LaboratoryService {
       return {
         id: p.id,
         name: p.name,
-        age: p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / 31557600000) : 30,
+        age: p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / 31557600000) : null,
         gender: p.gender || 'Unknown',
         phone: p.phone || 'N/A',
         email: p.email || 'N/A',
@@ -360,18 +354,25 @@ export class LaboratoryService {
   async getProfile(userEmail?: string) {
     const hospital = await this.getHospitalContext(userEmail);
     return {
+      id: hospital.id,
       name: hospital.name,
-      contact: hospital.contact || 'N/A',
-      location: hospital.location || 'N/A',
+      phone: hospital.phone || '',
+      address: hospital.address || '',
+      type: hospital.type || 'LAB',
       email: hospital.email,
-      license: "LAB-2023-9981",
-      established: hospital.createdAt
+      licenseNo: hospital.licenseNumber || '',
+      established: hospital.createdAt,
+      logoUrl: (await this.db.queryOne('SELECT value FROM setting WHERE `key` = ?', [`profile.logo.lab.${hospital.id}`]))?.value || '',
     };
   }
 
   // --- Samples APIs ---
   async getSamples(userEmail?: string) {
     const hospital = await this.getHospitalContext(userEmail);
+    const cacheKey = `lab:samples:${hospital.id}`;
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) return cached;
+
     const reqs = await this.db.query(`
       SELECT t.*, p.name as patientName 
       FROM testrequest t
@@ -380,7 +381,7 @@ export class LaboratoryService {
       ORDER BY t.createdAt DESC
     `, [hospital.id]);
 
-    return reqs.map(r => ({
+    const result = reqs.map(r => ({
       id: r.sampleId || r.id, // Display sampleId if exists, else id
       testRequestId: r.id,
       sampleType: r.testType,
@@ -392,6 +393,8 @@ export class LaboratoryService {
       assignedTo: r.assignedTo,
       rejectionReason: r.rejectionReason
     }));
+    await this.redisService.set(cacheKey, result, 300);
+    return result;
   }
 
   async updateSampleStatus(userEmail: string | undefined, testRequestId: string, status: string, rejectionReason?: string) {
@@ -424,6 +427,10 @@ export class LaboratoryService {
       VALUES (?, ?, ?, ?)
     `, [uuidv4(), testRequestId, status, 'Lab Technician']);
 
+    await this.redisService.del(`lab:samples:${hospital.id}`);
+    await this.redisService.del(`lab:overview:${hospital.id}`);
+    await this.redisService.del(`lab:testrequests:${hospital.id}`);
+
     return { success: true };
   }
 
@@ -433,6 +440,7 @@ export class LaboratoryService {
     if (!testReq) throw new NotFoundException('Sample request not found');
 
     await this.db.query('UPDATE testrequest SET assignedTo = ? WHERE id = ?', [assignee, testRequestId]);
+    await this.redisService.del(`lab:samples:${hospital.id}`);
     return { success: true };
   }
 
@@ -510,5 +518,14 @@ export class LaboratoryService {
       [data.name, data.email, data.phone, data.address, hospital.id]
     );
     return { success: true };
+  }
+
+  async uploadProfileLogo(userEmail: string | undefined, file?: Express.Multer.File) {
+    if (!file) throw new BadRequestException('Select an image to upload.');
+    if (!file.mimetype?.startsWith('image/')) throw new BadRequestException('Profile image must be an image file.');
+    const hospital = await this.getHospitalContext(userEmail);
+    const logoUrl = `/uploads/${file.filename}`;
+    await this.db.query('INSERT INTO setting (`key`, value, updatedAt) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value), updatedAt = VALUES(updatedAt)', [`profile.logo.lab.${hospital.id}`, logoUrl, new Date()]);
+    return { logoUrl };
   }
 }

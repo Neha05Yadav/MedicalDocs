@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { authHeaders } from "@/lib/auth-fetch";
 
 const Upload = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>;
 const Trash2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
@@ -161,12 +162,12 @@ export default function DoctorProfilePage() {
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch("/api/clinic/profile");
+      const res = await fetch("/api/clinic/profile", { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         setProfile({
           ...data,
-          logoUrl: localStorage.getItem("clinic_logo") || data.logoUrl || ""
+          logoUrl: data.logoUrl || ""
         });
       } else {
         toast.error("Failed to load profile details.");
@@ -182,22 +183,27 @@ export default function DoctorProfilePage() {
     setProfile({ ...profile, [e.target.name]: e.target.value });
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
-    
-    // For demo purposes, save the image URL to local storage so it persists locally
-    const url = URL.createObjectURL(file);
-    localStorage.setItem("clinic_logo", url);
-    setProfile({ ...profile, logoUrl: url });
-    toast.success("Profile picture updated!");
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await fetch("/api/clinic/profile/logo", { method: "POST", headers: authHeaders(), body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Upload failed");
+      setProfile((current) => ({ ...current, logoUrl: data.logoUrl }));
+      toast.success("Profile picture updated!");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Profile picture upload failed.");
+    }
   };
 
   const handleSave = async () => {
     try {
       const res = await fetch("/api/clinic/profile", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(true),
         body: JSON.stringify(profile),
       });
       if (res.ok) {

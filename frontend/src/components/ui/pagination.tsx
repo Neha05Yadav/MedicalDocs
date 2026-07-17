@@ -1,6 +1,6 @@
-import ChevronLeft from "lucide-react/dist/esm/icons/chevron-left.mjs";
-import ChevronRight from "lucide-react/dist/esm/icons/chevron-right.mjs";
-import MoreHorizontal from "lucide-react/dist/esm/icons/more-horizontal.mjs";
+import { ChevronLeft } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 
 import * as React from "react";
 import { cn } from "@/lib/utils";

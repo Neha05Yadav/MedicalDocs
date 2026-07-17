@@ -133,7 +133,7 @@ export default function SalesRevenuePage() {
                   contentStyle={{ backgroundColor: '#1e293b', borderRadius: '16px', border: 'none', color: '#fff', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   itemStyle={{ fontWeight: 800, fontSize: '14px' }}
                   labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontSize: '13px', fontWeight: 600 }}
-                  formatter={(value: number, name: string) => [`₹${(value/100000).toFixed(1)} Lacs`, name === 'revenue' ? 'Actual Revenue' : 'Target']}
+                  formatter={(value, name) => [`₹${(Number(value ?? 0)/100000).toFixed(1)} Lacs`, name === 'revenue' ? 'Actual Revenue' : 'Target']}
                 />
                 <Area type="monotone" dataKey="target" stroke="#cbd5e1" strokeWidth={2.5} strokeDasharray="6 6" fill="none" />
                 <Area type="monotone" dataKey="revenue" stroke="#4f46e5" strokeWidth={4} fill="url(#colorRev)" activeDot={{ r: 8, strokeWidth: 3, stroke: '#fff', fill: '#4f46e5' }} />

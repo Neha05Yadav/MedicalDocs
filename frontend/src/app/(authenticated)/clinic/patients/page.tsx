@@ -6,6 +6,7 @@ import {
   Search, UserPlus, MoreVertical, CheckCircle2, Clock, 
   XCircle, FileText, ChevronDown, User, X, Edit
 } from "lucide-react";
+import { authHeaders } from "@/lib/auth-fetch";
 
 export default function DoctorPatientsPage() {
   const [activeFilter, setActiveFilter] = useState("All Patients");
@@ -25,8 +26,7 @@ export default function DoctorPatientsPage() {
 
   const fetchLabsList = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch('/api/clinic/labs', { headers: { 'Authorization': `Bearer ${token}` }});
+      const res = await fetch('/api/clinic/labs', { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         setLabsList(data);
@@ -41,10 +41,9 @@ export default function DoctorPatientsPage() {
     }
     setIsSubmittingLab(true);
     try {
-      const token = localStorage.getItem("token");
       const res = await fetch('/api/clinic/test-requests', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: authHeaders(true),
         body: JSON.stringify(labForm)
       });
       if (res.ok) {
@@ -93,7 +92,7 @@ export default function DoctorPatientsPage() {
     setLoading(true);
     try {
       const url = query ? `/api/clinic/patients/search?query=${query}` : `/api/clinic/patients`;
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: authHeaders() });
       const data = await res.json();
       if (Array.isArray(data)) {
         setPatients(data);
@@ -111,7 +110,7 @@ export default function DoctorPatientsPage() {
 
   const fetchMyPatients = async () => {
     try {
-      const res = await fetch('/api/clinic/my-patients');
+      const res = await fetch('/api/clinic/my-patients', { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         setDoctorPatientsData(data);
@@ -171,7 +170,7 @@ export default function DoctorPatientsPage() {
 
       const res = await fetch('/api/clinic/patients/request-access', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(true),
         body: JSON.stringify(payload)
       });
       toast.success(`Access request sent to ${selectedPatient.name}`);
@@ -189,7 +188,7 @@ export default function DoctorPatientsPage() {
     try {
       await fetch('/api/clinic/patients/approve-access', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(true),
         body: JSON.stringify({ patientId })
       });
       toast.success(`Access Approved (Test Mode)`);
@@ -209,7 +208,7 @@ export default function DoctorPatientsPage() {
     setSelectedRecord(null);
     
     try {
-      const res = await fetch(`/api/clinic/patients/${patient.id}/records`);
+      const res = await fetch(`/api/clinic/patients/${patient.id}/records`, { headers: authHeaders() });
       if(!res.ok) throw new Error("Failed to load");
       const data = await res.json();
       setRecords(data);
@@ -859,7 +858,7 @@ export default function DoctorPatientsPage() {
                       </div>
                       <div className="mt-4 px-6 mb-6">
                         {!selectedRecord.fileUrl ? (
-                          <img src="/dummy-report.png" alt="Dummy Medical Report" className="max-w-full h-auto object-contain rounded-lg shadow-sm bg-white mx-auto" />
+                          <div className="rounded-xl border border-slate-200 bg-white px-8 py-10 text-center text-slate-500">No file is attached to this medical record.</div>
                         ) : selectedRecord.fileUrl?.match(/\.(jpeg|jpg|gif|png)$/i) || selectedRecord.fileUrl?.startsWith('http') ? (
                           <img src={selectedRecord.fileUrl?.startsWith('http') ? selectedRecord.fileUrl : `/uploads/${selectedRecord.fileUrl}`} alt={selectedRecord.title} className="max-w-full h-auto object-contain rounded-lg shadow-sm bg-white mx-auto" />
                         ) : (

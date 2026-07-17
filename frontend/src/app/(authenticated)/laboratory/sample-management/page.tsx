@@ -7,6 +7,7 @@ const Droplets = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/s
 const Calendar = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>;
 const User = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
 const ChevronRight = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>;
+const ChevronLeft = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>;
 const FileUp = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg>;
 
 import { useState, useEffect, useRef } from "react";
@@ -19,6 +20,10 @@ export default function SampleManagementPage() {
   
   const [samples, setSamples] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Modal states
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
@@ -48,6 +53,11 @@ export default function SampleManagementPage() {
   useEffect(() => {
     fetchSamples();
   }, []);
+
+  // Reset to first page when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
 
   const handleUpdateClick = (smp: any) => {
     setSelectedSample(smp);
@@ -128,6 +138,11 @@ export default function SampleManagementPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentSamples = filteredSamples.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredSamples.length / itemsPerPage);
+
   const statuses = ["All", "Pending Collection", "Sample Collected", "Received in Lab", "Under Testing", "Report Ready", "Completed", "Rejected"];
 
   const getStatusBadge = (status: string) => {
@@ -205,8 +220,8 @@ export default function SampleManagementPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredSamples.length > 0 ? (
-                filteredSamples.map((smp) => (
+              {currentSamples.length > 0 ? (
+                currentSamples.map((smp) => (
                   <tr key={smp.id} className="hover:bg-slate-50/80 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -267,6 +282,48 @@ export default function SampleManagementPage() {
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-slate-50/50">
+            <span className="text-sm text-slate-500">
+              Showing <span className="font-medium text-slate-900">{indexOfFirstItem + 1}</span> to <span className="font-medium text-slate-900">{Math.min(indexOfLastItem, filteredSamples.length)}</span> of <span className="font-medium text-slate-900">{filteredSamples.length}</span> results
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+              
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentPage(i + 1)}
+                    className={`w-8 h-8 flex items-center justify-center rounded text-sm font-medium transition-colors ${
+                      currentPage === i + 1 
+                        ? "bg-[#0891b2] text-white border border-[#0891b2]" 
+                        : "text-slate-600 border border-transparent hover:bg-slate-100"
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* UPDATE STATUS MODAL */}

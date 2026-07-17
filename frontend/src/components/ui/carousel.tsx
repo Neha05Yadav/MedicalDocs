@@ -1,5 +1,5 @@
-import ArrowLeft from "lucide-react/dist/esm/icons/arrow-left.mjs";
-import ArrowRight from "lucide-react/dist/esm/icons/arrow-right.mjs";
+import { ArrowLeft } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import * as React from "react";
 import useEmblaCarousel, { type UseEmblaCarouselType } from "embla-carousel-react";

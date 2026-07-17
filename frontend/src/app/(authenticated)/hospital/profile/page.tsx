@@ -69,7 +69,7 @@ export default function HospitalProfilePage() {
           name: data.name || "",
           email: data.email || "",
           phone: data.phone || "",
-          logoUrl: localStorage.getItem("hospital_logo") || data.logoUrl || "",
+          logoUrl: data.logoUrl || "",
           registrationNumber: data.registrationNumber || "",
           licenseNumber: data.licenseNumber || "",
           type: data.type || "",
@@ -139,11 +139,18 @@ export default function HospitalProfilePage() {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
     
-    // For demo purposes, save the image URL to local storage so it persists locally
-    const url = URL.createObjectURL(file);
-    localStorage.setItem("hospital_logo", url);
-    setProfile({ ...profile, logoUrl: url });
-    toast.success("Profile picture updated!");
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = localStorage.getItem("token") || "";
+    try {
+      const response = await fetch("/api/hospital/profile/logo", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.message || "Hospital logo could not be uploaded.");
+      setProfile({ ...profile, logoUrl: data.logoUrl });
+      toast.success("Hospital logo saved.");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Hospital logo could not be uploaded.");
+    }
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {

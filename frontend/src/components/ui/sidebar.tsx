@@ -1,4 +1,4 @@
-import PanelLeft from "lucide-react/dist/esm/icons/panel-left.mjs";
+import { PanelLeft } from "lucide-react";
 
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";

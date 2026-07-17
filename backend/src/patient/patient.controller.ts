@@ -18,6 +18,30 @@ export class PatientController {
     return this.patientService.getRecords(req.user.email);
   }
 
+  @Get('appointments')
+  async getAppointments(@Request() req: any) {
+    return this.patientService.getAppointments(req.user.email);
+  }
+
+  @Get('appointments/providers')
+  async getAppointmentProviders() {
+    return this.patientService.getAppointmentProviders();
+  }
+
+  @Post('appointments')
+  async createAppointment(@Request() req: any, @Body() data: any) {
+    return this.patientService.createAppointment(req.user.email, data);
+  }
+
+  @Put('appointments/:id/status')
+  async updateAppointmentStatus(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body('status') status: string,
+  ) {
+    return this.patientService.updateAppointmentStatus(req.user.email, id, status);
+  }
+
   @Post('records/upload')
   @UseInterceptors(FileInterceptor('file'))
   async uploadRecord(@Request() req: any, @UploadedFile() file: Express.Multer.File, @Body() body: any) {
@@ -32,6 +56,12 @@ export class PatientController {
   @Put('profile')
   async updateProfile(@Request() req: any, @Body() data: any) {
     return this.patientService.updateProfile(req.user.email, data);
+  }
+
+  @Post('profile/logo')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadProfileLogo(@Request() req: any, @UploadedFile() file: Express.Multer.File) {
+    return this.patientService.uploadProfileLogo(req.user.email, file);
   }
 
   @Get('prescriptions')

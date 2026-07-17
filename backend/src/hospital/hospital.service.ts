@@ -2,20 +2,18 @@ import { Injectable, NotFoundException, BadRequestException, UnauthorizedExcepti
 import { MysqlService } from '../mysql.service';
 import { v4 as uuidv4 } from 'uuid';
 import * as bcrypt from 'bcrypt';
+import { RedisService } from '../redis/redis.service';
 
 @Injectable()
 export class HospitalService {
-  constructor(private db: MysqlService) {}
+  constructor(
+    private db: MysqlService,
+    private redisService: RedisService,
+  ) {}
 
   private async getHospitalByEmail(userEmail: string) {
-    let hospital = await this.db.queryOne('SELECT * FROM hospital WHERE email = ? AND type = "HOSPITAL"', [userEmail]);
-    if (!hospital) {
-      hospital = await this.db.queryOne('SELECT * FROM hospital WHERE email = ?', [userEmail]);
-    }
-    if (!hospital) {
-      hospital = await this.db.queryOne('SELECT * FROM hospital WHERE type = "HOSPITAL" LIMIT 1');
-    }
-    if (!hospital) throw new Error("No hospital found");
+    const hospital = await this.db.queryOne('SELECT * FROM hospital WHERE email = ? AND type = "HOSPITAL"', [userEmail]);
+    if (!hospital) throw new UnauthorizedException('No hospital workspace is linked to this identity.');
     return hospital;
   }
 
@@ -28,6 +26,10 @@ export class HospitalService {
   }
 
   async getOverview(userEmail: string) {
+    const cacheKey = `hospital:overview:${userEmail}`;
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) return cached;
+
     const hospital = await this.getHospitalByEmail(userEmail);
 
     const doctorsCountRow = await this.db.queryOne('SELECT COUNT(*) as c FROM doctor WHERE hospitalId = ?', [hospital.id]);
@@ -65,17 +67,30 @@ export class HospitalService {
         status: req.status === 'APPROVED' ? 'Stable' : 'Pending Labs'
     }));
 
-    return {
-        totalDoctors: Number(doctorsCountRow.c),
-        totalPatients: Number(patientsCountRow.c),
-        reportsUploaded: Number(recordsCountRow.c),
+    const reportRows = await this.db.query(`
+      SELECT DATE(date) AS reportDate, COUNT(*) AS reports
+      FROM medicalrecord
+      WHERE hospitalId = ? AND date >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+      GROUP BY DATE(date)
+    `, [hospital.id]);
+    const reportsByDate = new Map(reportRows.map(row => [new Date(row.reportDate).toISOString().slice(0, 10), Number(row.reports)]));
+    const reportStats = Array.from({ length: 7 }, (_, offset) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - offset));
+      const key = date.toISOString().slice(0, 10);
+      return { name: date.toLocaleDateString('en-US', { weekday: 'short' }), reports: reportsByDate.get(key) || 0 };
+    });
+
+    const result = {
+        totalDoctors: doctorsCountRow ? Number(doctorsCountRow.c) : 0,
+        totalPatients: patientsCountRow ? Number(patientsCountRow.c) : 0,
+        reportsUploaded: recordsCountRow ? Number(recordsCountRow.c) : 0,
         totalDepartments: distinctDeptsRow.length,
         activePatients: activePatients,
-        reportStats: [
-            { name: "Mon", reports: 24 }, { name: "Tue", reports: 35 }, { name: "Wed", reports: 18 },
-            { name: "Thu", reports: 42 }, { name: "Fri", reports: 30 }, { name: "Sat", reports: 12 }, { name: "Sun", reports: 8 }
-        ]
+        reportStats
     };
+    await this.redisService.set(cacheKey, result, 300);
+    return result;
   }
 
   async addTreatmentPatient(userEmail: string, data: any) {
@@ -113,12 +128,16 @@ export class HospitalService {
   }
 
   async getDoctors(userEmail: string) {
+    const cacheKey = `hospital:doctors:${userEmail}`;
+    const cached = await this.redisService.get(cacheKey);
+    // if (cached) return cached;
+
     const hospital = await this.getHospitalByEmail(userEmail);
     const doctors = await this.db.query('SELECT * FROM doctor WHERE hospitalId = ? ORDER BY name ASC', [hospital.id]);
     
-    return Promise.all(doctors.map(async d => {
+    const result = await Promise.all(doctors.map(async d => {
       const activePatientsRow = await this.db.queryOne('SELECT COUNT(DISTINCT patientId) as c FROM accessrequest WHERE doctorId = ? AND hospitalId = ?', [d.id, hospital.id]);
-      const activePatients = Number(activePatientsRow.c);
+      const activePatients = activePatientsRow ? Number(activePatientsRow.c) : 0;
 
       return {
         id: d.id,
@@ -133,6 +152,9 @@ export class HospitalService {
         rating: 4.8
       };
     }));
+    
+    await this.redisService.set(cacheKey, result, 300);
+    return result;
   }
 
   async addDoctor(userEmail: string, data: any) {
@@ -142,6 +164,8 @@ export class HospitalService {
       'INSERT INTO doctor (id, name, specialization, phone, email, status, hospitalId, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [doctorId, data.name, data.department || data.specialty || 'General', data.phone || '', data.email || '', data.status || 'Active', hospital.id, new Date()]
     );
+    await this.redisService.del(`hospital:doctors:${userEmail}`);
+    await this.redisService.del(`hospital:overview:${userEmail}`);
     return { success: true, message: "Doctor added successfully", doctor: { id: doctorId } };
   }
 
@@ -150,16 +174,23 @@ export class HospitalService {
       'UPDATE doctor SET name = ?, specialization = ?, phone = ?, email = ?, status = ? WHERE id = ?',
       [data.name, data.department || data.specialty, data.phone || '', data.email || '', data.status, id]
     );
+    await this.redisService.del(`hospital:doctors:${userEmail}`);
     return { success: true, message: "Doctor updated successfully" };
   }
 
   async deleteDoctor(userEmail: string, id: string) {
     await this.db.query('DELETE FROM doctor WHERE id = ?', [id]);
+    await this.redisService.del(`hospital:doctors:${userEmail}`);
+    await this.redisService.del(`hospital:overview:${userEmail}`);
     return { success: true, message: "Doctor deleted successfully" };
   }
 
   async searchPatients(userEmail: string, query: string) {
     if (!query || query.length < 2) return [];
+    const cacheKey = `hospital:searchPatients:${userEmail}:${query}`;
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) return cached;
+
     const hospital = await this.getHospitalByEmail(userEmail);
     
     const patients = await this.db.query(
@@ -226,6 +257,7 @@ export class HospitalService {
       });
     }
 
+    await this.redisService.set(cacheKey, result, 300);
     return result;
   }
 
@@ -582,7 +614,7 @@ export class HospitalService {
     const hospital = await this.getHospitalByEmail(userEmail);
     const doctors = await this.db.query('SELECT * FROM doctor WHERE hospitalId = ?', [hospital.id]);
     const totalReportsRow = await this.db.queryOne('SELECT COUNT(*) as c FROM medicalrecord WHERE hospitalId = ?', [hospital.id]);
-    const totalReports = Number(totalReportsRow.c);
+    const totalReports = totalReportsRow ? Number(totalReportsRow.c) : 0;
 
     const deptMap: Record<string, { doctors: number, patients: number, reports: number }> = {};
     let totalPatients = 0;
@@ -592,8 +624,11 @@ export class HospitalService {
       if (!deptMap[deptName]) deptMap[deptName] = { doctors: 0, patients: 0, reports: 0 };
       deptMap[deptName].doctors += 1;
       const apptCountRow = await this.db.queryOne('SELECT COUNT(*) as c FROM appointment WHERE doctorId = ?', [doc.id]);
-      deptMap[deptName].patients += Number(apptCountRow.c);
-      totalPatients += Number(apptCountRow.c);
+      if (apptCountRow) {
+        const count = Number(apptCountRow.c);
+        deptMap[deptName].patients += count;
+        totalPatients += count;
+      }
     }
 
     const deptKeys = Object.keys(deptMap);
@@ -663,57 +698,112 @@ export class HospitalService {
 
   async getAnalytics(userEmail: string) {
     const hospital = await this.getHospitalByEmail(userEmail);
-    const doctors = await this.db.query('SELECT * FROM doctor WHERE hospitalId = ?', [hospital.id]);
-    const totalReportsRow = await this.db.queryOne('SELECT COUNT(*) as c FROM medicalrecord WHERE hospitalId = ?', [hospital.id]);
-    
-    let totalPatients = 0;
-    let appointmentsThisMonth = 0;
-    const currentMonth = new Date().getMonth();
-    const deptMap: Record<string, number> = {};
+    const [patientRow, appointmentRow, priorAppointmentRow, totalReportsRow, priorReportsRow] = await Promise.all([
+      this.db.queryOne(`SELECT COUNT(DISTINCT a.patientId) AS c FROM appointment a INNER JOIN doctor d ON d.id = a.doctorId WHERE d.hospitalId = ?`, [hospital.id]),
+      this.db.queryOne(`SELECT COUNT(*) AS c FROM appointment a INNER JOIN doctor d ON d.id = a.doctorId WHERE d.hospitalId = ? AND a.dateTime >= DATE_FORMAT(CURDATE(), '%Y-%m-01')`, [hospital.id]),
+      this.db.queryOne(`SELECT COUNT(*) AS c FROM appointment a INNER JOIN doctor d ON d.id = a.doctorId WHERE d.hospitalId = ? AND a.dateTime >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m-01') AND a.dateTime < DATE_FORMAT(CURDATE(), '%Y-%m-01')`, [hospital.id]),
+      this.db.queryOne(`SELECT COUNT(*) AS c FROM medicalrecord WHERE hospitalId = ? AND date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')`, [hospital.id]),
+      this.db.queryOne(`SELECT COUNT(*) AS c FROM medicalrecord WHERE hospitalId = ? AND date >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m-01') AND date < DATE_FORMAT(CURDATE(), '%Y-%m-01')`, [hospital.id]),
+    ]);
+    const totalPatients = Number(patientRow?.c || 0);
+    const appointmentsThisMonth = Number(appointmentRow?.c || 0);
+    const reportsThisMonth = Number(totalReportsRow?.c || 0);
 
-    for (const doc of doctors) {
-      const deptName = doc.specialization;
-      if (!deptMap[deptName]) deptMap[deptName] = 0;
-      
-      const appts = await this.db.query('SELECT * FROM appointment WHERE doctorId = ?', [doc.id]);
-      deptMap[deptName] += appts.length;
-      totalPatients += appts.length;
-      
-      appts.forEach(app => {
-        if (new Date(app.dateTime).getMonth() === currentMonth) {
-          appointmentsThisMonth++;
-        }
-      });
-    }
+    const deptRows = await this.db.query(`
+      SELECT COALESCE(d.department, d.specialization, 'General') AS name, COUNT(a.id) AS value
+      FROM doctor d LEFT JOIN appointment a ON a.doctorId = d.id
+      WHERE d.hospitalId = ?
+      GROUP BY COALESCE(d.department, d.specialization, 'General')
+      ORDER BY value DESC
+    `, [hospital.id]);
 
     const colors = ["#dc2626", "#7c3aed", "#d97706", "#0252d9", "#059669", "#ec4899", "#14b8a6"];
-    const deptDistribution = Object.keys(deptMap).map((name, index) => ({
-      name,
-      value: deptMap[name] || 1,
+    const deptDistribution = deptRows.map((row, index) => ({
+      name: row.name,
+      value: Number(row.value),
       color: colors[index % colors.length]
     }));
 
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-    const monthlyData = months.map((month, idx) => {
-      const scale = 0.5 + (idx * 0.1); 
-      return {
-        month,
-        patients: Math.max(10, Math.floor(totalPatients * scale)) + (Math.floor(Math.random() * 20)),
-        appointments: Math.max(5, Math.floor(appointmentsThisMonth * scale)) + (Math.floor(Math.random() * 10)),
-        reports: Math.max(2, Math.floor(Number(totalReportsRow.c) * scale)) + (Math.floor(Math.random() * 5))
-      };
+    const appointmentMonths = await this.db.query(`
+      SELECT DATE_FORMAT(a.dateTime, '%Y-%m') AS monthKey, COUNT(*) AS appointments, COUNT(DISTINCT a.patientId) AS patients
+      FROM appointment a INNER JOIN doctor d ON d.id = a.doctorId
+      WHERE d.hospitalId = ? AND a.dateTime >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 5 MONTH)
+      GROUP BY DATE_FORMAT(a.dateTime, '%Y-%m')
+    `, [hospital.id]);
+    const reportMonths = await this.db.query(`
+      SELECT DATE_FORMAT(date, '%Y-%m') AS monthKey, COUNT(*) AS reports
+      FROM medicalrecord WHERE hospitalId = ? AND date >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 5 MONTH)
+      GROUP BY DATE_FORMAT(date, '%Y-%m')
+    `, [hospital.id]);
+    const appointmentsByMonth = new Map(appointmentMonths.map(row => [row.monthKey, row]));
+    const reportsByMonth = new Map(reportMonths.map(row => [row.monthKey, row]));
+    const monthlyData = Array.from({ length: 6 }, (_, index) => {
+      const date = new Date();
+      date.setDate(1);
+      date.setMonth(date.getMonth() - (5 - index));
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const appointmentMonth = appointmentsByMonth.get(monthKey);
+      const reportMonth = reportsByMonth.get(monthKey);
+      return { month: date.toLocaleDateString('en-US', { month: 'short' }), patients: Number(appointmentMonth?.patients || 0), appointments: Number(appointmentMonth?.appointments || 0), reports: Number(reportMonth?.reports || 0) };
     });
+    const trend = (current: number, previous: number) => previous === 0 ? (current === 0 ? '0%' : 'New') : `${current >= previous ? '+' : ''}${Math.round(((current - previous) / previous) * 100)}%`;
 
     return {
       kpis: [
-        { label: "Total Patients", value: totalPatients.toString(), trend: "+12%" },
-        { label: "Avg. Wait Time", value: "18 min", trend: "-5%" },
-        { label: "Appts This Month", value: appointmentsThisMonth.toString(), trend: "+8%" },
-        { label: "Reports Uploaded", value: totalReportsRow.c.toString(), trend: "+15%" },
+        { label: "Total Patients", value: totalPatients.toString() },
+        { label: "Data Window", value: "6 months" },
+        { label: "Appts This Month", value: appointmentsThisMonth.toString(), trend: trend(appointmentsThisMonth, Number(priorAppointmentRow?.c || 0)) },
+        { label: "Reports This Month", value: reportsThisMonth.toString(), trend: trend(reportsThisMonth, Number(priorReportsRow?.c || 0)) },
       ],
       monthlyData,
       deptDistribution
     };
+  }
+
+  async getSubscription(userEmail: string) {
+    const hospital = await this.getHospitalByEmail(userEmail);
+    const plans = await this.db.query('SELECT * FROM subscriptionplan ORDER BY price ASC');
+    const current = await this.db.queryOne(`
+      SELECT hs.*, sp.name AS planName
+      FROM hospitalsubscription hs
+      INNER JOIN subscriptionplan sp ON sp.id = hs.planId
+      WHERE hs.hospitalId = ? AND UPPER(hs.status) = 'ACTIVE'
+      ORDER BY hs.updatedAt DESC LIMIT 1
+    `, [hospital.id]);
+
+    return {
+      currentPlanId: current?.planId || null,
+      subscription: current || null,
+      plans: plans.map(plan => {
+        let features: string[] = [];
+        try { features = Array.isArray(plan.features) ? plan.features : JSON.parse(plan.features || '[]'); } catch { features = []; }
+        return { ...plan, features, popular: Boolean(plan.popular) };
+      }),
+    };
+  }
+
+  async changeSubscription(userEmail: string, planId: string) {
+    const hospital = await this.getHospitalByEmail(userEmail);
+    const plan = await this.db.queryOne('SELECT id, name FROM subscriptionplan WHERE id = ?', [planId]);
+    if (!plan) throw new NotFoundException('Subscription plan not found.');
+
+    const connection = await this.db.getPool().getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.execute('UPDATE hospitalsubscription SET status = ?, updatedAt = ? WHERE hospitalId = ? AND UPPER(status) = ?', ['Inactive', new Date(), hospital.id, 'ACTIVE']);
+      const now = new Date();
+      await connection.execute(
+        'INSERT INTO hospitalsubscription (id, hospitalId, planId, status, startDate, endDate, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [uuidv4(), hospital.id, plan.id, 'Active', now, null, now, now],
+      );
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+    return { currentPlanId: plan.id, message: `${plan.name} is now active.` };
   }
 
   async getHospitalProfile(userEmail: string) {
@@ -729,6 +819,17 @@ export class HospitalService {
       type: hospital.type,
       ...profile
     };
+  }
+
+  async updateHospitalLogo(userEmail: string, file?: Express.Multer.File) {
+    if (!file) throw new BadRequestException('Select an image to upload.');
+    if (!file.mimetype?.startsWith('image/')) throw new BadRequestException('Hospital logo must be an image file.');
+    const hospital = await this.getHospitalByEmail(userEmail);
+    const logoUrl = `/uploads/${file.filename}`;
+    const existing = await this.db.queryOne('SELECT id FROM hospital_profile WHERE hospitalId = ?', [hospital.id]);
+    if (existing) await this.db.query('UPDATE hospital_profile SET logoUrl = ?, updatedAt = ? WHERE hospitalId = ?', [logoUrl, new Date(), hospital.id]);
+    else await this.db.query('INSERT INTO hospital_profile (id, hospitalId, logoUrl) VALUES (?, ?, ?)', [uuidv4(), hospital.id, logoUrl]);
+    return { logoUrl };
   }
 
   async updateHospitalProfile(userEmail: string, data: any) {

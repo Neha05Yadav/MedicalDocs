@@ -1,10 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { MysqlService } from '../mysql.service';
 import { v4 as uuidv4 } from 'uuid';
+import { RedisService } from '../redis/redis.service';
 
 @Injectable()
 export class PatientService {
-  constructor(private db: MysqlService) {}
+  constructor(
+    private db: MysqlService,
+    private redisService: RedisService,
+  ) {}
 
   private generatePatientId(name: string, phone: string, year: string) {
     const initials = name.split(' ').map(n => n[0] || '').join('').toUpperCase().substring(0, 2);
@@ -15,6 +19,10 @@ export class PatientService {
   }
 
   async getOverview(userEmail: string) {
+    const cacheKey = `patient:overview:${userEmail}`;
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) return cached;
+
     let patient = await this.db.queryOne('SELECT * FROM patient WHERE email = ?', [userEmail]);
 
     if (!patient) {
@@ -82,7 +90,7 @@ export class PatientService {
     timelineEvents.sort((a, b) => b.date.getTime() - a.date.getTime());
     const recentTimeline = timelineEvents.slice(0, 4);
 
-    return {
+    const result = {
       patientInfo: {
         id: patient.id,
         name: patient.name,
@@ -105,9 +113,103 @@ export class PatientService {
         size: '1.2 MB'
       }))
     };
+
+    await this.redisService.set(cacheKey, result, 300); // 5 mins
+    return result;
+  }
+
+  async getAppointments(userEmail: string) {
+    const patient = await this.db.queryOne('SELECT id FROM patient WHERE email = ?', [userEmail]);
+    if (!patient) return [];
+
+    return this.db.query(`
+      SELECT
+        a.id,
+        a.dateTime AS appointment_date,
+        LOWER(a.status) AS status,
+        a.notes,
+        d.name AS doctor_name,
+        COALESCE(d.department, d.specialization, 'General medicine') AS department,
+        h.name AS hospital_name
+      FROM appointment a
+      INNER JOIN doctor d ON d.id = a.doctorId
+      INNER JOIN hospital h ON h.id = a.hospitalId
+      WHERE a.patientId = ?
+      ORDER BY a.dateTime DESC
+    `, [patient.id]);
+  }
+
+  async getAppointmentProviders() {
+    return this.db.query(`
+      SELECT
+        d.id AS doctorId,
+        d.name AS doctorName,
+        COALESCE(d.department, d.specialization, 'General medicine') AS department,
+        h.id AS hospitalId,
+        h.name AS hospitalName
+      FROM doctor d
+      INNER JOIN hospital h ON h.id = d.hospitalId
+      WHERE UPPER(COALESCE(d.status, 'ACTIVE')) = 'ACTIVE'
+        AND UPPER(COALESCE(h.status, 'ACTIVE')) = 'ACTIVE'
+      ORDER BY h.name, d.name
+    `);
+  }
+
+  async createAppointment(userEmail: string, data: any) {
+    const patient = await this.db.queryOne('SELECT id FROM patient WHERE email = ?', [userEmail]);
+    if (!patient) throw new NotFoundException('Patient profile not found. Complete your profile first.');
+
+    const dateTime = new Date(data.dateTime);
+    if (!data.doctorId || !data.hospitalId || Number.isNaN(dateTime.getTime())) {
+      throw new BadRequestException('Doctor, facility, and a valid appointment time are required.');
+    }
+    if (dateTime.getTime() <= Date.now()) {
+      throw new BadRequestException('Appointment time must be in the future.');
+    }
+
+    const provider = await this.db.queryOne(
+      'SELECT id FROM doctor WHERE id = ? AND hospitalId = ? AND UPPER(COALESCE(status, "ACTIVE")) = "ACTIVE"',
+      [data.doctorId, data.hospitalId],
+    );
+    if (!provider) throw new BadRequestException('The selected provider is not available at this facility.');
+
+    const id = uuidv4();
+    const now = new Date();
+    await this.db.query(
+      'INSERT INTO appointment (id, patientId, doctorId, hospitalId, dateTime, status, notes, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, patient.id, data.doctorId, data.hospitalId, dateTime, 'SCHEDULED', String(data.notes || '').trim() || null, now, now],
+    );
+    await this.redisService.del(`patient:overview:${userEmail}`);
+    return { id, message: 'Appointment booked successfully.' };
+  }
+
+  async updateAppointmentStatus(userEmail: string, id: string, status: string) {
+    const normalizedStatus = String(status || '').toUpperCase();
+    if (normalizedStatus !== 'CANCELLED') {
+      throw new BadRequestException('Patients may only cancel scheduled appointments.');
+    }
+
+    const patient = await this.db.queryOne('SELECT id FROM patient WHERE email = ?', [userEmail]);
+    if (!patient) throw new NotFoundException('Patient profile not found.');
+    const appointment = await this.db.queryOne(
+      'SELECT id, status FROM appointment WHERE id = ? AND patientId = ?',
+      [id, patient.id],
+    );
+    if (!appointment) throw new NotFoundException('Appointment not found.');
+    if (String(appointment.status).toUpperCase() !== 'SCHEDULED') {
+      throw new BadRequestException('Only scheduled appointments can be cancelled.');
+    }
+
+    await this.db.query('UPDATE appointment SET status = ?, updatedAt = ? WHERE id = ?', ['CANCELLED', new Date(), id]);
+    await this.redisService.del(`patient:overview:${userEmail}`);
+    return { message: 'Appointment cancelled.' };
   }
 
   async getRecords(userEmail: string) {
+    const cacheKey = `patient:records:${userEmail}`;
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) return cached;
+
     const patient = await this.db.queryOne('SELECT id FROM patient WHERE email = ?', [userEmail]);
     if (!patient) return { myUploads: [] };
 
@@ -144,7 +246,9 @@ export class PatientService {
       };
     });
 
-    return { myUploads: formattedRecords };
+    const result = { myUploads: formattedRecords };
+    await this.redisService.set(cacheKey, result, 300); // 5 mins
+    return result;
   }
 
   async uploadRecord(userEmail: string, file: any, body: any) {
@@ -158,10 +262,18 @@ export class PatientService {
       [newId, patient.id, body.reportName || file.originalname, body.reportType || 'DOCUMENT', file.filename, now, now]
     );
 
+    // Invalidate patient cache
+    await this.redisService.del(`patient:overview:${userEmail}`);
+    await this.redisService.del(`patient:records:${userEmail}`);
+
     return { id: newId };
   }
 
   async getProfile(userEmail: string) {
+    const cacheKey = `patient:profile:${userEmail}`;
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) return cached;
+
     const patient = await this.db.queryOne('SELECT * FROM patient WHERE email = ?', [userEmail]);
     if (!patient) {
       return {
@@ -169,7 +281,7 @@ export class PatientService {
       };
     }
     
-    return {
+    const result = {
       id: patient.id,
       name: patient.name,
       email: patient.email,
@@ -177,7 +289,10 @@ export class PatientService {
       dateOfBirth: patient.dateOfBirth ? new Date(patient.dateOfBirth).toISOString().split('T')[0] : '',
       bloodGroup: patient.bloodGroup,
       gender: patient.gender,
+      logoUrl: (await this.db.queryOne('SELECT value FROM setting WHERE `key` = ?', [`profile.logo.patient.${patient.id}`]))?.value || '',
     };
+    await this.redisService.set(cacheKey, result, 600); // 10 mins
+    return result;
   }
 
   async updateProfile(userEmail: string, data: any) {
@@ -199,7 +314,23 @@ export class PatientService {
       );
       patient = { id: newId };
     }
+    
+    // Invalidate caches
+    await this.redisService.del(`patient:profile:${userEmail}`);
+    await this.redisService.del(`patient:overview:${userEmail}`);
+    
     return patient;
+  }
+
+  async uploadProfileLogo(userEmail: string, file?: Express.Multer.File) {
+    if (!file) throw new BadRequestException('Select an image to upload.');
+    if (!file.mimetype?.startsWith('image/')) throw new BadRequestException('Profile image must be an image file.');
+    const patient = await this.db.queryOne('SELECT id FROM patient WHERE email = ?', [userEmail]);
+    if (!patient) throw new NotFoundException('Patient profile not found.');
+    const logoUrl = `/uploads/${file.filename}`;
+    await this.db.query('INSERT INTO setting (`key`, value, updatedAt) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value), updatedAt = VALUES(updatedAt)', [`profile.logo.patient.${patient.id}`, logoUrl, new Date()]);
+    await this.redisService.del(`patient:profile:${userEmail}`);
+    return { logoUrl };
   }
 
   async getPrescriptions(userEmail: string) {

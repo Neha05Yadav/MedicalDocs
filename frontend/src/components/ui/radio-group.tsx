@@ -1,4 +1,4 @@
-import Circle from "lucide-react/dist/esm/icons/circle.mjs";
+import { Circle } from "lucide-react";
 
 import * as React from "react";
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";

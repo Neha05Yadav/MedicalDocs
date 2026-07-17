@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 export default function HospitalNotificationsPage() {
+  const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token") || ""}` });
   const router = useRouter();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +35,12 @@ export default function HospitalNotificationsPage() {
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch("/api/hospital/notifications");
+      const res = await fetch("/api/hospital/notifications", { headers: authHeaders() });
+      if (res.status === 401) {
+        localStorage.removeItem("token");
+        router.push("/login");
+        return;
+      }
       if (!res.ok) throw new Error("Failed to load");
       const data = await res.json();
       setNotifications(data);
@@ -52,7 +58,7 @@ export default function HospitalNotificationsPage() {
 
   const markAllAsRead = async () => {
     try {
-      await fetch("/api/hospital/notifications/read-all", { method: "PUT" });
+      await fetch("/api/hospital/notifications/read-all", { method: "PUT", headers: authHeaders() });
       setNotifications(notifications.map(n => ({ ...n, isRead: true })));
       toast.success("All notifications marked as read");
     } catch (err) {
@@ -62,7 +68,7 @@ export default function HospitalNotificationsPage() {
 
   const markAsRead = async (id: string) => {
     try {
-      await fetch(`/api/hospital/notifications/${id}/read`, { method: "PUT" });
+      await fetch(`/api/hospital/notifications/${id}/read`, { method: "PUT", headers: authHeaders() });
       setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
     } catch (err) {
       console.error(err);
@@ -72,7 +78,7 @@ export default function HospitalNotificationsPage() {
   const deleteNotification = async (id: string, e?: any) => {
     if (e) e.stopPropagation();
     try {
-      await fetch(`/api/hospital/notifications/${id}`, { method: "DELETE" });
+      await fetch(`/api/hospital/notifications/${id}`, { method: "DELETE", headers: authHeaders() });
       setNotifications(notifications.filter(n => n.id !== id));
       toast.success("Notification deleted");
     } catch (err) {

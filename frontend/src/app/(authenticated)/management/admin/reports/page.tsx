@@ -242,27 +242,28 @@ export default function ReportsMonitoringPage() {
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
         <DialogContent className="max-w-md bg-white">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-900">Report Details</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-slate-900">Report Metadata Details</DialogTitle>
           </DialogHeader>
           {selectedReport && (
             <div className="space-y-5 py-4">
+              <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-lg text-sm font-medium flex items-start gap-2 mb-2">
+                <span className="text-amber-500 mt-0.5">⚠️</span>
+                Due to privacy policies, actual medical reports and attachments cannot be viewed or downloaded by administrators. You can only view the metadata.
+              </div>
               <div>
                 <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Patient Name</span>
                 <div className="font-semibold text-slate-900 text-base">{selectedReport.patient?.name || 'Unknown'}</div>
               </div>
               <div>
-                <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Report Document</span>
-                <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-slate-300 transition-colors cursor-pointer group" onClick={() => selectedReport.fileUrl && window.open(selectedReport.fileUrl.startsWith('http') ? selectedReport.fileUrl : `/uploads/${selectedReport.fileUrl}`, '_blank')}>
-                  <div className="p-2 bg-white rounded-lg shadow-sm group-hover:scale-105 transition-transform">
-                    <FileText className="size-6" />
+                <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Report Type / Title</span>
+                <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <div className="p-2 bg-white rounded-lg shadow-sm border border-slate-100">
+                    <FileText className="size-6 text-slate-400" />
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-slate-900 line-clamp-1">{selectedReport.title || `${selectedReport.type} Report`}.pdf</div>
-                    <div className="text-xs text-slate-500 font-medium mt-0.5">Click to View Document</div>
+                    <div className="text-sm font-bold text-slate-900 line-clamp-1">{selectedReport.title || `${selectedReport.type} Report`}</div>
+                    <div className="text-xs text-slate-500 font-medium mt-0.5">Attachment access restricted</div>
                   </div>
-                  <button className="ml-auto p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
-                    <Download className="size-4" />
-                  </button>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">

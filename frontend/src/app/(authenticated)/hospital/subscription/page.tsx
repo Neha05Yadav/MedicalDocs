@@ -7,31 +7,42 @@ export default function HospitalSubscriptionPage() {
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
-
-  // Hardcoded current plan for demo purposes
-  const [currentPlan, setCurrentPlan] = useState("plan_1");
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch('/api/management/admin/subscriptions')
-      .then(res => res.json())
-      .then(data => {
-        setPlans(Array.isArray(data) ? data : []);
+    const token = localStorage.getItem("token") || "";
+    fetch('/api/hospital/subscription', { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => {
+        if (!res.ok) throw new Error("Subscription data could not be loaded.");
+        return res.json();
       })
-      .catch(() => toast.error("Failed to load pricing plans"))
+      .then(data => {
+        setPlans(Array.isArray(data?.plans) ? data.plans : []);
+        setCurrentPlan(data?.currentPlanId || null);
+      })
+      .catch((caught: unknown) => {
+        const message = caught instanceof Error ? caught.message : "Failed to load pricing plans";
+        setError(message);
+        toast.error(message);
+      })
       .finally(() => setLoading(false));
   }, []);
 
-  const handleUpgrade = (planId: string, planName: string) => {
+  const handleUpgrade = async (planId: string) => {
     setUpgradingPlan(planId);
-    
-    // Simulate payment/upgrade delay
-    setTimeout(() => {
+    try {
+      const token = localStorage.getItem("token") || "";
+      const response = await fetch('/api/hospital/subscription', { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ planId }) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.message || "Unable to change subscription plan.");
       setCurrentPlan(planId);
+      toast.success(data?.message || "Subscription plan updated.");
+    } catch (caught: unknown) {
+      toast.error(caught instanceof Error ? caught.message : "Unable to change subscription plan.");
+    } finally {
       setUpgradingPlan(null);
-      toast.success(`Successfully upgraded to ${planName}!`, {
-        description: "Your new features are now unlocked."
-      });
-    }, 1500);
+    }
   };
 
   return (
@@ -49,6 +60,8 @@ export default function HospitalSubscriptionPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {loading ? (
           <div className="col-span-3 text-center py-12 text-slate-500 font-medium animate-pulse">Loading plans...</div>
+        ) : error ? (
+          <div className="col-span-3 text-center py-12 text-red-600 font-medium">{error}</div>
         ) : plans.length > 0 ? plans.map((plan) => {
           const isCurrentPlan = currentPlan === plan.id;
           const isUpgrading = upgradingPlan === plan.id;
@@ -97,7 +110,7 @@ export default function HospitalSubscriptionPage() {
               </ul>
 
               <button 
-                onClick={() => handleUpgrade(plan.id, plan.name)}
+                onClick={() => void handleUpgrade(plan.id)}
                 disabled={isCurrentPlan || upgradingPlan !== null}
                 className={`w-full py-4 rounded-2xl text-base font-bold transition-all flex items-center justify-center gap-2 ${
                   isCurrentPlan 
@@ -115,7 +128,7 @@ export default function HospitalSubscriptionPage() {
                   <>Processing...</>
                 ) : (
                   <>
-                    <Zap className="size-4" /> Upgrade Now
+                    <Zap className="size-4" /> Activate plan
                   </>
                 )}
               </button>

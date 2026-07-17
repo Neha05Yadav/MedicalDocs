@@ -13,16 +13,22 @@ import { toast } from "sonner";
 export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/hospital/analytics")
-      .then(res => res.json())
+    const token = localStorage.getItem("token") || "";
+    fetch("/api/hospital/analytics", { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => {
+        if (!res.ok) throw new Error("Hospital analytics could not be loaded from the server.");
+        return res.json();
+      })
       .then(resData => {
         setData(resData);
       })
       .catch(err => {
         console.error(err);
-        toast.error("Failed to load analytics");
+        setError(err instanceof Error ? err.message : "Failed to load analytics");
+        toast.error("Failed to load live analytics");
       })
       .finally(() => setLoading(false));
   }, []);
@@ -31,33 +37,11 @@ export default function AnalyticsPage() {
     return <div className="p-8 text-center text-slate-500 animate-pulse">Loading analytics dashboard...</div>;
   }
 
-  const defaultKpis = [
-    { label: "Total Patients", value: "1,842", trend: "+12%" },
-    { label: "Avg. Wait Time", value: "18 min", trend: "-5%" },
-    { label: "Appts This Month", value: "340", trend: "+8%" },
-    { label: "Reports Uploaded", value: "300", trend: "+15%" },
-  ];
+  if (error) return <div className="grid min-h-[55vh] place-items-center p-8 text-center"><div><h2 className="text-xl font-bold">Live analytics are unavailable</h2><p className="mt-2 text-muted-foreground">{error}</p><button onClick={() => window.location.reload()} className="mt-5 rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white">Try again</button></div></div>;
 
-  const defaultMonthlyData = [
-    { month: "Jan", patients: 320, appointments: 210, reports: 180 },
-    { month: "Feb", patients: 350, appointments: 240, reports: 200 },
-    { month: "Mar", patients: 410, appointments: 280, reports: 240 },
-    { month: "Apr", patients: 380, appointments: 260, reports: 220 },
-    { month: "May", patients: 450, appointments: 310, reports: 270 },
-    { month: "Jun", patients: 490, appointments: 340, reports: 300 },
-  ];
-
-  const defaultDeptDist = [
-    { name: "Cardiology", value: 142, color: "#dc2626" },
-    { name: "Neurology", value: 98, color: "#7c3aed" },
-    { name: "Orthopedics", value: 76, color: "#d97706" },
-    { name: "Pediatrics", value: 124, color: "#0252d9" },
-    { name: "General", value: 210, color: "#059669" },
-  ];
-
-  const kpis = data?.kpis?.length > 0 ? data.kpis : defaultKpis;
-  const monthlyData = data?.monthlyData?.length > 0 ? data.monthlyData : defaultMonthlyData;
-  const deptDistribution = data?.deptDistribution?.length > 0 ? data.deptDistribution : defaultDeptDist;
+  const kpis = Array.isArray(data?.kpis) ? data.kpis : [];
+  const monthlyData = Array.isArray(data?.monthlyData) ? data.monthlyData : [];
+  const deptDistribution = Array.isArray(data?.deptDistribution) ? data.deptDistribution : [];
   return (
     <div className="p-8">
       {/* KPI Row */}
@@ -73,7 +57,7 @@ export default function AnalyticsPage() {
               </div>
               <div className="flex items-end gap-2">
                 <p className="text-2xl font-bold">{k.value}</p>
-                <span className={`text-xs font-medium mb-1 ${k.trend.startsWith("+") ? "text-emerald-500" : "text-red-500"}`}>{k.trend}</span>
+                {k.trend && <span className={`text-xs font-medium mb-1 ${String(k.trend).startsWith("+") ? "text-emerald-500" : "text-red-500"}`}>{k.trend}</span>}
               </div>
             </div>
           );

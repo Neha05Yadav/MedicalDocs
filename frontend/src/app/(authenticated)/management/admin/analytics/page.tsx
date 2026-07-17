@@ -26,10 +26,9 @@ const RequestedTestsChart = dynamic(() => import('./AnalyticsCharts').then(mod =
 const ReportStatsChart = dynamic(() => import('./AnalyticsCharts').then(mod => mod.ReportStatsChart), { 
   loading: () => <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">Loading chart...</div> 
 });
-// Initial mock state just for layout before load
-const initialGrowthData = [];
-const initialRequestedTestsData = [];
-const initialReportStatsData = [];
+const initialGrowthData: Array<Record<string, string | number>> = [];
+const initialRequestedTestsData: Array<Record<string, string | number>> = [];
+const initialReportStatsData: Array<Record<string, string | number>> = [];
 
 export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
@@ -68,7 +67,7 @@ export default function AnalyticsPage() {
               <Users className="size-5 text-blue-600" />
               User Growth
             </h3>
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">+42% YoY</span>
+            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">Live database</span>
           </div>
           <div className="h-72 w-full">
             <UserGrowthChart data={data.growthData} />
@@ -81,7 +80,7 @@ export default function AnalyticsPage() {
               <Hospital className="size-5 text-purple-600" />
               Facility Registration Growth
             </h3>
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">+15% YoY</span>
+            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">Live database</span>
           </div>
           <div className="h-72 w-full">
             <FacilityGrowthChart data={data.growthData} />

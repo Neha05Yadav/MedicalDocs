@@ -27,11 +27,11 @@ export const RevenueTrendAreaChart = ({ data }: { data: any[] }) => (
         axisLine={false} 
         tickLine={false} 
         tick={{ fontSize: 12, fill: '#64748b' }}
-        tickFormatter={(value) => `₹${value.toLocaleString()}`}
+        tickFormatter={(value) => `₹${Number(value ?? 0).toLocaleString()}`}
       />
       <RechartsTooltip 
         contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-        formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Revenue']}
+        formatter={(value) => [`₹${Number(value ?? 0).toLocaleString()}`, 'Revenue']}
       />
       <Area 
         type="monotone" 

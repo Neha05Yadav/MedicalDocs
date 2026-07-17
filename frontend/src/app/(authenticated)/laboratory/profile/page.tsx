@@ -28,13 +28,13 @@ export default function LabProfilePage() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState({
     labName: "",
-    type: "Pathology & Microbiology",
+    type: "",
     labId: "",
-    licenseNo: "CDSCO-8821-2023",
+    licenseNo: "",
     email: "",
     phone: "",
     address: "",
-    description: "NABL accredited diagnostic center specializing in advanced pathology, genetics, and comprehensive microbiology testing.",
+    description: "",
     logoUrl: ""
   });
 
@@ -61,7 +61,9 @@ export default function LabProfilePage() {
           phone: data.phone || "",
           address: data.address || "",
           labId: data.id || "",
-          logoUrl: localStorage.getItem("lab_logo") || ""
+          type: data.type || "",
+          licenseNo: data.licenseNo || "",
+          logoUrl: data.logoUrl || ""
         }));
       }
     } catch (error) {
@@ -75,15 +77,22 @@ export default function LabProfilePage() {
     setProfile({ ...profile, [e.target.name]: e.target.value });
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
     
-    // For demo purposes, save the image URL to local storage so it persists locally
-    const url = URL.createObjectURL(file);
-    localStorage.setItem("lab_logo", url);
-    setProfile({ ...profile, logoUrl: url });
-    toast.success("Profile picture updated!");
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = localStorage.getItem("token") || "";
+    try {
+      const response = await fetch("/api/laboratory/profile/logo", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.message || "Profile picture could not be uploaded.");
+      setProfile({ ...profile, logoUrl: data.logoUrl });
+      toast.success("Profile picture saved.");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Profile picture could not be uploaded.");
+    }
   };
 
   const handleSave = async () => {

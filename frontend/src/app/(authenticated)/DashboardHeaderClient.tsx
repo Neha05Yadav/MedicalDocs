@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { allNavs } from "./navConfig";
+import styles from "./dashboard-theme.module.css";
 
 const Bell = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>;
 
@@ -109,12 +110,12 @@ export default function DashboardHeaderClient() {
   const headerInfo = getHeaderInfo();
 
   return (
-    <header className="h-[72px] border-b border-slate-200 bg-white flex items-center justify-between px-4 md:px-8 shrink-0 z-10">
+    <header className={styles.header}>
       <div>
-        <h1 className="text-xl font-bold tracking-tight text-slate-900">
+        <h1 className={styles.title}>
           {headerInfo.title}
         </h1>
-        <p className="text-[13px] text-slate-500 mt-0.5">
+        <p className={styles.subtitle}>
           {headerInfo.subtitle}
         </p>
       </div>
@@ -138,7 +139,7 @@ export default function DashboardHeaderClient() {
           isLaboratory ? "/laboratory/notifications" :
           "/patient/notifications"
         } prefetch={false}>
-          <div className="relative p-2.5 bg-white border border-slate-200 rounded-full text-slate-600 shadow-sm hover:bg-slate-50 transition-colors cursor-pointer flex items-center justify-center">
+          <div className={styles.iconButton}>
             <Bell className="w-5 h-5" />
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white text-[9px] font-bold text-white flex items-center justify-center">
@@ -156,23 +157,23 @@ export default function DashboardHeaderClient() {
               window.location.href = "/";
             }
           }}
-          className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 p-1.5 pr-3 rounded-full transition-colors"
+          className={styles.profile}
           title="Click to log out"
         >
-          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold overflow-hidden relative text-sm uppercase">
+          <div className={styles.avatar}>
              {userInitials || (isSuperAdmin ? "SA" : isAccounts ? "AM" : isSales ? "SM" : isSupport ? "SR" : isAdmin ? "AD" : isHospital ? "HA" : isLaboratory ? "LA" : isClinic ? "CA" : "PA")}
           </div>
           <div className="hidden md:block text-left">
-            <div className="text-sm font-bold text-slate-900 leading-tight">
+            <div className={styles.profileName}>
               {userName || (isSuperAdmin ? "Super Admin" : isAccounts ? "Accounts Manager" : isSales ? "Sales Manager" : isSupport ? "Support Agent" : isAdmin ? "System Admin" : isHospital ? "Hospital Admin" : isLaboratory ? "Laboratory Admin" : isClinic ? "Clinic Admin" : "Patient")}
             </div>
             {!isHospital && (
-              <div className="text-[12px] text-slate-500">
+              <div className={styles.profilePortal}>
                 {isSuperAdmin ? "Management" : isAccounts ? "Management" : isSales ? "Management" : isSupport ? "Management" : isAdmin ? "Management" : isLaboratory ? "Laboratory" : isClinic ? "Clinic" : "Patient Portal"}
               </div>
             )}
             {isHospital && (
-              <div className="text-[12px] text-slate-500">
+              <div className={styles.profilePortal}>
                 Hospital Portal
               </div>
             )}

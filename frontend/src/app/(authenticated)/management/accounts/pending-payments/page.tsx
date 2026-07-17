@@ -17,12 +17,15 @@ const ChevronDown = (props: any) => <svg {...props} xmlns="http://www.w3.org/200
 
 
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 
 export default function PendingPaymentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [reminderClient, setReminderClient] = useState("City Care Hospital");
+  const [reminderClient, setReminderClient] = useState("");
+  const [reminderInvoiceId, setReminderInvoiceId] = useState<string | null>(null);
+  const [sendingReminder, setSendingReminder] = useState(false);
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,21 +33,18 @@ export default function PendingPaymentsPage() {
     fetch('/api/management/accounts/payments?status=Pending')
       .then(res => res.json())
       .then(data => {
-        const processed = (data.payments || []).map((p: any, idx: number) => {
-          // Simulate some overdue mechanics for realistic mock UI
-          const seed = parseInt(p.id.replace(/\D/g, '')) || idx;
-          const daysOverdue = (seed % 20) - 5; 
-          const lateFee = daysOverdue > 0 ? `₹${(daysOverdue * 100).toLocaleString()}` : "₹0";
-          const reminderSent = daysOverdue > 5;
+        const processed = (data.payments || []).map((p: any) => {
+          const dueAt = new Date(p.date);
+          const daysOverdue = Math.floor((Date.now() - dueAt.getTime()) / 86_400_000);
           
           return {
             invoice: p.invoiceNo,
             client: p.client,
             type: "Hospital", 
-            amount: `₹${p.amount.toLocaleString()}`,
-            dueDate: p.date,
-            lateFee,
-            reminderSent,
+            amount: `₹${Number(p.amount || 0).toLocaleString('en-IN')}`,
+            dueDate: dueAt.toLocaleDateString('en-IN'),
+            lateFee: "₹0",
+            reminderSent: false,
             daysOverdue,
             raw: p
           };
@@ -65,9 +65,23 @@ export default function PendingPaymentsPage() {
     if (statusFilter === "Not Sent") matchesStatus = pay.reminderSent === false;
     return matchesSearch && matchesStatus;
   });
-  const handleOpenModal = (clientName: string = "City Care Hospital") => {
+  const handleOpenModal = (clientName: string, invoiceId: string | null = null) => {
     setReminderClient(clientName);
+    setReminderInvoiceId(invoiceId);
     setIsModalOpen(true);
+  };
+  const sendReminder = async () => {
+    setSendingReminder(true);
+    try {
+      const response = await fetch('/api/management/accounts/payment-reminders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ invoiceId: reminderInvoiceId }) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.message || 'Reminder could not be sent.');
+      setPayments(current => current.map(payment => !reminderInvoiceId || payment.invoice === reminderInvoiceId ? { ...payment, reminderSent: true } : payment));
+      setIsModalOpen(false);
+      toast.success(data?.message || 'Reminder sent.');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Reminder could not be sent.');
+    } finally { setSendingReminder(false); }
   };
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans">
@@ -98,7 +112,7 @@ export default function PendingPaymentsPage() {
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-slate-500 pointer-events-none" />
             </div>
             <button 
-              onClick={() => handleOpenModal("All Pending Clients")}
+              onClick={() => handleOpenModal("All pending facilities")}
               className="flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-50 text-amber-700 border border-amber-100 rounded-xl text-sm font-bold hover:bg-amber-100 transition-colors"
             >
               <BellRing className="size-4" />
@@ -166,7 +180,7 @@ export default function PendingPaymentsPage() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button 
-                      onClick={() => handleOpenModal(pay.client)}
+                      onClick={() => handleOpenModal(pay.client, pay.invoice)}
                       className="px-3 py-1.5 text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:text-amber-700 hover:border-amber-200 hover:bg-amber-50 rounded-lg transition-colors flex items-center gap-1.5 ml-auto"
                     >
                       <Mail className="size-3.5" /> Send Reminder
@@ -190,7 +204,7 @@ export default function PendingPaymentsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h3 className="text-lg font-bold text-slate-900">Send Payment Reminder</h3>
+              <h3 className="text-lg font-bold text-slate-900">Send in-app payment reminder</h3>
               <button 
                 onClick={() => setIsModalOpen(false)}
                 className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-colors"
@@ -212,7 +226,8 @@ export default function PendingPaymentsPage() {
                 <label className="block text-sm font-bold text-slate-700 mb-2">Subject:</label>
                 <input 
                   type="text" 
-                  defaultValue="Payment Reminder: Overdue Invoice"
+                  value="Payment reminder: outstanding invoice"
+                  readOnly
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
                 />
               </div>
@@ -220,14 +235,16 @@ export default function PendingPaymentsPage() {
                 <label className="block text-sm font-bold text-slate-700 mb-2">Message:</label>
                 <textarea 
                   rows={5}
-                  defaultValue={`Dear ${reminderClient},\n\nThis is a gentle reminder that your payment is currently overdue. Kindly process the payment at your earliest convenience to avoid any service interruptions.\n\nPlease find the invoice attached to this email.\n\nThank you,\nMediDoc Accounts Team`}
+                  value={`A payment reminder will be delivered to ${reminderClient} inside the MediDoc notification centre for ${reminderInvoiceId || 'all pending invoices'}.`}
+                  readOnly
                   className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 resize-none leading-relaxed"
                 ></textarea>
               </div>
             </div>
             <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
               <button 
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => void sendReminder()}
+                disabled={sendingReminder}
                 className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
               >
                 Cancel
@@ -236,7 +253,7 @@ export default function PendingPaymentsPage() {
                 onClick={() => setIsModalOpen(false)}
                 className="px-5 py-2.5 text-sm font-bold bg-amber-500 text-white hover:bg-amber-600 rounded-xl shadow-sm transition-colors"
               >
-                Send Reminder
+                {sendingReminder ? "Sending…" : "Send reminder"}
               </button>
             </div>
           </div>

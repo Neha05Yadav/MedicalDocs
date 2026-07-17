@@ -1,5 +1,5 @@
 "use client";
-import Search from "lucide-react/dist/esm/icons/search.mjs";
+import { Search } from "lucide-react";
 import * as React from "react";
 import { type DialogProps } from "@radix-ui/react-dialog";
 import { Command as CommandPrimitive } from "cmdk";

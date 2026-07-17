@@ -129,4 +129,10 @@ export class LaboratoryController {
   async updateProfile(@Body() data: any, @Request() req: any) {
     return this.laboratoryService.updateProfile(req.user.email, data);
   }
+
+  @Post('profile/logo')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadProfileLogo(@UploadedFile() file: Express.Multer.File, @Request() req: any) {
+    return this.laboratoryService.uploadProfileLogo(req.user.email, file);
+  }
 }

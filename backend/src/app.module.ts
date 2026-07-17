@@ -12,8 +12,16 @@ import { LaboratoryModule } from './laboratory/laboratory.module';
 import { ManagementModule } from './management/management.module';
 import { SupportTicketModule } from './support-ticket/support-ticket.module';
 
+import { RedisModule } from './redis/redis.module';
+import { ThrottlerModule } from '@nestjs/throttler';
+
 @Module({
   imports: [
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 100, // global rate limit
+    }]),
+    RedisModule,
     MysqlModule,
     AuthModule, 
     PatientModule,

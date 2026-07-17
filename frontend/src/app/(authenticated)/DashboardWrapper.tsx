@@ -1,16 +1,59 @@
+"use client";
+
+import type { CSSProperties } from "react";
+import { usePathname } from "next/navigation";
 import DashboardSidebar from "./DashboardSidebar";
 import DashboardHeaderClient from "./DashboardHeaderClient";
+import styles from "./dashboard-theme.module.css";
+import { useEffect } from "react";
+
+if (typeof window !== "undefined") {
+  const originalFetch = window.fetch;
+  window.fetch = async (...args) => {
+    const res = await originalFetch(...args);
+    if (res.status === 401 && !window.location.pathname.includes("/login") && !window.location.pathname.includes("/auth")) {
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+    }
+    return res;
+  };
+}
+
+const themes = {
+  patient: ["#0891b2", "#22d3ee", "8 145 178"],
+  clinic: ["#2563eb", "#38bdf8", "37 99 235"],
+  hospital: ["#4f46e5", "#818cf8", "79 70 229"],
+  laboratory: ["#7c3aed", "#c084fc", "124 58 237"],
+  management: ["#0f766e", "#2dd4bf", "15 118 110"],
+} as const;
 
 export default function DashboardWrapper({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname() || "";
+  const themeName = pathname.startsWith("/clinic")
+    ? "clinic"
+    : pathname.startsWith("/hospital")
+      ? "hospital"
+      : pathname.startsWith("/laboratory")
+        ? "laboratory"
+        : pathname.startsWith("/management")
+          ? "management"
+          : "patient";
+  const [accent, accent2, accentRgb] = themes[themeName];
+  const themeVariables = {
+    "--dash-accent": accent,
+    "--dash-accent-2": accent2,
+    "--dash-accent-rgb": accentRgb,
+  } as CSSProperties;
+
   return (
-    <div className="h-screen overflow-hidden bg-background flex w-full">
+    <div className={styles.shell} style={themeVariables} data-dashboard-theme={themeName}>
       <DashboardSidebar />
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 flex flex-col overflow-hidden bg-gradient-to-r from-emerald-50 to-blue-50">
+      <main className={styles.main}>
         <DashboardHeaderClient />
 
-        <div className="flex-1 overflow-y-auto">
+        <div className={styles.content}>
           {children}
         </div>
       </main>

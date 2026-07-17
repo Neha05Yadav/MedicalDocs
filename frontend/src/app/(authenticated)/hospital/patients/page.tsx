@@ -39,6 +39,7 @@ interface Doctor {
   id: string;
   name: string;
   department: string;
+  specialization?: string;
 }
 
 export default function PatientSearchVerificationPage() {
@@ -901,7 +902,7 @@ export default function PatientSearchVerificationPage() {
                       </div>
                       <div className="mt-4 px-6 mb-6">
                         {!selectedRecord.fileUrl ? (
-                          <img src="/dummy-report.png" alt="Dummy Medical Report" className="max-w-full h-auto object-contain rounded-lg shadow-sm bg-white mx-auto" />
+                          <div className="rounded-xl border border-slate-200 bg-white px-8 py-10 text-center text-slate-500">No file is attached to this medical record.</div>
                         ) : selectedRecord.fileUrl?.match(/\.(jpeg|jpg|gif|png)$/i) || selectedRecord.fileUrl?.startsWith('http') ? (
                           <img src={selectedRecord.fileUrl?.startsWith('http') ? selectedRecord.fileUrl : `/uploads/${selectedRecord.fileUrl}`} alt={selectedRecord.title} className="max-w-full h-auto object-contain rounded-lg shadow-sm bg-white mx-auto" />
                         ) : (

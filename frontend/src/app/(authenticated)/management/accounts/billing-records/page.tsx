@@ -18,10 +18,27 @@ const Clock = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg"
 
 import React, { useState, useEffect } from 'react';
 
+interface PaymentHistoryEntry {
+  desc: string;
+  date: string;
+  amount: string;
+  balance: string;
+}
+
+interface LedgerClient {
+  id: string;
+  client: string;
+  type: string;
+  totalBilled: string;
+  totalPaid: string;
+  outstanding: string;
+  history: PaymentHistoryEntry[];
+}
+
 export default function ClientAccountLedgerPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [ledger, setLedger] = useState<any[]>([]);
+  const [ledger, setLedger] = useState<LedgerClient[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

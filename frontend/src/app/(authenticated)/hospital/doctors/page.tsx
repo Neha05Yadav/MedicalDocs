@@ -23,6 +23,7 @@ interface Doctor {
 }
 
 export default function DoctorsPage() {
+  const authHeaders = (json = false) => ({ ...(json ? { "Content-Type": "application/json" } : {}), Authorization: `Bearer ${localStorage.getItem("token") || ""}` });
   const router = useRouter();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,7 +41,7 @@ export default function DoctorsPage() {
 
   const fetchDoctors = async () => {
     try {
-      const res = await fetch("/api/hospital/doctors");
+      const res = await fetch("/api/hospital/doctors", { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to load doctors");
       const data = await res.json();
       setDoctors(data);
@@ -62,7 +63,7 @@ export default function DoctorsPage() {
     
     try {
       const res = await fetch(`/api/hospital/doctors/${id}`, {
-        method: "DELETE"
+        method: "DELETE", headers: authHeaders()
       });
       if (!res.ok) throw new Error("Failed to delete");
       setDoctors(doctors.filter(d => d.id !== id));
@@ -94,9 +95,7 @@ export default function DoctorsPage() {
       if (modalMode === "add") {
         const res = await fetch("/api/hospital/doctors", {
           method: "POST",
-          headers: { 
-            "Content-Type": "application/json"
-          },
+          headers: authHeaders(true),
           body: JSON.stringify(currentDoctor)
         });
         if (!res.ok) throw new Error("Failed to add");
@@ -106,9 +105,7 @@ export default function DoctorsPage() {
       } else {
         const res = await fetch(`/api/hospital/doctors/${currentDoctor.id}`, {
           method: "PUT",
-          headers: { 
-            "Content-Type": "application/json"
-          },
+          headers: authHeaders(true),
           body: JSON.stringify(currentDoctor)
         });
         if (!res.ok) throw new Error("Failed to update");

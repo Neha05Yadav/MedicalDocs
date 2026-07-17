@@ -1,26 +1,31 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, Scope, UnauthorizedException } from '@nestjs/common';
+import { REQUEST } from '@nestjs/core';
 import { MysqlService } from '../mysql.service';
 import { v4 as uuidv4 } from 'uuid';
+import { RedisService } from '../redis/redis.service';
 
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class ClinicService {
-  constructor(private db: MysqlService) {}
+  constructor(
+    private db: MysqlService,
+    private redisService: RedisService,
+    @Inject(REQUEST) private readonly request: any,
+  ) {}
 
   private async getDoctorContext() {
-    let doctor = await this.db.queryOne(`
-      SELECT d.* FROM doctor d
-      JOIN hospital h ON d.hospitalId = h.id
-      WHERE h.type = 'CLINIC' LIMIT 1
-    `);
-    if (!doctor) {
-      doctor = await this.db.queryOne('SELECT * FROM doctor LIMIT 1');
-    }
-    if (!doctor) throw new Error("No doctor context found");
+    const email = this.request?.user?.email;
+    if (!email) throw new UnauthorizedException('Clinic identity is required.');
+    const doctor = await this.db.queryOne('SELECT * FROM doctor WHERE email = ?', [email]);
+    if (!doctor) throw new UnauthorizedException('No clinic workspace is linked to this identity.');
     return doctor;
   }
 
   async getOverview() {
     const doctor = await this.getDoctorContext();
+    const cacheKey = `clinic:overview:${doctor.id}`;
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) return cached;
+
     const currentMonth = new Date().getMonth();
 
     const appts = await this.db.query('SELECT * FROM appointment WHERE doctorId = ?', [doctor.id]);
@@ -90,7 +95,7 @@ export class ClinicService {
       ORDER BY r.requestDate DESC LIMIT 5
     `, [doctor.id]);
 
-    return {
+    const result = {
       kpis,
       todaysAppointments,
       pendingAppointments,
@@ -111,11 +116,11 @@ export class ClinicService {
         ward: r.hospitalName || 'General Ward',
         lastVisit: new Date(r.requestDate).toLocaleDateString()
       })),
-      revenueData: [
-        { name: "Mon", revenue: 4500 }, { name: "Tue", revenue: 5200 }, { name: "Wed", revenue: 4800 },
-        { name: "Thu", revenue: 6100 }, { name: "Fri", revenue: 5900 }, { name: "Sat", revenue: 6500 }, { name: "Sun", revenue: 7000 }
-      ]
+      revenueData: []
     };
+
+    await this.redisService.set(cacheKey, result, 300);
+    return result;
   }
 
   async getAppointments() {
@@ -206,6 +211,8 @@ export class ClinicService {
         data.status, new Date(), new Date()
       ]
     );
+    await this.redisService.del(`clinic:patients:${doctor.id}`);
+    await this.redisService.del(`clinic:overview:${doctor.id}`);
     return { success: true, id };
   }
 
@@ -219,11 +226,16 @@ export class ClinicService {
         data.status, new Date(), id, doctor.id
       ]
     );
+    await this.redisService.del(`clinic:patients:${doctor.id}`);
     return { success: true };
   }
 
   async getPatients() {
     const doctor = await this.getDoctorContext();
+    const cacheKey = `clinic:patients:${doctor.id}`;
+    const cached = await this.redisService.get<any[]>(cacheKey);
+    if (cached) return cached;
+
     const appts = await this.db.query('SELECT patientId FROM appointment WHERE doctorId = ?', [doctor.id]);
     const reqs = await this.db.query('SELECT patientId FROM accessrequest WHERE doctorId = ?', [doctor.id]);
 
@@ -285,6 +297,8 @@ export class ClinicService {
         });
       }
     }
+    
+    await this.redisService.set(cacheKey, patients, 300);
     return patients;
   }
 
@@ -530,6 +544,7 @@ export class ClinicService {
       }
     }
 
+    await this.redisService.del(`clinic:overview:${doctor.id}`);
     return { id: pId };
   }
 
@@ -674,6 +689,7 @@ export class ClinicService {
   async getProfile() {
     const doctor = await this.getDoctorContext();
     const h = await this.db.queryOne('SELECT name FROM hospital WHERE id = ?', [doctor.hospitalId]);
+    const logo = await this.db.queryOne('SELECT value FROM setting WHERE `key` = ?', [`clinic_logo_${doctor.id}`]);
 
     return {
       name: doctor.name,
@@ -685,7 +701,8 @@ export class ClinicService {
       phone: doctor.phone || "",
       experience: doctor.experience || "0 Years",
       bio: doctor.bio || "No bio available.",
-      address: doctor.address || "No address provided."
+      address: doctor.address || "No address provided.",
+      logoUrl: logo?.value || ""
     };
   }
 
@@ -696,5 +713,16 @@ export class ClinicService {
       [data.name, data.specialization, data.department, data.registrationNo, data.email, data.phone, data.experience, data.bio, data.address, doctor.id]
     );
     return { success: true };
+  }
+
+  async uploadProfileLogo(file?: Express.Multer.File) {
+    if (!file) throw new NotFoundException('Please select an image to upload.');
+    const doctor = await this.getDoctorContext();
+    const logoUrl = `/uploads/${file.filename}`;
+    await this.db.query(
+      'INSERT INTO setting (`key`, value, updatedAt) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE value = VALUES(value), updatedAt = NOW()',
+      [`clinic_logo_${doctor.id}`, logoUrl],
+    );
+    return { logoUrl };
   }
 }

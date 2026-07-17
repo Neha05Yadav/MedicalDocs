@@ -47,6 +47,12 @@ export default function HospitalDashboard() {
       const res = await fetch("/api/hospital/overview", {
         headers: { "Authorization": `Bearer ${token}` }
       });
+      
+      if (res.status === 401) {
+        localStorage.removeItem("token");
+        router.push("/login");
+        return;
+      }
 
       if (!res.ok) throw new Error("Failed to fetch overview data");
       

@@ -52,7 +52,7 @@ export default function PatientProfileClient() {
           phone: data.phone || "",
           emergencyContact: "",
           address: "",
-          logoUrl: localStorage.getItem("patient_logo") || ""
+          logoUrl: data.logoUrl || ""
         });
       } catch (error) {
         console.error(error);
@@ -64,19 +64,25 @@ export default function PatientProfileClient() {
     fetchProfile();
   }, [router]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setProfile({ ...profile, [e.target.name]: e.target.value });
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
-    
-    // For demo purposes, save the image URL to local storage so it persists locally
-    const url = URL.createObjectURL(file);
-    localStorage.setItem("patient_logo", url);
-    setProfile({ ...profile, logoUrl: url });
-    toast.success("Profile picture updated!");
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = localStorage.getItem("token") || "";
+    try {
+      const response = await fetch("/api/patient/profile/logo", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.message || "Profile picture could not be uploaded.");
+      setProfile({ ...profile, logoUrl: data.logoUrl });
+      toast.success("Profile picture saved.");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Profile picture could not be uploaded.");
+    }
   };
 
   const handleSave = async () => {

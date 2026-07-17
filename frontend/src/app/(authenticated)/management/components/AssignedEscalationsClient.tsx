@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -21,6 +21,21 @@ export default function AssignedEscalationsClient({ role, initialData }: { role:
   const [escalations, setEscalations] = useState(initialData);
   const [searchTerm, setSearchTerm] = useState("");
 
+  useEffect(() => {
+    const token = localStorage.getItem("token") || "";
+    fetch("/api/support-tickets", { headers: { Authorization: `Bearer ${token}` } })
+      .then(response => { if (!response.ok) throw new Error("Escalations could not be loaded."); return response.json(); })
+      .then(data => {
+        const tickets = (Array.isArray(data) ? data : []).filter((ticket: any) => {
+          const isEscalated = ["HIGH", "CRITICAL"].includes(String(ticket.priority).toUpperCase());
+          const isAccounts = /bill|payment|refund|subscription|invoice/i.test(`${ticket.category} ${ticket.subject}`);
+          return isEscalated && (role === "accounts" ? isAccounts : !isAccounts);
+        }).map((ticket: any) => ({ id: ticket.id, ticketId: ticket.ticketId, user: ticket.userName || "Unknown user", userRole: ticket.userRole || "User", issue: ticket.subject, status: ticket.status, priority: ticket.priority, assignedBy: "Support workflow", assignedDate: ticket.updatedAt || ticket.createdAt }));
+        setEscalations(tickets);
+      })
+      .catch((error: unknown) => toast.error(error instanceof Error ? error.message : "Escalations could not be loaded."));
+  }, [role]);
+
   const filteredEscalations = escalations.filter(esc => 
     esc.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
     esc.ticketId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -31,13 +46,11 @@ export default function AssignedEscalationsClient({ role, initialData }: { role:
   const inProgressCount = escalations.filter(e => e.status === "In Progress").length;
   const resolvedCount = escalations.filter(e => e.status === "Resolved").length;
 
-  const handleAction = (id: string, newStatus: string, message: string) => {
-    setEscalations(prev => prev.map(esc => {
-      if (esc.id === id) {
-        return { ...esc, status: newStatus };
-      }
-      return esc;
-    }));
+  const handleAction = async (id: string, newStatus: string, message: string) => {
+    const token = localStorage.getItem("token") || "";
+    const response = await fetch(`/api/support-tickets/${id}/status`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ status: newStatus }) });
+    if (!response.ok) return toast.error("Escalation status could not be updated.");
+    setEscalations(prev => prev.map(esc => esc.id === id ? { ...esc, status: newStatus } : esc));
     toast.success(message);
   };
 

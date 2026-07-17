@@ -16,6 +16,7 @@ const ArrowRight = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000
 export default function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetch('/api/management/super-admin/overview')
@@ -23,51 +24,18 @@ export default function SuperAdminDashboard() {
       .then(json => {
         if (json.error) throw new Error(json.error);
         
-        // Map backend array format to frontend object format
-        const backendStats = Array.isArray(json.stats) ? json.stats : [];
-        const getValue = (titleName: string) => backendStats.find((s: any) => s.title === titleName)?.value || 0;
-
-        setData({
-          stats: {
-            totalUsers: getValue("Total Users") || 1520,
-            totalHospitals: getValue("Active Hospitals") || 24,
-            totalLabs: 42,
-            totalDoctors: 156,
-            totalReports: 3420,
-            activeAdmins: 5,
-            monthlyGrowth: backendStats[0]?.change || "+15.2%",
-            platformRevenue: "$24,500"
-          },
-          revenueData: json.revenueData || [35, 42, 58, 65, 80, 95],
-          userDistribution: json.userDistribution || [
-            { region: "North America", users: 4250, percent: 45, color: "bg-blue-500" },
-            { region: "Europe", users: 3100, percent: 32, color: "bg-indigo-500" },
-            { region: "Asia", users: 1800, percent: 18, color: "bg-emerald-500" },
-            { region: "Other", users: 450, percent: 5, color: "bg-slate-400" }
-          ]
-        });
+        if (!json?.stats) throw new Error("Platform overview returned an invalid response.");
+        setData({ stats: json.stats, revenueData: Array.isArray(json.revenueData) ? json.revenueData : [], userDistribution: Array.isArray(json.userDistribution) ? json.userDistribution : [] });
         setLoading(false);
       })
       .catch(err => {
-        console.error("Fetch failed, using mock data:", err);
-        // Fallback mock data so the dashboard still looks beautiful
-        setData({
-          stats: {
-            totalUsers: 1520, totalHospitals: 24, totalLabs: 42,
-            totalDoctors: 156, totalReports: 3420, activeAdmins: 5,
-            monthlyGrowth: "+15.2%", platformRevenue: "$24,500"
-          },
-          revenueData: [35, 42, 58, 65, 80, 95],
-          userDistribution: [
-            { region: "North America", users: 4250, percent: 45, color: "bg-blue-500" },
-            { region: "Europe", users: 3100, percent: 32, color: "bg-indigo-500" },
-            { region: "Asia", users: 1800, percent: 18, color: "bg-emerald-500" },
-            { region: "Other", users: 450, percent: 5, color: "bg-slate-400" }
-          ]
-        });
+        console.error("Platform overview fetch failed:", err);
+        setError(err instanceof Error ? err.message : "Platform overview could not be loaded.");
         setLoading(false);
       });
   }, []);
+
+  if (error) return <div className="grid min-h-[60vh] place-items-center p-8 text-center"><div><h2 className="text-xl font-bold">Live platform data is unavailable</h2><p className="mt-2 text-slate-500">{error}</p><button onClick={() => window.location.reload()} className="mt-5 rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white">Try again</button></div></div>;
 
   const stats = data ? [
     { title: "Total Users", value: data.stats.totalUsers, icon: Users, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-100" },

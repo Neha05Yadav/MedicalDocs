@@ -62,7 +62,8 @@ export default function DepartmentsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/hospital/departments")
+    const token = localStorage.getItem("token") || "";
+    fetch("/api/hospital/departments", { headers: { Authorization: `Bearer ${token}` } })
       .then(res => res.json())
       .then(data => {
         setKpiData(data.kpiData || []);

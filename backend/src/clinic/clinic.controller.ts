@@ -1,8 +1,10 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseInterceptors, UploadedFile, UseGuards } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ClinicService } from './clinic.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('clinic')
+@UseGuards(JwtAuthGuard)
 export class ClinicController {
   constructor(private readonly clinicService: ClinicService) {}
 
@@ -133,5 +135,11 @@ export class ClinicController {
   @Put('profile')
   async updateProfile(@Body() data: any) {
     return this.clinicService.updateProfile(data);
+  }
+
+  @Post('profile/logo')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadProfileLogo(@UploadedFile() file: Express.Multer.File) {
+    return this.clinicService.uploadProfileLogo(file);
   }
 }

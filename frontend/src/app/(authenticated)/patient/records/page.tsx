@@ -107,22 +107,22 @@ export default function RecordsAndReportsPage() {
     <div className="p-6 md:p-10 max-w-[1200px] mx-auto min-h-screen">
       {/* My Uploads Section */}
       <section className="bg-white rounded-2xl border border-slate-200/80 p-1 mb-8 shadow-sm">
-        <div className="p-6">
-          <div className="flex justify-between items-start mb-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-cyan-50/80 text-cyan-600 p-3.5 rounded-full">
-                <User className="w-6 h-6" />
+        <div className="p-7 2xl:p-8">
+          <div className="mb-7 flex items-start justify-between">
+            <div className="flex items-center gap-5">
+              <div className="rounded-2xl bg-cyan-50/80 p-4 text-cyan-600">
+                <User className="size-8" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-slate-900">My Uploads</h2>
-                <p className="text-[14px] text-slate-500 mt-0.5">Documents and reports uploaded by you.</p>
+                <h2 className="text-[clamp(1.6rem,1.5vw,2rem)] font-extrabold tracking-tight text-slate-900">My Uploads</h2>
+                <p className="mt-1 text-[clamp(1rem,.9vw,1.2rem)] text-slate-500">Documents and reports uploaded by you.</p>
               </div>
             </div>
             <button 
               onClick={() => setIsUploadModalOpen(true)}
-              className="bg-[#12224d] text-white px-5 py-2.5 rounded-lg flex items-center gap-2.5 text-[14px] font-semibold hover:bg-cyan-900 transition-colors shadow-sm"
+              className="flex items-center gap-3 rounded-xl bg-[#12224d] px-6 py-3.5 text-[clamp(1rem,.88vw,1.16rem)] font-bold text-white shadow-sm transition-colors hover:bg-cyan-900"
             >
-              <Upload className="w-4 h-4" /> Upload Report
+              <Upload className="size-5" /> Upload Report
             </button>
           </div>
           
@@ -130,43 +130,43 @@ export default function RecordsAndReportsPage() {
             {records.filter(r => r.hospitalName === "Uploaded by Patient").length === 0 ? (
                <div className="text-center py-10 text-slate-500">No personal uploads found. Click 'Upload Report' to add one.</div>
             ) : (
-              <table className="w-full text-left text-[14px]">
+              <table className="w-full text-left text-[clamp(1rem,.88vw,1.16rem)]">
                 <thead className="bg-slate-50/50 border-b border-slate-200/70 text-slate-500 font-medium">
                   <tr>
-                    <th className="px-6 py-4 font-semibold">File Name</th>
-                    <th className="px-6 py-4 font-semibold">Type</th>
-                    <th className="px-6 py-4 font-semibold">Upload Date</th>
-                    <th className="px-6 py-4 font-semibold">Size</th>
-                    <th className="px-6 py-4 font-semibold text-center">Actions</th>
+                    <th className="px-6 py-5 font-bold">File Name</th>
+                    <th className="px-6 py-5 font-bold">Type</th>
+                    <th className="px-6 py-5 font-bold">Upload Date</th>
+                    <th className="px-6 py-5 font-bold">Size</th>
+                    <th className="px-6 py-5 text-center font-bold">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100/80">
                   {records.filter(r => r.hospitalName === "Uploaded by Patient").map((file) => (
                     <tr key={file.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4.5">
-                        <div className="flex items-center gap-3.5">
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-4">
                           {file.fileType === 'pdf' ? (
-                            <div className="text-red-500 bg-red-50 p-2 rounded-lg"><FileText className="w-4 h-4" /></div>
+                            <div className="rounded-xl bg-red-50 p-2.5 text-red-500"><FileText className="size-5" /></div>
                           ) : (
-                            <div className="text-emerald-500 bg-white p-2 rounded-lg"><ImageIcon className="w-4 h-4" /></div>
+                            <div className="rounded-xl bg-white p-2.5 text-emerald-500"><ImageIcon className="size-5" /></div>
                           )}
                           <span className="font-semibold text-slate-800">{file.fileName}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4.5">
-                        <span className={`px-3 py-1.5 rounded-full text-[12px] font-bold ${file.typeColor}`}>
+                      <td className="px-6 py-5">
+                        <span className={`rounded-full px-3.5 py-2 text-[clamp(.88rem,.75vw,1rem)] font-extrabold ${file.typeColor}`}>
                           {file.type}
                         </span>
                       </td>
-                      <td className="px-6 py-4.5 text-slate-600 font-medium">{file.uploadDate}</td>
-                      <td className="px-6 py-4.5 text-slate-600 font-medium">{file.size}</td>
-                      <td className="px-6 py-4.5">
+                      <td className="px-6 py-5 font-semibold text-slate-600">{file.uploadDate}</td>
+                      <td className="px-6 py-5 font-semibold text-slate-600">{file.size}</td>
+                      <td className="px-6 py-5">
                         <div className="flex items-center justify-center gap-4 text-slate-400">
                           <button 
                             onClick={() => setSelectedReportDetails(file)}
                             className="hover:text-cyan-600 transition-colors"
                           >
-                            <Eye className="w-5 h-5" />
+                            <Eye className="size-6" />
                           </button>
                         </div>
                       </td>
@@ -181,15 +181,15 @@ export default function RecordsAndReportsPage() {
 
       {/* Hospital/Lab Uploads Section */}
       <section className="bg-white rounded-2xl border border-slate-200/80 p-1 mb-8 shadow-sm">
-        <div className="p-6">
+        <div className="p-7 2xl:p-8">
           <div className="flex justify-between items-start mb-6">
             <div className="flex items-center gap-4">
-              <div className="bg-emerald-50/80 text-emerald-600 p-3.5 rounded-full">
-                <Info className="w-6 h-6" />
+              <div className="rounded-2xl bg-emerald-50/80 p-4 text-emerald-600">
+                <Info className="size-8" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Hospital & Lab Reports</h2>
-                <p className="text-[14px] text-slate-500 mt-0.5">Documents uploaded by healthcare facilities.</p>
+                <h2 className="text-[clamp(1.6rem,1.5vw,2rem)] font-extrabold tracking-tight text-slate-900">Hospital & Lab Reports</h2>
+                <p className="mt-1 text-[clamp(1rem,.9vw,1.2rem)] text-slate-500">Documents uploaded by healthcare facilities.</p>
               </div>
             </div>
           </div>
@@ -200,7 +200,7 @@ export default function RecordsAndReportsPage() {
               className={`flex items-center p-5 rounded-2xl border text-left transition-all ${activeCard === 'Hospital' ? 'border-emerald-500 shadow-md bg-emerald-50/20' : 'border-slate-200 hover:border-emerald-300 hover:shadow-sm bg-white'}`}
             >
               <div className={`p-3 rounded-xl mr-4 ${activeCard === 'Hospital' ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-600'}`}>
-                <Building className="w-6 h-6" />
+                <Building className="size-8" />
               </div>
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Hospitals</h3>
@@ -213,7 +213,7 @@ export default function RecordsAndReportsPage() {
               className={`flex items-center p-5 rounded-2xl border text-left transition-all ${activeCard === 'Clinic' ? 'border-blue-500 shadow-md bg-blue-50/20' : 'border-slate-200 hover:border-blue-300 hover:shadow-sm bg-white'}`}
             >
               <div className={`p-3 rounded-xl mr-4 ${activeCard === 'Clinic' ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-600'}`}>
-                <Stethoscope className="w-6 h-6" />
+                <Stethoscope className="size-8" />
               </div>
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Clinics</h3>
@@ -226,7 +226,7 @@ export default function RecordsAndReportsPage() {
               className={`flex items-center p-5 rounded-2xl border text-left transition-all ${activeCard === 'Laboratory' ? 'border-purple-500 shadow-md bg-purple-50/20' : 'border-slate-200 hover:border-purple-300 hover:shadow-sm bg-white'}`}
             >
               <div className={`p-3 rounded-xl mr-4 ${activeCard === 'Laboratory' ? 'bg-purple-500 text-white' : 'bg-purple-50 text-purple-600'}`}>
-                <Flask className="w-6 h-6" />
+                <Flask className="size-8" />
               </div>
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Laboratories</h3>
@@ -242,15 +242,15 @@ export default function RecordsAndReportsPage() {
               ).length === 0 ? (
                  <div className="text-center py-10 text-slate-500 bg-slate-50">No reports found for this category.</div>
               ) : (
-                <table className="w-full text-left text-[14px]">
+                <table className="w-full text-left text-[clamp(1rem,.88vw,1.16rem)]">
                   <thead className="bg-slate-50/50 border-b border-slate-200/70 text-slate-500 font-medium">
                     <tr>
-                      <th className="px-6 py-4 font-semibold">File Name</th>
-                      <th className="px-6 py-4 font-semibold">Type</th>
-                      <th className="px-6 py-4 font-semibold">Source Facility</th>
-                      <th className="px-6 py-4 font-semibold">Upload Date</th>
-                      <th className="px-6 py-4 font-semibold">Size</th>
-                      <th className="px-6 py-4 font-semibold text-center">Actions</th>
+                      <th className="px-6 py-5 font-bold">File Name</th>
+                      <th className="px-6 py-5 font-bold">Type</th>
+                      <th className="px-6 py-5 font-bold">Source Facility</th>
+                      <th className="px-6 py-5 font-bold">Upload Date</th>
+                      <th className="px-6 py-5 font-bold">Size</th>
+                      <th className="px-6 py-5 text-center font-bold">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100/80">
@@ -258,38 +258,38 @@ export default function RecordsAndReportsPage() {
                       (activeCard === 'Laboratory' ? (r.hospitalType?.toUpperCase() === 'LAB' || r.hospitalType?.toUpperCase() === 'LABORATORY') : r.hospitalType?.toUpperCase() === activeCard.toUpperCase())
                     ).map((file) => (
                       <tr key={file.id} className="hover:bg-slate-50/50 transition-colors bg-white">
-                        <td className="px-6 py-4.5">
-                          <div className="flex items-center gap-3.5">
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-4">
                             {file.fileType === 'pdf' ? (
-                              <div className="text-red-500 bg-red-50 p-2 rounded-lg"><FileText className="w-4 h-4" /></div>
+                              <div className="rounded-xl bg-red-50 p-2.5 text-red-500"><FileText className="size-5" /></div>
                             ) : (
-                              <div className="text-emerald-500 bg-white p-2 rounded-lg"><ImageIcon className="w-4 h-4" /></div>
+                              <div className="rounded-xl bg-white p-2.5 text-emerald-500"><ImageIcon className="size-5" /></div>
                             )}
                             <span className="font-semibold text-slate-800">{file.fileName}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4.5">
-                          <span className={`px-3 py-1.5 rounded-full text-[12px] font-bold ${file.typeColor}`}>
+                        <td className="px-6 py-5">
+                          <span className={`rounded-full px-3.5 py-2 text-[clamp(.88rem,.75vw,1rem)] font-extrabold ${file.typeColor}`}>
                             {file.type}
                           </span>
                         </td>
-                        <td className="px-6 py-4.5">
+                        <td className="px-6 py-5">
                           <div className="flex flex-col">
                             <span className="text-slate-800 font-semibold">{file.hospitalName}</span>
-                            <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1 mt-0.5">
-                              <User className="size-3" /> Doctor Assigned
+                            <span className="mt-1 flex items-center gap-1.5 text-[clamp(.84rem,.7vw,.94rem)] font-medium text-slate-500">
+                              <User className="size-4" /> Doctor Assigned
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4.5 text-slate-600 font-medium">{file.uploadDate}</td>
-                        <td className="px-6 py-4.5 text-slate-600 font-medium">{file.size}</td>
-                        <td className="px-6 py-4.5">
+                        <td className="px-6 py-5 font-semibold text-slate-600">{file.uploadDate}</td>
+                        <td className="px-6 py-5 font-semibold text-slate-600">{file.size}</td>
+                        <td className="px-6 py-5">
                           <div className="flex items-center justify-center gap-4 text-slate-400">
                             <button 
                               onClick={() => setSelectedReportDetails(file)}
                               className="hover:text-cyan-600 transition-colors"
                             >
-                              <Eye className="w-5 h-5" />
+                              <Eye className="size-6" />
                             </button>
                           </div>
                         </td>
@@ -436,13 +436,7 @@ export default function RecordsAndReportsPage() {
                     className="max-w-full max-h-[85vh] object-contain rounded-lg bg-white"
                   />
                 )
-              ) : (
-                <img 
-                  src="/dummy-report.png" 
-                  alt="Dummy Medical Report"
-                  className="max-w-full max-h-[85vh] object-contain rounded-lg bg-white"
-                />
-              )}
+              ) : <div className="rounded-2xl border border-white/15 bg-white/5 px-8 py-10 text-center text-slate-300">No file is attached to this database record.</div>}
             </div>
             
             <div className="p-4 bg-black/50 backdrop-blur-md text-white text-center absolute bottom-0 left-0 right-0">

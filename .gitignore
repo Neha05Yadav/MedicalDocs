@@ -9,6 +9,9 @@ lerna-debug.log*
 
 node_modules
 dist
+coverage
+.next
+*.tsbuildinfo
 dist-ssr
 .output
 .vinxi
@@ -31,7 +34,9 @@ dist-ssr
 *.sln
 *.sw?
 
-backend/.env
-frontend/.env
+backend/.env*
+!backend/.env.example
+frontend/.env*
+!frontend/.env.example
 backend/uploads/
 *.sql

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { allNavs } from "./navConfig";
 import { SidebarLink } from "./SidebarLink";
+import styles from "./dashboard-theme.module.css";
+import { MediDocBrand } from "@/components/MediDocBrand";
 
 // JSX-based icon map
 const IconMap: Record<string, React.FC<{ className?: string }>> = {
@@ -57,21 +59,18 @@ export default function DashboardSidebar() {
 
   return (
     <aside
-      className="hidden md:flex shrink-0 border-r border-border bg-gradient-to-br from-blue-50 to-white flex-col transition-all duration-300 relative h-full w-64"
+      className={`hidden md:flex ${styles.sidebar}`}
     >
-      <div className="h-16 border-b border-border flex items-center px-4 gap-3 shrink-0">
-        <div className="size-8 bg-brand rounded-lg flex items-center justify-center shrink-0">
-          <div className="size-4 bg-background rounded-sm" />
-        </div>
-        <div className="flex flex-col">
-           <span className="font-semibold tracking-tight leading-none mt-1">MediDoc</span>
-           <span id="sidebar-group-title" className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-0.5">
-             {title}
-           </span>
+      <div className={styles.brandRow}>
+        <div>
+          <MediDocBrand compact />
+          <span id="sidebar-group-title" className={`${styles.portalName} ml-[3.25rem] block`}>
+            {title}
+          </span>
         </div>
       </div>
       
-      <nav className="flex-1 p-3 overflow-y-auto no-scrollbar group">
+      <nav className={`${styles.sidebarNav} no-scrollbar group`}>
         <div className="space-y-1">
           {Object.entries(allNavs).map(([groupName, navItems]) => (
             <div key={groupName} className={`nav-group ${groupName === activeGroup ? 'block' : 'hidden'}`}>
@@ -86,7 +85,7 @@ export default function DashboardSidebar() {
         </div>
       </nav>
 
-      <div className="p-3 border-t border-border bg-gradient-to-br from-blue-50 to-white shrink-0 mt-auto">
+      <div className={styles.sidebarFooter}>
         <button
           onClick={() => {
             localStorage.removeItem("token");
@@ -100,7 +99,7 @@ export default function DashboardSidebar() {
               window.location.href = "/";
             }
           }}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors w-full"
+          className={styles.signOut}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4 shrink-0"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
           <span>Sign out</span>

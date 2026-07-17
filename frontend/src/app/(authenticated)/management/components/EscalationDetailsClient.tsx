@@ -14,6 +14,7 @@ import {
   CheckCircle,
   FileText,
   DollarSign,
+  RefreshCw,
   Send
 } from "lucide-react";
 

@@ -3,7 +3,8 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Card, CardHeader } from "@/components/ui/card";
-import { tabs } from "./data";
+
+const tabs = ["All Tickets", "Open", "In Progress", "Resolved", "Closed"];
 
 export default function TicketsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

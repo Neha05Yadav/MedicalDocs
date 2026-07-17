@@ -4,52 +4,58 @@ import { HospitalService } from './hospital.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('hospital')
+@UseGuards(JwtAuthGuard)
 export class HospitalController {
   constructor(private readonly hospitalService: HospitalService) {}
 
   @Get('overview')
-  async getOverview() {
-    return this.hospitalService.getOverview('');
+  async getOverview(@Request() req: any) {
+    return this.hospitalService.getOverview(req.user.email);
   }
 
   @Post('add-treatment-patient')
-  async addTreatmentPatient(@Body() data: any) {
-    return this.hospitalService.addTreatmentPatient('', data);
+  async addTreatmentPatient(@Request() req: any, @Body() data: any) {
+    return this.hospitalService.addTreatmentPatient(req.user.email, data);
   }
 
   @Put('update-treatment-patient')
-  async updateTreatmentPatient(@Body() data: any) {
-    return this.hospitalService.updateTreatmentPatient('', data);
+  async updateTreatmentPatient(@Request() req: any, @Body() data: any) {
+    return this.hospitalService.updateTreatmentPatient(req.user.email, data);
   }
 
   @Get('labs')
   async getLabs() {
     return this.hospitalService.getAllLabs();
   }
-
+  //@UseGuards(JwtAuthGuard)
   @Get('doctors')
-  async getDoctors() {
-    return this.hospitalService.getDoctors('');
+  async getDoctors(@Request() req: any) {
+    try {
+      return await this.hospitalService.getDoctors('hospital@demo.com');
+    } catch (error) {
+      console.error("GET DOCTORS ERROR:", error);
+      throw error;
+    }
   }
 
   @Post('doctors')
-  async addDoctor(@Body() data: any) {
-    return this.hospitalService.addDoctor('', data);
+  async addDoctor(@Request() req: any, @Body() data: any) {
+    return this.hospitalService.addDoctor(req.user.email, data);
   }
 
   @Put('doctors/:id')
-  async updateDoctor(@Param('id') id: string, @Body() data: any) {
-    return this.hospitalService.updateDoctor('', id, data);
+  async updateDoctor(@Request() req: any, @Param('id') id: string, @Body() data: any) {
+    return this.hospitalService.updateDoctor(req.user.email, id, data);
   }
 
   @Delete('doctors/:id')
-  async deleteDoctor(@Param('id') id: string) {
-    return this.hospitalService.deleteDoctor('', id);
+  async deleteDoctor(@Request() req: any, @Param('id') id: string) {
+    return this.hospitalService.deleteDoctor(req.user.email, id);
   }
 
   @Get('search-patients')
-  async searchPatients(@Query('q') q: string) {
-    return this.hospitalService.searchPatients('', q);
+  async searchPatients(@Request() req: any, @Query('q') q: string) {
+    return this.hospitalService.searchPatients(req.user.email, q);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -119,54 +125,64 @@ export class HospitalController {
   // --- Billing & Payments Module APIs ---
 
   @Get('billing/patients')
-  async getBillingPatients() {
-    return this.hospitalService.getBillingPatients('');
+  async getBillingPatients(@Request() req: any) {
+    return this.hospitalService.getBillingPatients(req.user.email);
   }
 
   @Get('billing/invoices')
-  async getInvoices() {
-    return this.hospitalService.getInvoices('');
+  async getInvoices(@Request() req: any) {
+    return this.hospitalService.getInvoices(req.user.email);
   }
 
   @Post('billing/invoice')
-  async createInvoice(@Body() data: any) {
-    return this.hospitalService.createInvoice('', data);
+  async createInvoice(@Request() req: any, @Body() data: any) {
+    return this.hospitalService.createInvoice(req.user.email, data);
   }
 
   // --- Departments Module APIs ---
 
   @Get('departments')
-  async getDepartments() {
-    return this.hospitalService.getDepartments('');
+  async getDepartments(@Request() req: any) {
+    return this.hospitalService.getDepartments(req.user.email);
   }
 
   // --- Notifications Module APIs ---
 
   @Get('notifications')
-  async getNotifications() {
-    return this.hospitalService.getNotifications('');
+  async getNotifications(@Request() req: any) {
+    return this.hospitalService.getNotifications(req.user.email);
   }
 
   @Put('notifications/read-all')
-  async markAllNotificationsAsRead() {
-    return this.hospitalService.markAllNotificationsAsRead('');
+  async markAllNotificationsAsRead(@Request() req: any) {
+    return this.hospitalService.markAllNotificationsAsRead(req.user.email);
   }
 
   @Put('notifications/:id/read')
-  async markNotificationAsRead(@Param('id') id: string) {
-    return this.hospitalService.markNotificationAsRead('', id);
+  async markNotificationAsRead(@Request() req: any, @Param('id') id: string) {
+    return this.hospitalService.markNotificationAsRead(req.user.email, id);
   }
 
   @Delete('notifications/:id')
-  async deleteNotification(@Param('id') id: string) {
-    return this.hospitalService.deleteNotification('', id);
+  async deleteNotification(@Request() req: any, @Param('id') id: string) {
+    return this.hospitalService.deleteNotification(req.user.email, id);
   }
 
   // --- Analytics Module APIs ---
 
   @Get('analytics')
-  async getAnalytics() {
-    return this.hospitalService.getAnalytics('');
+  async getAnalytics(@Request() req: any) {
+    return this.hospitalService.getAnalytics(req.user.email);
+  }
+
+  @Get('subscription')
+  async getSubscription(@Request() req: any) {
+    return this.hospitalService.getSubscription(req.user.email);
+  }
+
+  @Put('subscription')
+  async changeSubscription(@Request() req: any, @Body('planId') planId: string) {
+    return this.hospitalService.changeSubscription(req.user.email, planId);
   }
 
   // --- Profile Module APIs ---
@@ -192,8 +208,8 @@ export class HospitalController {
   @UseGuards(JwtAuthGuard)
   @Post('profile/logo')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadLogo(@UploadedFile() file: Express.Multer.File) {
+  async uploadLogo(@Request() req: any, @UploadedFile() file: Express.Multer.File) {
     if (!file) throw new BadRequestException('No file uploaded');
-    return { url: `/uploads/${file.filename}` };
+    return this.hospitalService.updateHospitalLogo(req.user.email, file);
   }
 }
