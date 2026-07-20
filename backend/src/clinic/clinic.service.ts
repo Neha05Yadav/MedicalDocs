@@ -1,8 +1,10 @@
-import { Inject, Injectable, NotFoundException, Scope, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, Scope, UnauthorizedException } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
 import { MysqlService } from '../mysql.service';
 import { v4 as uuidv4 } from 'uuid';
 import { RedisService } from '../redis/redis.service';
+import { createHash } from 'crypto';
+import { formatPrescriptionId, formatPrescriptionRecord } from '../prescription-id';
 
 @Injectable({ scope: Scope.REQUEST })
 export class ClinicService {
@@ -15,14 +17,38 @@ export class ClinicService {
   private async getDoctorContext() {
     const email = this.request?.user?.email;
     if (!email) throw new UnauthorizedException('Clinic identity is required.');
-    const doctor = await this.db.queryOne('SELECT * FROM doctor WHERE email = ?', [email]);
+
+    // A clinic portal may be opened by an individual doctor or by the clinic
+    // administrator. Resolve the doctor directly first; for an administrator,
+    // stay inside the linked clinic tenant and use its active clinical profile.
+    let doctor = await this.db.queryOne('SELECT * FROM doctor WHERE email = ?', [email]);
+    if (!doctor) {
+      const user = await this.db.queryOne(
+        `SELECT u.hospitalId
+         FROM user u
+         INNER JOIN hospital h ON h.id = u.hospitalId
+         WHERE u.email = ? AND UPPER(h.type) = 'CLINIC'
+         LIMIT 1`,
+        [email],
+      );
+
+      if (user?.hospitalId) {
+        doctor = await this.db.queryOne(
+          `SELECT * FROM doctor
+           WHERE hospitalId = ? AND (status IS NULL OR status = 'Active')
+           ORDER BY updatedAt DESC, id ASC
+           LIMIT 1`,
+          [user.hospitalId],
+        );
+      }
+    }
     if (!doctor) throw new UnauthorizedException('No clinic workspace is linked to this identity.');
     return doctor;
   }
 
   async getOverview() {
     const doctor = await this.getDoctorContext();
-    const cacheKey = `clinic:overview:${doctor.id}`;
+    const cacheKey = `clinic:overview:v2:${doctor.id}`;
     const cached = await this.redisService.get(cacheKey);
     if (cached) return cached;
 
@@ -69,21 +95,35 @@ export class ClinicService {
       { label: "Prescriptions Issued", value: prescriptionsWritten.toString() }
     ];
 
-    const todayAppts = await this.db.query(`
+    let scheduleMode = 'upcoming';
+    let scheduleRows = await this.db.query(`
       SELECT a.*, p.name as patientName 
       FROM appointment a
       LEFT JOIN patient p ON a.patientId = p.id
-      WHERE a.doctorId = ? AND DATE(a.dateTime) = ?
+      WHERE a.doctorId = ? AND a.dateTime >= CURDATE()
       ORDER BY a.dateTime ASC LIMIT 5
-    `, [doctor.id, todayStr]);
+    `, [doctor.id]);
+
+    // If the clinic has no future booking, keep the card useful with its real
+    // most-recent DB activity instead of rendering a large empty placeholder.
+    if (scheduleRows.length === 0) {
+      scheduleMode = 'recent';
+      scheduleRows = await this.db.query(`
+        SELECT a.*, p.name as patientName
+        FROM appointment a
+        LEFT JOIN patient p ON a.patientId = p.id
+        WHERE a.doctorId = ?
+        ORDER BY a.dateTime DESC LIMIT 5
+      `, [doctor.id]);
+    }
 
     const allPatients = await this.getPatients();
     const recentPatients = allPatients.slice(0, 5).map(p => ({
       id: p.id,
       name: p.name,
       condition: p.diagnosis || 'General',
-      age: p.age || 0,
-      last_visit: p.lastVisit === 'N/A' ? new Date().toISOString() : new Date(p.lastVisit).toISOString()
+      age: p.age || 'N/A',
+      last_visit: !p.lastVisit || p.lastVisit === 'N/A' ? null : new Date(p.lastVisit).toISOString()
     }));
     
     const activePatients = await this.db.query(`
@@ -101,19 +141,21 @@ export class ClinicService {
       pendingAppointments,
       totalPatients,
       prescriptionsWritten,
-      appointments: todayAppts.map(a => ({
+      scheduleMode,
+      appointments: scheduleRows.map(a => ({
         id: a.id,
         patientName: a.patientName,
         time: new Date(a.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        type: a.type || 'Consultation',
-        status: a.status
+        date: new Date(a.dateTime).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        notes: a.notes || 'Consultation',
+        status: a.status,
       })),
       recentPatients,
       activePatients: activePatients.map(r => ({
         id: r.id,
         name: r.hospitalPatientName || r.patientName,
-        condition: r.admissionInfo || 'Under Observation',
-        ward: r.hospitalName || 'General Ward',
+        condition: r.admissionInfo || 'No admission context',
+        ward: r.hospitalName || 'Facility unavailable',
         lastVisit: new Date(r.requestDate).toLocaleDateString()
       })),
       revenueData: []
@@ -212,21 +254,31 @@ export class ClinicService {
       ]
     );
     await this.redisService.del(`clinic:patients:${doctor.id}`);
-    await this.redisService.del(`clinic:overview:${doctor.id}`);
+    await this.redisService.del(`clinic:overview:v2:${doctor.id}`);
     return { success: true, id };
   }
 
   async updateMyPatient(id: string, data: any) {
     const doctor = await this.getDoctorContext();
     await this.db.query(
-      'UPDATE clinic_patient SET name = ?, age = ?, gender = ?, bloodGroup = ?, diagnosis = ?, followUp = ?, status = ?, updatedAt = ? WHERE id = ? AND doctorId = ?',
+      'UPDATE clinic_patient SET name = ?, phone = ?, age = ?, gender = ?, bloodGroup = ?, diagnosis = ?, followUp = ?, status = ?, updatedAt = ? WHERE id = ? AND doctorId = ?',
       [
-        data.name, data.age, data.gender, data.bloodGroup, data.diagnosis || 'Pending',
+        data.name, data.phone || null, data.age, data.gender, data.bloodGroup, data.diagnosis || 'Pending',
         data.followUp ? new Date(data.followUp).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not scheduled',
         data.status, new Date(), id, doctor.id
       ]
     );
     await this.redisService.del(`clinic:patients:${doctor.id}`);
+    return { success: true };
+  }
+
+  async deleteMyPatient(id: string) {
+    const doctor = await this.getDoctorContext();
+    const patient = await this.db.queryOne('SELECT id FROM clinic_patient WHERE id = ? AND doctorId = ?', [id, doctor.id]);
+    if (!patient) throw new NotFoundException('Clinic patient not found.');
+    await this.db.query('DELETE FROM clinic_patient WHERE id = ? AND doctorId = ?', [id, doctor.id]);
+    await this.redisService.del(`clinic:patients:${doctor.id}`);
+    await this.redisService.del(`clinic:overview:v2:${doctor.id}`);
     return { success: true };
   }
 
@@ -287,7 +339,7 @@ export class ClinicService {
         patients.push({
           id: p.id,
           name: p.name,
-          age: p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / 31557600000) : 35,
+          age: p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / 31557600000) : 'N/A',
           gender: p.gender || 'Unknown',
           phone: p.phone || 'N/A',
           lastVisit: lastAppt ? new Date(lastAppt.dateTime).toLocaleDateString() : 'N/A',
@@ -351,7 +403,7 @@ export class ClinicService {
         name: p.name,
         phone: p.phone,
         email: p.email,
-        age: p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / 31557600000) : 35,
+        age: p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / 31557600000) : 'N/A',
         gender: p.gender || 'Unknown',
         bloodGroup: p.bloodGroup || 'N/A',
         status,
@@ -376,7 +428,7 @@ export class ClinicService {
         name: p.name,
         email: p.email,
         phone: p.phone,
-        age: p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / 31557600000) : 35,
+        age: p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / 31557600000) : 'N/A',
         gender: p.gender || 'Unknown',
         bloodGroup: p.bloodGroup || 'N/A'
       },
@@ -387,14 +439,15 @@ export class ClinicService {
         status: a.status
       })),
       prescriptions: rxs.map(r => ({
-        id: r.id,
+        id: formatPrescriptionId(r.id),
+        recordId: r.id,
         medicine: r.medicine,
         date: new Date(r.createdAt).toLocaleDateString(),
         status: r.status
       })),
       records: recs.map(r => ({
         id: r.id,
-        title: r.title,
+        title: String(r.type).toUpperCase() === 'PRESCRIPTION' ? formatPrescriptionId(r.title || r.id) : r.title,
         type: r.type,
         date: new Date(r.date).toLocaleDateString(),
         fileUrl: r.fileUrl
@@ -482,7 +535,7 @@ export class ClinicService {
       });
     }
 
-    return reports;
+    return reports.map(formatPrescriptionRecord);
   }
 
   async getAllLabs() {
@@ -492,32 +545,53 @@ export class ClinicService {
   async getPrescriptions() {
     const doctor = await this.getDoctorContext();
     const rxs = await this.db.query(`
-      SELECT r.*, p.name as patientName 
+      SELECT r.*, p.name as patientName, sfp.storedFileId as imageFileId
       FROM prescription r
       LEFT JOIN patient p ON r.patientId = p.id
+      LEFT JOIN stored_file_prescription sfp ON sfp.prescriptionId = r.id
       WHERE r.doctorId = ?
       ORDER BY r.createdAt DESC
     `, [doctor.id]);
 
     return rxs.map(rx => ({
-      id: rx.id,
+      id: formatPrescriptionId(rx.id),
+      recordId: rx.id,
       patientName: rx.patientName,
       patientId: rx.patientId,
       medicine: rx.medicine,
       dosage: rx.dosage,
       duration: rx.duration,
       date: new Date(rx.createdAt).toLocaleDateString(),
-      status: rx.status
+      status: rx.status,
+      hasImage: Boolean(rx.imageFileId),
+      imageUrl: rx.imageFileId ? `/api/clinic/prescriptions/${encodeURIComponent(rx.id)}/image` : null,
     }));
   }
 
-  async createPrescription(data: any) {
+  async createPrescription(data: any, image?: Express.Multer.File) {
     const doctor = await this.getDoctorContext();
-    const pId = uuidv4();
-    await this.db.query(
-      'INSERT INTO prescription (id, patientId, doctorId, hospitalId, medicine, dosage, duration, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [pId, data.patientId, doctor.id, doctor.hospitalId, data.medicine, data.dosage, data.duration, data.status || 'Active', new Date(), new Date()]
-    );
+    const pId = await this.insertPrescriptionWithRxId(data, doctor);
+
+    if (image) {
+      if (!this.hasValidImageSignature(image.buffer, image.mimetype)) {
+        await this.db.query('DELETE FROM prescription WHERE id = ? AND doctorId = ?', [pId, doctor.id]);
+        throw new BadRequestException('The uploaded prescription image is invalid.');
+      }
+
+      const storedFileId = uuidv4();
+      const relativePath = `prescriptions/${pId}/${storedFileId}`;
+      const sha256 = createHash('sha256').update(image.buffer).digest('hex');
+      await this.db.query(
+        `INSERT INTO stored_file
+          (id, fileName, relativePath, mimeType, sizeBytes, sha256, content, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [storedFileId, image.originalname, relativePath, image.mimetype, image.size, sha256, image.buffer, new Date(), new Date()],
+      );
+      await this.db.query(
+        'INSERT INTO stored_file_prescription (storedFileId, prescriptionId, createdAt) VALUES (?, ?, ?)',
+        [storedFileId, pId, new Date()],
+      );
+    }
 
     if (data.labTestName && data.labId) {
       await this.db.query(
@@ -544,8 +618,81 @@ export class ClinicService {
       }
     }
 
-    await this.redisService.del(`clinic:overview:${doctor.id}`);
+    await this.redisService.del(`clinic:overview:v2:${doctor.id}`);
     return { id: pId };
+  }
+
+  async getPrescriptionImage(id: string) {
+    const doctor = await this.getDoctorContext();
+    const image = await this.db.queryOne(
+      `SELECT sf.fileName, sf.mimeType, sf.sizeBytes, sf.content
+       FROM prescription p
+       INNER JOIN stored_file_prescription sfp ON sfp.prescriptionId = p.id
+       INNER JOIN stored_file sf ON sf.id = sfp.storedFileId
+       WHERE p.id = ? AND p.doctorId = ?
+       LIMIT 1`,
+      [id, doctor.id],
+    );
+    if (!image) throw new NotFoundException('Prescription image not found');
+    return image;
+  }
+
+  private hasValidImageSignature(buffer: Buffer, mimeType: string): boolean {
+    if (!buffer?.length) return false;
+    if (mimeType === 'image/jpeg') {
+      return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+    }
+    if (mimeType === 'image/png') {
+      return buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    }
+    if (mimeType === 'image/webp') {
+      return buffer.length >= 12 && buffer.subarray(0, 4).toString('ascii') === 'RIFF' && buffer.subarray(8, 12).toString('ascii') === 'WEBP';
+    }
+    return false;
+  }
+
+  private async insertPrescriptionWithRxId(data: any, doctor: any): Promise<string> {
+    // Real prescription books use controlled serial numbers, not random IDs.
+    // Lock the single sequence row so concurrent requests receive consecutive,
+      // unique RX-prefixed identifiers.
+    const connection = await this.db.getPool().getConnection();
+    try {
+      await connection.beginTransaction();
+      const [sequenceRows]: any = await connection.execute(
+        `SELECT nextValue FROM prescription_id_sequence
+         WHERE sequenceName = 'prescription' FOR UPDATE`,
+      );
+      if (!sequenceRows.length) {
+        throw new Error('Prescription ID sequence is not initialized.');
+      }
+
+      let nextValue = Number(sequenceRows[0].nextValue);
+      while (nextValue <= 99999) {
+        const id = `RX${String(nextValue).padStart(5, '0')}`;
+        try {
+          await connection.execute(
+            'INSERT INTO prescription (id, patientId, doctorId, hospitalId, medicine, dosage, duration, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [id, data.patientId, doctor.id, doctor.hospitalId, data.medicine, data.dosage, data.duration, data.status || 'Active', new Date(), new Date()],
+          );
+          await connection.execute(
+            `UPDATE prescription_id_sequence SET nextValue = ?, updatedAt = ?
+             WHERE sequenceName = 'prescription'`,
+            [nextValue + 1, new Date()],
+          );
+          await connection.commit();
+          return id;
+        } catch (error: any) {
+          if (error?.code !== 'ER_DUP_ENTRY') throw error;
+          nextValue += 1;
+        }
+      }
+      throw new Error('The five-digit prescription ID range is exhausted.');
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 
   async updatePrescription(id: string, data: any) {
@@ -559,7 +706,14 @@ export class ClinicService {
 
   async deletePrescription(id: string) {
     const doctor = await this.getDoctorContext();
+    const file = await this.db.queryOne(
+      `SELECT sfp.storedFileId FROM stored_file_prescription sfp
+       INNER JOIN prescription p ON p.id = sfp.prescriptionId
+       WHERE p.id = ? AND p.doctorId = ? LIMIT 1`,
+      [id, doctor.id],
+    );
     await this.db.query('DELETE FROM prescription WHERE id = ? AND doctorId = ?', [id, doctor.id]);
+    if (file?.storedFileId) await this.db.query('DELETE FROM stored_file WHERE id = ?', [file.storedFileId]);
     return { success: true };
   }
 
@@ -584,7 +738,7 @@ export class ClinicService {
       id: r.id,
       patientName: r.patientName,
       patientId: r.patientId,
-      title: r.title,
+      title: String(r.type).toUpperCase() === 'PRESCRIPTION' ? formatPrescriptionId(r.title || r.id) : r.title,
       category: r.type,
       date: new Date(r.date).toLocaleDateString(),
       size: 'Unknown',

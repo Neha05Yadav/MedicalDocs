@@ -26,8 +26,21 @@ const ROLE_DASHBOARD: Record<string, string> = {
   PATIENT: "/patient/overview",
   HOSPITAL: "/hospital/overview",
   LAB: "/laboratory/overview",
+  LABORATORY: "/laboratory/overview",
+  LAB_MANAGER: "/laboratory/overview",
+  TECHNICIAN: "/laboratory/overview",
   CLINIC: "/clinic/overview",
   DOCTOR: "/clinic/overview",
+  ADMIN: "/management/admin/overview",
+  SUPER_ADMIN: "/management/super-admin/overview",
+  "SUPER ADMIN": "/management/super-admin/overview",
+  MANAGEMENT: "/management/admin/overview",
+  SALES: "/management/sales/overview",
+  "SALES MANAGER": "/management/sales/overview",
+  SUPPORT: "/management/support/overview",
+  "SUPPORT TEAM": "/management/support/overview",
+  ACCOUNTS: "/management/accounts/overview",
+  "ACCOUNTS MANAGER": "/management/accounts/overview",
 };
 
 const ROLE_OPTIONS = [
@@ -75,7 +88,7 @@ function SignupForm() {
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("user", JSON.stringify(data.user));
       document.cookie = `token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
-      toast.success(`Welcome to MediDoc, ${data.user.name}.`);
+      toast.success(`Welcome to MedicalDocs, ${data.user.name}.`);
       router.push(ROLE_DASHBOARD[String(data.user?.role || role).toUpperCase()] ?? "/patient/overview");
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Failed to connect to server");
@@ -86,7 +99,7 @@ function SignupForm() {
 
   return (
     <main className="relative min-h-[100svh] overflow-hidden bg-[#05070b] text-white">
-      <video className="absolute inset-0 size-full object-cover" autoPlay muted loop playsInline preload="metadata" poster="/medidoc-campaign/hero-video-poster.jpg" aria-label="MediDoc connected care journey">
+      <video className="absolute inset-0 size-full object-cover" autoPlay muted loop playsInline preload="metadata" poster="/medidoc-campaign/hero-video-poster.jpg" aria-label="MedicalDocs connected care journey">
         <source src="/medidoc-connected-care.mp4" type="video/mp4" />
       </video>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,7,11,.96)_0%,rgba(5,7,11,.82)_48%,rgba(5,7,11,.64)_100%),linear-gradient(0deg,rgba(5,7,11,.88),transparent_65%)]" />

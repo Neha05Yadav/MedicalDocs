@@ -44,9 +44,10 @@ export default function HospitalDashboard() {
       const token = localStorage.getItem("token");
       if (!token) return;
       
-      const res = await fetch("/api/hospital/overview", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
+      const [res, deptRes] = await Promise.all([
+        fetch("/api/hospital/overview", { headers: { "Authorization": `Bearer ${token}` } }),
+        fetch("/api/hospital/departments", { headers: { "Authorization": `Bearer ${token}` } })
+      ]);
       
       if (res.status === 401) {
         localStorage.removeItem("token");
@@ -57,6 +58,13 @@ export default function HospitalDashboard() {
       if (!res.ok) throw new Error("Failed to fetch overview data");
       
       const overviewData = await res.json();
+      if (deptRes.ok) {
+        const deptData = await deptRes.json();
+        overviewData.departments = deptData.departmentsData || [];
+      } else {
+        overviewData.departments = [];
+      }
+      
       setData(overviewData);
     } catch (e) {
       console.error(e);
@@ -161,23 +169,23 @@ export default function HospitalDashboard() {
       <div className="bg-card ring-1 ring-black/5 rounded-xl p-6">
         <h2 className="text-sm font-semibold mb-6">Department Overview</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { dept: "Cardiology", count: 142, trend: "+5%", icon: Activity },
-            { dept: "Neurology", count: 98, trend: "+2%", icon: TrendingUp },
-            { dept: "Orthopedics", count: 76, trend: "-1%", icon: Activity },
-            { dept: "Pediatrics", count: 124, trend: "+8%", icon: Clock },
-          ].map((d) => (
-            <div key={d.dept} className="p-4 bg-muted/50 rounded-xl">
+          {(data?.departments || []).slice(0, 4).map((d: any) => {
+            const Icon = d.icon || Building2;
+            return (
+            <div key={d.name || d.dept} className="p-4 bg-muted/50 rounded-xl">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{d.dept}</p>
-                <d.icon className="size-4 text-muted-foreground" />
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{d.name || d.dept}</p>
+                <Icon className="size-4 text-muted-foreground" />
               </div>
-              <p className="text-2xl font-bold">{d.count}</p>
-              <p className={`text-xs font-medium mt-1 ${d.trend.startsWith("+") ? "text-emerald" : "text-red"}`}>
-                {d.trend} this week
+              <p className="text-2xl font-bold">{d.patients || d.count || 0}</p>
+              <p className={`text-xs font-medium mt-1 ${(d.trend || "+0%").startsWith("+") ? "text-emerald-500" : "text-red-500"}`}>
+                {d.trend || "+0%"} this week
               </p>
             </div>
-          ))}
+          )})}
+          {(!data?.departments || data.departments.length === 0) && (
+            <div className="col-span-full rounded-xl border border-dashed border-slate-200 p-8 text-center text-sm text-muted-foreground">No department activity is recorded yet.</div>
+          )}
         </div>
       </div>
     </div>

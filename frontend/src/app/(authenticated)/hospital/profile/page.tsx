@@ -12,6 +12,8 @@ const Save = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" 
 const Lock = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
 const Upload = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line></svg>;
 const Trash2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>;
+const ShieldCheck = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>;
+const Clock = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>;
 
 export default function HospitalProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -188,72 +190,80 @@ export default function HospitalProfilePage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto w-full min-h-screen">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-8">
-        {/* Profile Cover & Header */}
-        <div className="h-32 bg-gradient-to-r from-[#0891b2] to-cyan-400 relative"></div>
-        <div className="px-8 pb-8">
-          <div className="relative flex justify-between items-start mt-[-3rem]">
-            <div className="relative shrink-0 group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-              <div className="w-24 h-24 bg-white rounded-full border-4 border-white shadow-lg flex items-center justify-center overflow-hidden relative">
+    <div className="min-h-screen w-full bg-slate-50/60 p-4 sm:p-6 lg:p-8 [&_label]:mb-2 [&_label]:text-[.72rem] [&_label]:font-extrabold [&_label]:tracking-[.1em] [&_input]:min-h-12 [&_input]:rounded-xl [&_input]:px-4 [&_input]:text-base [&_select]:min-h-12 [&_select]:rounded-xl [&_select]:px-4 [&_select]:text-base [&_textarea]:rounded-xl [&_textarea]:px-4 [&_textarea]:py-3 [&_textarea]:text-base [&_input[type=checkbox]]:min-h-0 [&_input[type=checkbox]]:size-5 [&_input[type=checkbox]]:p-0">
+      <section className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="h-2 bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-400" />
+        <div className="p-6 sm:p-8 lg:p-9">
+          <div className="flex flex-col gap-7 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+              <div className="relative shrink-0 group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+              <div className="relative flex size-28 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-lg">
                 {profile.logoUrl ? (
                   <img src={profile.logoUrl} alt="Logo" className="w-full h-full object-cover" />
                 ) : (
-                  <Hospital className="w-10 h-10 text-[#0891b2]" />
+                  <Hospital className="size-12 text-[#0891b2]" />
                 )}
-                
-                {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Upload className="w-6 h-6 text-white" />
+                <div className="absolute inset-0 flex items-center justify-center bg-slate-950/60 opacity-0 transition-opacity group-hover:opacity-100">
+                  <span className="flex flex-col items-center gap-1 text-xs font-bold text-white"><Upload className="size-6" /> Upload logo</span>
                 </div>
               </div>
-              
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                className="hidden" 
-                accept=".jpg,.jpeg,.png"
-                onChange={handleLogoUpload}
-              />
+              <input type="file" ref={fileInputRef} className="hidden" accept=".jpg,.jpeg,.png" onChange={handleLogoUpload} />
             </div>
 
-            <div className="flex gap-3 pt-14">
+              <div>
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-black uppercase tracking-[.2em] text-cyan-700">Facility directory</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700"><ShieldCheck className="size-3.5" /> Registered profile</span>
+                </div>
+                <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{profile.name || "Hospital Name"}</h1>
+                <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-semibold text-slate-500">
+                  <span className="rounded-lg bg-slate-100 px-3 py-1.5 font-mono text-slate-700">ID: {profile.hospitalId || "Pending"}</span>
+                  <span className="inline-flex items-center gap-2"><MapPin className="size-4 text-cyan-600" /> {[profile.city, profile.state, profile.country].filter(Boolean).join(", ") || "Location not provided"}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
               {!isEditing ? (
                 <>
-                  <button onClick={() => setIsEditing(true)} className="px-5 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-sm">
+                  <button onClick={() => setIsEditing(true)} className="rounded-xl bg-[#12224d] px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-cyan-900">
                     Edit Profile
                   </button>
-                  <button onClick={() => setIsPasswordModalOpen(true)} className="px-4 py-2 border border-slate-200 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2">
-                    <Lock className="w-4 h-4" /> Security
+                  <button onClick={() => setIsPasswordModalOpen(true)} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50">
+                    <Lock className="size-4" /> Security
                   </button>
                 </>
               ) : (
                 <>
-                  <button onClick={handleSave} className="px-5 py-2 bg-[#0891b2] text-white text-sm font-semibold rounded-lg hover:bg-cyan-700 transition-colors shadow-sm flex items-center gap-2">
-                    <Save className="w-4 h-4" /> Save
+                  <button onClick={handleSave} className="flex items-center gap-2 rounded-xl bg-[#0891b2] px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-cyan-700">
+                    <Save className="size-4" /> Save changes
                   </button>
-                  <button onClick={() => { setIsEditing(false); fetchProfile(); }} className="px-5 py-2 border border-slate-200 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-colors">
+                  <button onClick={() => { setIsEditing(false); fetchProfile(); }} className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50">
                     Cancel
                   </button>
                 </>
               )}
             </div>
           </div>
-          
-          <div className="mt-4">
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{profile.name || "Hospital Name"}</h1>
-            <p className="text-slate-500 font-mono text-sm mt-0.5">{profile.hospitalId}</p>
+
+          <div className="mt-8 grid grid-cols-2 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 lg:grid-cols-4">
+            <div className="border-b border-r border-slate-200 p-5 lg:border-b-0"><p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Facility type</p><p className="mt-2 text-lg font-black text-slate-900">{profile.type || "Not set"}</p></div>
+            <div className="border-b border-slate-200 p-5 lg:border-b-0 lg:border-r"><p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Established</p><p className="mt-2 text-lg font-black text-slate-900">{profile.establishedYear || "Not set"}</p></div>
+            <div className="border-r border-slate-200 p-5"><p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Working hours</p><p className="mt-2 flex items-center gap-2 text-lg font-black text-slate-900"><Clock className="size-5 text-cyan-600" /> {profile.openingTime && profile.closingTime ? `${profile.openingTime}–${profile.closingTime}` : "Not set"}</p></div>
+            <div className="p-5"><p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Emergency services</p><p className={`mt-2 text-lg font-black ${profile.emergencyServices ? "text-emerald-700" : "text-slate-500"}`}>{profile.emergencyServices ? "Available 24/7" : "Not available"}</p></div>
           </div>
         </div>
+      </section>
 
-        {/* Profile Content */}
-        <div className="border-t border-slate-100">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-6 py-6 sm:px-8"><p className="text-xs font-black uppercase tracking-[.18em] text-cyan-700">Institutional record</p><h2 className="mt-1 text-2xl font-black text-slate-950">Facility information</h2><p className="mt-1 text-sm font-medium text-slate-500">Registration, contacts, administration and operating information.</p></div>
+        <div className="bg-slate-50/70 p-5 sm:p-7">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             
             {/* Hospital Info */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-2 mb-4 text-[#0891b2] font-semibold">
-                <Hospital className="w-5 h-5" /> Hospital Information
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+              <div className="mb-6 flex items-center gap-3 border-b border-slate-100 pb-5 text-lg font-black text-slate-900">
+                <span className="rounded-xl bg-cyan-50 p-3 text-cyan-700"><Hospital className="size-6" /></span> Hospital Information
               </div>
               <div className="grid gap-4">
                 <div>
@@ -296,9 +306,9 @@ export default function HospitalProfilePage() {
             </div>
 
             {/* Contact & Address */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-2 mb-4 text-[#0891b2] font-semibold">
-                <Phone className="w-5 h-5" /> Contact Information
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+              <div className="mb-6 flex items-center gap-3 border-b border-slate-100 pb-5 text-lg font-black text-slate-900">
+                <span className="rounded-xl bg-emerald-50 p-3 text-emerald-700"><Phone className="size-6" /></span> Contact Information
               </div>
               <div className="grid gap-4">
                 <div>
@@ -321,8 +331,8 @@ export default function HospitalProfilePage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 mb-4 mt-8 text-[#0891b2] font-semibold">
-                <MapPin className="w-5 h-5" /> Address
+              <div className="mb-5 mt-8 flex items-center gap-3 border-t border-slate-100 pt-6 text-base font-black text-slate-900">
+                <MapPin className="size-5 text-cyan-700" /> Registered Address
               </div>
               <div className="grid gap-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -349,9 +359,9 @@ export default function HospitalProfilePage() {
             </div>
             
             {/* Administrator Info */}
-            <div className="space-y-6 pt-4 border-t border-slate-100 md:border-0 md:pt-0">
-              <div className="flex items-center gap-2 mb-4 text-[#0891b2] font-semibold">
-                <Mail className="w-5 h-5" /> Administrator Information
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+              <div className="mb-6 flex items-center gap-3 border-b border-slate-100 pb-5 text-lg font-black text-slate-900">
+                <span className="rounded-xl bg-violet-50 p-3 text-violet-700"><Mail className="size-6" /></span> Administrator Information
               </div>
               <div className="grid gap-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -376,9 +386,9 @@ export default function HospitalProfilePage() {
             </div>
 
             {/* Hospital Details */}
-            <div className="space-y-6 pt-4 border-t border-slate-100 md:border-0 md:pt-0">
-              <div className="flex items-center gap-2 mb-4 text-[#0891b2] font-semibold">
-                <Hospital className="w-5 h-5" /> Hospital Details
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+              <div className="mb-6 flex items-center gap-3 border-b border-slate-100 pb-5 text-lg font-black text-slate-900">
+                <span className="rounded-xl bg-amber-50 p-3 text-amber-700"><Clock className="size-6" /></span> Operations & Services
               </div>
               <div className="grid gap-4">
                 <div>
@@ -414,7 +424,7 @@ export default function HospitalProfilePage() {
 
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Password Modal */}
       {isPasswordModalOpen && (

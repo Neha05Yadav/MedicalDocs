@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseInterceptors, UploadedFile, UseGuards } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Post, Put, Delete, Body, Param, Query, UseInterceptors, UploadedFile, UseGuards, StreamableFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { ClinicService } from './clinic.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -43,6 +44,11 @@ export class ClinicController {
     return this.clinicService.updateMyPatient(id, data);
   }
 
+  @Delete('my-patients/:id')
+  async deleteMyPatient(@Param('id') id: string) {
+    return this.clinicService.deleteMyPatient(id);
+  }
+
   @Post('patients/request-access')
   async requestAccess(@Body() body: { patientId: string; reportTypes: string; reason: string; priority: string; duration: string; note?: string }) {
     return this.clinicService.requestAccess(body.patientId, body.reportTypes, body.reason, body.priority, body.duration, body.note || "");
@@ -66,8 +72,27 @@ export class ClinicController {
   }
 
   @Post('prescriptions')
-  async createPrescription(@Body() data: any) {
-    return this.clinicService.createPrescription(data);
+  @UseInterceptors(FileInterceptor('image', {
+    storage: memoryStorage(),
+    limits: { fileSize: 8 * 1024 * 1024 },
+    fileFilter: (_request, file, callback) => {
+      const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+      callback(allowed.includes(file.mimetype) ? null : new BadRequestException('Only JPG, PNG or WebP prescription images are allowed.'), allowed.includes(file.mimetype));
+    },
+  }))
+  async createPrescription(@UploadedFile() image: Express.Multer.File | undefined, @Body() data: any) {
+    return this.clinicService.createPrescription(data, image);
+  }
+
+  @Get('prescriptions/:id/image')
+  async getPrescriptionImage(@Param('id') id: string) {
+    const image = await this.clinicService.getPrescriptionImage(id);
+    const safeName = String(image.fileName || 'prescription-image').replace(/["\r\n]/g, '_');
+    return new StreamableFile(image.content, {
+      type: image.mimeType,
+      disposition: `inline; filename="${safeName}"`,
+      length: Number(image.sizeBytes),
+    });
   }
 
   @Put('prescriptions/:id')

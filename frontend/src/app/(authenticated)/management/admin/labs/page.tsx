@@ -549,12 +549,8 @@ export default function LabManagementPage() {
                         </h4>
                       </div>
                       <div className="space-y-4">
-                        {[
-                          { title: "Equipment Calibrated", desc: "CBC Analyzer maintenance done.", time: "Today, 09:00 AM" },
-                          { title: "Test Batch Processed", desc: "150 samples verified.", time: "Yesterday, 06:30 PM" },
-                          { title: "New Staff Added", desc: "2 Junior Technicians joined.", time: "12 Jun, 10:15 AM" },
-                        ].map((act, i) => (
-                          <div key={i} className="flex items-start gap-3">
+                        {(selectedLab.recentActivity || []).map((act: any) => (
+                          <div key={act.id} className="flex items-start gap-3">
                             <div className="mt-0.5 size-2 rounded-full bg-blue-500 shrink-0"></div>
                             <div>
                               <h5 className="text-sm font-bold text-slate-900 leading-tight">{act.title}</h5>
@@ -563,6 +559,7 @@ export default function LabManagementPage() {
                             </div>
                           </div>
                         ))}
+                        {(!selectedLab.recentActivity || selectedLab.recentActivity.length === 0) && <p className="text-xs italic text-slate-400">No laboratory activity recorded yet.</p>}
                       </div>
                     </div>
                   </div>

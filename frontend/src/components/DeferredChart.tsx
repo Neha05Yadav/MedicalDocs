@@ -6,11 +6,7 @@ export default function DeferredChart({ children }: { children: React.ReactNode 
   const [shouldRender, setShouldRender] = useState(false);
 
   useEffect(() => {
-    // Yield to the main thread and render the chart after initial paint and hydration
-    const timer = setTimeout(() => {
-      setShouldRender(true);
-    }, 150);
-    return () => clearTimeout(timer);
+    setShouldRender(true);
   }, []);
 
   if (!shouldRender) {

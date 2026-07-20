@@ -33,6 +33,16 @@ const nextConfig: NextConfig = {
         destination: '/doctor',
         permanent: true,
       },
+      {
+        source: '/lab-dashboard',
+        destination: '/laboratory',
+        permanent: true,
+      },
+      {
+        source: '/laboratory-dashboard',
+        destination: '/laboratory',
+        permanent: true,
+      },
     ]
   },
 };

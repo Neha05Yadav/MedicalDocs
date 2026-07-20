@@ -19,14 +19,7 @@ const TestTube2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/
 const Microscope = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 18h8"></path><path d="M3 22h18"></path><path d="M14 22a7 7 0 1 0 0-14h-1"></path><path d="M9 14h2"></path><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"></path><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"></path></svg>;
 const CheckCircle2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>;
 
-const patientChartData = [
-  { name: 'Jan', patients: 25 },
-  { name: 'Feb', patients: 45 },
-  { name: 'Mar', patients: 38 },
-  { name: 'Apr', patients: 65 },
-  { name: 'May', patients: 60 },
-  { name: 'Jun', patients: 90 },
-];
+
 
 const getStatusStyles = (status: string) => {
   switch (status) {
@@ -42,6 +35,7 @@ const getStatusStyles = (status: string) => {
 export default function LaboratoryDashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetchOverview();
@@ -49,13 +43,17 @@ export default function LaboratoryDashboard() {
 
   const fetchOverview = async () => {
     try {
+      setError("");
       const res = await fetch("/api/laboratory/overview", { headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` } });
-      if (res.ok) {
-        const jsonData = await res.json();
-        setData(jsonData);
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(payload?.message || `Lab dashboard request failed (${res.status})`);
       }
+      setData(payload);
     } catch (e) {
-      toast.error("Failed to fetch lab overview data.");
+      const message = e instanceof Error ? e.message : "Failed to fetch lab overview data.";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -65,9 +63,21 @@ export default function LaboratoryDashboard() {
     return <div className="p-12 text-center min-h-screen text-slate-500">Loading Dashboard...</div>;
   }
 
-  if (!data) return null;
+  if (!data) {
+    return (
+      <div className="min-h-[70vh] grid place-items-center p-8">
+        <div className="w-full max-w-xl rounded-2xl border border-red-200 bg-white p-8 text-center shadow-sm">
+          <h2 className="text-xl font-extrabold text-slate-900">Lab data could not be loaded</h2>
+          <p className="mt-2 text-sm text-slate-600">{error || "No laboratory workspace was returned by the server."}</p>
+          <button type="button" onClick={() => { setLoading(true); fetchOverview(); }} className="mt-5 rounded-xl bg-cyan-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-cyan-700">
+            Retry live data
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  const { kpis, testRequestOverviewData, reportsSummaryData, recentTestRequests, recentNotifications = [] } = data;
+  const { kpis, testRequestOverviewData, reportsSummaryData, patientChartData, recentTestRequests, recentNotifications = [] } = data;
 
   const getNotificationIcon = (type: string) => {
     switch(type) {

@@ -41,53 +41,35 @@ export default function AdminDashboard() {
 
   const kpis = data?.kpis || {};
   
-  const kpiData = [
-    { title: "Total Patients", value: kpis.patients?.toLocaleString() || "0", trend: "+12.5%", isPositive: true, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-    { title: "Total Doctors", value: kpis.doctors?.toLocaleString() || "0", trend: "+4.2%", isPositive: true, icon: Stethoscope, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { title: "Total Hospitals", value: kpis.hospitals?.toLocaleString() || "0", trend: "+2.1%", isPositive: true, icon: Hospital, color: "text-purple-600", bg: "bg-purple-50" },
-    { title: "Total Reports", value: kpis.reports?.toLocaleString() || "0", trend: "+18.4%", isPositive: true, icon: FileText, color: "text-rose-600", bg: "bg-rose-50" },
+  const rawKpiData = [
+    { title: "Total Patients", value: kpis.patients?.toLocaleString() || "0", trend: "Live", isPositive: true, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+    { title: "Total Doctors", value: kpis.doctors?.toLocaleString() || "0", trend: "Live", isPositive: true, icon: Stethoscope, color: "text-emerald-600", bg: "bg-emerald-50" },
+    { title: "Total Facilities", value: kpis.hospitals?.toLocaleString() || "0", trend: "Live", isPositive: true, icon: Hospital, color: "text-purple-600", bg: "bg-purple-50" },
+    { title: "Total Reports", value: kpis.reports?.toLocaleString() || "0", trend: "Live", isPositive: true, icon: FileText, color: "text-rose-600", bg: "bg-rose-50" },
     { title: "Platform Revenue", value: `₹${kpis.revenue?.toLocaleString() || "0"}`, trend: "+5.4%", isPositive: true, icon: Activity, color: "text-amber-600", bg: "bg-amber-50" },
   ];
+  const kpiData = rawKpiData.map((item) => item.title === "Platform Revenue"
+    ? { ...item, title: "Collected Revenue", value: `₹${kpis.revenue?.toLocaleString() || "0"}`, trend: "Paid invoices" }
+    : item);
 
-  const userDistributionData = [
-    { name: 'Patients', value: kpis.patients || 0, color: '#3b82f6' },
-    { name: 'Doctors', value: kpis.doctors || 0, color: '#10b981' },
-    { name: 'Hospitals', value: kpis.hospitals || 0, color: '#8b5cf6' },
-  ];
+  const userDistributionData = data?.userDistributionData || [];
 
-  const activityDataByPeriod = {
-    "This Week": [
-      { name: 'Mon', reports: 400, tests: 240 },
-      { name: 'Tue', reports: 300, tests: 139 },
-      { name: 'Wed', reports: 200, tests: 980 },
-      { name: 'Thu', reports: 278, tests: 390 },
-      { name: 'Fri', reports: 189, tests: 480 },
-      { name: 'Sat', reports: 239, tests: 380 },
-      { name: 'Sun', reports: 349, tests: 430 },
-    ],
-    "Last Week": [
-      { name: 'Mon', reports: 320, tests: 210 },
-      { name: 'Tue', reports: 250, tests: 150 },
-      { name: 'Wed', reports: 310, tests: 850 },
-      { name: 'Thu', reports: 190, tests: 320 },
-      { name: 'Fri', reports: 240, tests: 410 },
-      { name: 'Sat', reports: 180, tests: 350 },
-      { name: 'Sun', reports: 280, tests: 390 },
-    ],
-    "This Month": [
-      { name: 'Wk 1', reports: 1200, tests: 1840 },
-      { name: 'Wk 2', reports: 1400, tests: 1639 },
-      { name: 'Wk 3', reports: 1100, tests: 2180 },
-      { name: 'Wk 4', reports: 1578, tests: 1890 },
-    ]
+  const activityDataByPeriod = data?.activityDataByPeriod || {
+    "This Week": [],
+    "Last Week": [],
+    "This Month": []
   };
 
-  const recentActivities = [
-    { id: 1, title: "New Hospital Registered", desc: "City Care Hospital joined the network", time: "10 mins ago", icon: Building2, color: "text-emerald-500", bg: "bg-emerald-100" },
-    { id: 2, title: "System Alert", desc: "High traffic detected in Lab module", time: "1 hour ago", icon: Activity, color: "text-amber-500", bg: "bg-amber-100" },
-    { id: 3, title: "Doctor Verified", desc: "Dr. Sharma's credentials verified", time: "2 hours ago", icon: CheckCircle2, color: "text-blue-500", bg: "bg-blue-100" },
-    { id: 4, title: "Batch Reports Processed", desc: "1,200 reports processed successfully", time: "3 hours ago", icon: FileText, color: "text-purple-500", bg: "bg-purple-100" },
-  ];
+  const recentActivities = (data?.recentActivities || []).map((act: any) => ({
+    id: act.id,
+    title: act.title,
+    desc: act.description,
+    time: act.time,
+    icon: act.type === 'New Hospital' ? Building2 : CheckCircle2,
+    color: act.type === 'New Hospital' ? "text-emerald-500" : "text-blue-500",
+    bg: act.type === 'New Hospital' ? "bg-emerald-100" : "bg-blue-100"
+  }));
+
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans">
@@ -119,7 +101,7 @@ export default function AdminDashboard() {
           </div>
           <UserDistributionClient data={userDistributionData} />
           <div className="grid grid-cols-3 gap-4 mt-6">
-            {userDistributionData.map(item => (
+            {userDistributionData.map((item: any) => (
               <div key={item.name} className="text-center">
                 <div className="flex items-center justify-center gap-1.5 mb-1">
                   <div className="size-2.5 rounded-full" style={{ backgroundColor: item.color }}></div>
@@ -139,7 +121,7 @@ export default function AdminDashboard() {
           <h3 className="font-bold text-slate-900 text-lg">Recent Activities</h3>
         </div>
         <div className="space-y-4">
-          {recentActivities.map((activity, idx) => (
+          {recentActivities.map((activity: any, idx: number) => (
             <div key={activity.id} className={`flex items-start gap-4 p-4 rounded-xl ${idx !== recentActivities.length - 1 ? 'border-b border-slate-100' : ''}`}>
               <div className={`p-3 rounded-xl ${activity.bg} ${activity.color} shrink-0`}>
                 <activity.icon className="size-5" />

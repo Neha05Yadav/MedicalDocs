@@ -8,6 +8,40 @@ export class SuperAdminService {
   constructor(private db: MysqlService) {}
 
   async getOverview() {
+    const [users, hospitals, labs, doctors, reports, admins, currentUsers, previousUsers, paidRevenue, monthlyRows] = await Promise.all([
+      this.db.queryOne('SELECT COUNT(*) AS c FROM user'),
+      this.db.queryOne(`SELECT COUNT(*) AS c FROM hospital WHERE LOWER(type) NOT LIKE '%lab%'`),
+      this.db.queryOne(`SELECT COUNT(*) AS c FROM hospital WHERE LOWER(type) LIKE '%lab%'`),
+      this.db.queryOne('SELECT COUNT(*) AS c FROM doctor'),
+      this.db.queryOne('SELECT COUNT(*) AS c FROM medicalrecord'),
+      this.db.queryOne(`SELECT COUNT(*) AS c FROM user WHERE role IN ('Admin','SuperAdmin') AND status = 'Active'`),
+      this.db.queryOne(`SELECT COUNT(*) AS c FROM user WHERE createdAt >= DATE_FORMAT(CURDATE(), '%Y-%m-01')`),
+      this.db.queryOne(`SELECT COUNT(*) AS c FROM user WHERE createdAt >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m-01') AND createdAt < DATE_FORMAT(CURDATE(), '%Y-%m-01')`),
+      this.db.queryOne(`SELECT COALESCE(SUM(totalAmount), 0) AS total FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL')`),
+      this.db.query(`SELECT DATE_FORMAT(date, '%Y-%m') AS monthKey, SUM(totalAmount) AS amount FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL') AND date >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 5 MONTH) GROUP BY monthKey`),
+    ]);
+    const number = (row: any) => Number(row?.c || 0);
+    const format = (value: number) => value >= 1000000 ? `${(value / 1000000).toFixed(1)}M` : value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(value);
+    const current = number(currentUsers), previous = number(previousUsers);
+    const growth = previous === 0 ? (current === 0 ? '0%' : 'New') : `${current >= previous ? '+' : ''}${Math.round(((current - previous) / previous) * 100)}%`;
+    const monthly = new Map(monthlyRows.map(row => [row.monthKey, Number(row.amount || 0)]));
+    const revenueData = Array.from({ length: 6 }, (_, index) => { const date = new Date(); date.setDate(1); date.setMonth(date.getMonth() - (5 - index)); const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; return { month: date.toLocaleDateString('en-US', { month: 'short' }), amount: monthly.get(key) || 0 }; });
+    const maxRevenue = Math.max(...revenueData.map(row => row.amount), 1);
+    const composition = [
+      { region: 'Registered users', count: number(users), color: 'bg-blue-500' },
+      { region: 'Doctors', count: number(doctors), color: 'bg-emerald-500' },
+      { region: 'Hospitals & clinics', count: number(hospitals), color: 'bg-indigo-500' },
+      { region: 'Laboratories', count: number(labs), color: 'bg-amber-500' },
+    ];
+    const maxCount = Math.max(...composition.map(row => row.count), 1);
+    return {
+      stats: { totalUsers: format(number(users)), totalHospitals: format(number(hospitals)), totalLabs: format(number(labs)), totalDoctors: format(number(doctors)), totalReports: format(number(reports)), activeAdmins: format(number(admins)), monthlyGrowth: growth, platformRevenue: `₹${Number(paidRevenue?.total || 0).toLocaleString('en-IN')}` },
+      revenueData: revenueData.map(row => ({ ...row, percent: Math.round((row.amount / maxRevenue) * 100) })),
+      userDistribution: composition.map(row => ({ ...row, users: format(row.count), percent: Math.round((row.count / maxCount) * 100) })),
+    };
+  }
+
+  private async getOverviewLegacy() {
     const totalUsersRow = await this.db.queryOne('SELECT COUNT(*) as c FROM patient');
     const totalHospitalsRow = await this.db.queryOne('SELECT COUNT(*) as c FROM hospital WHERE LOWER(type) LIKE "%hospital%" OR LOWER(type) LIKE "%clinic%"');
     const totalLabsRow = await this.db.queryOne('SELECT COUNT(*) as c FROM hospital WHERE LOWER(type) LIKE "%lab%"');
@@ -77,6 +111,30 @@ export class SuperAdminService {
   }
 
   async getAnalytics() {
+    const [facilities, revenue, records, appointmentDays, testDays, revenueRows, tickets] = await Promise.all([
+      this.db.queryOne(`SELECT COUNT(*) AS c FROM hospital WHERE status = 'Active' AND isVerified = true`),
+      this.db.queryOne(`SELECT COALESCE(SUM(totalAmount),0) AS total FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL') AND date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')`),
+      this.db.queryOne('SELECT COUNT(*) AS c FROM medicalrecord'),
+      this.db.query(`SELECT DATE(createdAt) AS day, COUNT(*) AS c FROM appointment WHERE createdAt >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) GROUP BY DATE(createdAt)`),
+      this.db.query(`SELECT DATE(createdAt) AS day, COUNT(*) AS c FROM testrequest WHERE createdAt >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) GROUP BY DATE(createdAt)`),
+      this.db.query(`SELECT DATE_FORMAT(date, '%Y-%m') AS monthKey, SUM(totalAmount) AS revenue FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL') AND date >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 5 MONTH) GROUP BY monthKey`),
+      this.db.query('SELECT id, ticketId, subject, priority, status, updatedAt FROM support_ticket ORDER BY updatedAt DESC LIMIT 5'),
+    ]);
+    const key = (value: any) => { const date = new Date(value); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
+    const appointments = new Map(appointmentDays.map(row => [key(row.day), Number(row.c)]));
+    const tests = new Map(testDays.map(row => [key(row.day), Number(row.c)]));
+    const apiUsageData = Array.from({ length: 7 }, (_, index) => { const date = new Date(); date.setHours(0,0,0,0); date.setDate(date.getDate() - (6-index)); const day = key(date); return { name: date.toLocaleDateString('en-US',{weekday:'short'}), requests: (appointments.get(day)||0) + (tests.get(day)||0) }; });
+    const monthly = new Map(revenueRows.map(row => [row.monthKey, Number(row.revenue || 0)]));
+    const revenueData = Array.from({ length: 6 }, (_, index) => { const date = new Date(); date.setDate(1); date.setMonth(date.getMonth() - (5-index)); const monthKey = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`; return { month: date.toLocaleDateString('en-US',{month:'short'}), revenue: monthly.get(monthKey)||0 }; });
+    return {
+      kpis: { systemUptime: null, monthlyRevenue: Number(revenue?.total || 0), activeFacilities: Number(facilities?.c || 0), storedRecords: Number(records?.c || 0) },
+      apiUsageData,
+      revenueData,
+      recentLogs: tickets.map(ticket => ({ id: ticket.id, type: String(ticket.priority).toLowerCase() === 'high' ? 'warning' : 'info', message: ticket.subject, source: `${ticket.ticketId} · ${ticket.status}`, time: new Date(ticket.updatedAt).toLocaleString('en-IN') })),
+    };
+  }
+
+  private async getAnalyticsLegacy() {
     const activeFacilitiesRow = await this.db.queryOne('SELECT COUNT(*) as c FROM hospital WHERE status = "Active" AND isVerified = true');
 
     return {
@@ -107,6 +165,34 @@ export class SuperAdminService {
   async getAdmins() {
     const admins = await this.db.query('SELECT id, name, email, role, phone, status, updatedAt as lastLogin FROM user WHERE role IN ("Admin", "SuperAdmin") ORDER BY createdAt DESC');
     return admins;
+  }
+
+  async getAuditLogs() {
+    const rows = await this.db.query('SELECT id, type, title, message, createdAt FROM notification ORDER BY createdAt DESC LIMIT 100');
+    return rows.map(row => ({ id: row.id, action_type: String(row.type || 'INFO').toUpperCase(), user_email: 'system', details: `${row.title || 'Notification'}: ${row.message || ''}`, created_at: row.createdAt }));
+  }
+
+  async getPlatformSettings() {
+    const rows = await this.db.query(`SELECT \`key\`, value FROM setting WHERE \`key\` LIKE 'platform.%'`);
+    return rows.reduce((settings: Record<string, any>, row: any) => { const key = String(row.key).replace(/^platform\./, ''); const value = row.value === 'true' ? true : row.value === 'false' ? false : /^\d+$/.test(String(row.value)) ? Number(row.value) : row.value; settings[key] = value; return settings; }, {});
+  }
+
+  async savePlatformSettings(data: Record<string, any>) {
+    for (const [key, value] of Object.entries(data)) {
+      await this.db.query('INSERT INTO setting (`key`, value, updatedAt) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value), updatedAt = VALUES(updatedAt)', [`platform.${key}`, String(value), new Date()]);
+    }
+    return this.getPlatformSettings();
+  }
+
+  async getPlatformNotifications() {
+    const rows = await this.db.query('SELECT id, type, severity, title, message, isRead, actionRequired, createdAt FROM notification WHERE hospitalId IS NULL ORDER BY createdAt DESC LIMIT 100');
+    return rows.map(row => ({ id: row.id, type: String(row.severity || row.type || 'info').toLowerCase(), title: row.title, message: row.message, is_read: Boolean(row.isRead), action_url: row.actionRequired ? '/management/support/notifications' : null, created_at: row.createdAt }));
+  }
+
+  async updatePlatformNotifications(id?: string, markAll = false) {
+    if (markAll) await this.db.query('UPDATE notification SET isRead = true WHERE hospitalId IS NULL');
+    else if (id) await this.db.query('UPDATE notification SET isRead = true WHERE id = ? AND hospitalId IS NULL', [id]);
+    return { success: true };
   }
 
   async createAdmin(data: any) {

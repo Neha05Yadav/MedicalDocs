@@ -15,6 +15,7 @@ const UploadCloud = (props: any) => <svg {...props} xmlns="http://www.w3.org/200
 const X = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>;
 const Pencil = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="m15 5 4 4"></path></svg>;
 const Trash2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>;
+const ImageIcon = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"></path></svg>;
 
 export default function DoctorPrescriptionsPage() {
   const router = useRouter();
@@ -31,6 +32,10 @@ export default function DoctorPrescriptionsPage() {
   const [dosage, setDosage] = useState("");
   const [duration, setDuration] = useState("");
   const [status, setStatus] = useState("Active");
+  const [prescriptionImage, setPrescriptionImage] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   
   // Lab Test Request State
   const [labs, setLabs] = useState<{id: string, name: string}[]>([]);
@@ -46,6 +51,31 @@ export default function DoctorPrescriptionsPage() {
     fetchPrescriptions();
     fetchLabs();
   }, []);
+
+  useEffect(() => () => {
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+  }, [imagePreviewUrl]);
+
+  const handleImageSelection = (file?: File) => {
+    if (!file) return;
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Only JPG, PNG or WebP images are allowed.");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Prescription image must be smaller than 8 MB.");
+      return;
+    }
+    setPrescriptionImage(file);
+    setImagePreviewUrl(URL.createObjectURL(file));
+  };
+
+  const removeSelectedImage = () => {
+    setPrescriptionImage(null);
+    setImagePreviewUrl("");
+    if (imageInputRef.current) imageInputRef.current.value = "";
+  };
 
   const fetchLabs = async () => {
     try {
@@ -82,31 +112,63 @@ export default function DoctorPrescriptionsPage() {
       toast.error("Please select a Destination Laboratory for the lab test.");
       return;
     }
+    setSubmitting(true);
     try {
+      const formData = new FormData();
+      formData.append("patientId", patientId);
+      formData.append("medicine", medicine);
+      formData.append("dosage", dosage);
+      formData.append("duration", duration);
+      formData.append("status", status);
+      formData.append("labTestName", labTestName);
+      formData.append("labTestPriority", labTestPriority);
+      formData.append("labId", selectedLabId);
+      if (prescriptionImage) formData.append("image", prescriptionImage);
+
       const res = await fetch("/api/clinic/prescriptions", {
         method: "POST",
-        headers: authHeaders(true),
-        body: JSON.stringify({ patientId, medicine, dosage, duration, status, labTestName, labTestPriority, labId: selectedLabId }),
+        headers: authHeaders(),
+        body: formData,
       });
       if (res.ok) {
-        toast.success("Prescription Created!");
+        toast.success(prescriptionImage ? "Prescription and image uploaded!" : "Prescription Created!");
         if (labTestName) toast.success("Lab Test Requested successfully.");
         setActiveTab("view");
         fetchPrescriptions();
         // Reset form
         setPatientId(""); setMedicine(""); setDosage(""); setDuration(""); setStatus("Active"); setLabTestName(""); setLabTestPriority("Normal");
+        removeSelectedImage();
       } else {
-        toast.error("Failed to create prescription");
+        const payload = await res.json().catch(() => null);
+        toast.error(payload?.message || "Failed to create prescription");
       }
     } catch (err) {
       toast.error("Error creating prescription");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleViewImage = async (rx: any) => {
+    try {
+      const response = await fetch(rx.imageUrl, { headers: authHeaders() });
+      if (!response.ok) throw new Error("Prescription image could not be loaded.");
+      const objectUrl = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to open prescription image.");
+    }
+  };
+
+  const handleDelete = async (recordId: string) => {
     if (!confirm("Are you sure you want to delete this prescription?")) return;
     try {
-      const res = await fetch(`/api/clinic/prescriptions/${id}`, { method: "DELETE", headers: authHeaders() });
+      const res = await fetch(`/api/clinic/prescriptions/${encodeURIComponent(recordId)}`, { method: "DELETE", headers: authHeaders() });
       if (res.ok) {
         toast.success("Prescription Deleted");
         fetchPrescriptions();
@@ -127,7 +189,8 @@ export default function DoctorPrescriptionsPage() {
     e.preventDefault();
     if (!selectedPrescription) return;
     try {
-      const res = await fetch(`/api/clinic/prescriptions/${selectedPrescription.id}`, {
+      const recordId = selectedPrescription.recordId || selectedPrescription.id;
+      const res = await fetch(`/api/clinic/prescriptions/${encodeURIComponent(recordId)}`, {
         method: "PUT",
         headers: authHeaders(true),
         body: JSON.stringify({
@@ -150,7 +213,8 @@ export default function DoctorPrescriptionsPage() {
   };
 
   const filteredPrescriptions = prescriptions.filter(rx => {
-    const matchesSearch = rx.patientName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const matchesSearch = rx.patientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          rx.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           rx.medicine?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "All" || rx.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -231,7 +295,7 @@ export default function DoctorPrescriptionsPage() {
                 <tbody className="divide-y divide-slate-100">
                   {filteredPrescriptions.length > 0 ? (
                     filteredPrescriptions.map((rx) => (
-                      <tr key={rx.id} className="hover:bg-slate-50/80 transition-colors group">
+                      <tr key={rx.recordId || rx.id} className="hover:bg-slate-50/80 transition-colors group">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="size-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center shrink-0">
@@ -239,7 +303,7 @@ export default function DoctorPrescriptionsPage() {
                             </div>
                             <div>
                               <div className="font-semibold text-slate-800">{rx.medicine}</div>
-                              <div className="text-[11px] text-slate-500 font-mono mt-0.5" title={rx.id}>ID: {rx.id.substring(0,8)}...</div>
+                              <div className="text-[11px] text-slate-500 font-mono mt-0.5" title={rx.id}>Prescription ID: {rx.id}</div>
                             </div>
                           </div>
                         </td>
@@ -269,6 +333,15 @@ export default function DoctorPrescriptionsPage() {
                         </td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex items-center justify-center gap-2">
+                            {rx.hasImage && (
+                              <button
+                                onClick={() => handleViewImage(rx)}
+                                className="p-2 text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50 rounded-md transition-colors"
+                                title="View Prescription Image"
+                              >
+                                <ImageIcon className="size-4" />
+                              </button>
+                            )}
                             <button 
                               onClick={() => openEditModal(rx)}
                               className="p-2 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors" 
@@ -277,7 +350,7 @@ export default function DoctorPrescriptionsPage() {
                               <Pencil className="size-4" />
                             </button>
                             <button 
-                              onClick={() => handleDelete(rx.id)}
+                              onClick={() => handleDelete(rx.recordId || rx.id)}
                               className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" 
                               title="Delete Prescription"
                             >
@@ -375,6 +448,40 @@ export default function DoctorPrescriptionsPage() {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Prescription Image (Optional)</label>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(event) => handleImageSelection(event.target.files?.[0])}
+                />
+                {imagePreviewUrl ? (
+                  <div className="relative overflow-hidden rounded-2xl border border-cyan-200 bg-cyan-50/40 p-3">
+                    <img src={imagePreviewUrl} alt="Selected prescription preview" className="h-56 w-full rounded-xl bg-white object-contain" />
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-slate-800">{prescriptionImage?.name}</p>
+                        <p className="text-xs text-slate-500">{prescriptionImage ? `${(prescriptionImage.size / 1024 / 1024).toFixed(2)} MB` : ""}</p>
+                      </div>
+                      <button type="button" onClick={removeSelectedImage} className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50">
+                        <X className="size-4" /> Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => imageInputRef.current?.click()}
+                    className="flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-left transition hover:border-cyan-500 hover:bg-cyan-50/40"
+                  >
+                    <span className="grid size-12 place-items-center rounded-xl bg-cyan-100 text-cyan-700"><ImageIcon className="size-6" /></span>
+                    <span><b className="block text-sm text-slate-800">Upload prescription image</b><small className="mt-1 block text-xs text-slate-500">JPG, PNG or WebP - maximum 8 MB</small></span>
+                  </button>
+                )}
+              </div>
+
               {/* Lab Test Addition */}
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 mt-6">
                 <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -435,9 +542,10 @@ export default function DoctorPrescriptionsPage() {
               <div className="pt-4 flex justify-end">
                 <button 
                   type="submit"
-                  className="px-8 py-3 bg-[#0891b2] hover:bg-cyan-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm flex items-center gap-2"
+                  disabled={submitting}
+                  className="px-8 py-3 bg-[#0891b2] hover:bg-cyan-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <UploadCloud className="size-4" /> Issue Prescription
+                  <UploadCloud className="size-4" /> {submitting ? "Uploading..." : "Issue Prescription"}
                 </button>
               </div>
             </form>

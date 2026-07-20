@@ -5,13 +5,8 @@ export function DelayedRender({ children, onShow }: { children: React.ReactNode,
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    // Automatically show the chart after a short delay to avoid blocking initial render
-    const timer = setTimeout(() => {
-      setShow(true);
-      if (onShow) onShow();
-    }, 300); // 300ms delay is enough to let the page load smoothly
-
-    return () => clearTimeout(timer);
+    setShow(true);
+    onShow?.();
   }, [onShow]);
 
   if (!show) {

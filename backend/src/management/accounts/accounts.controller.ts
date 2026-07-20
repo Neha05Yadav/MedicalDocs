@@ -11,6 +11,6 @@ export class AccountsController {
   @Get('billing') getBilling() { return this.managementService.getAccountsBilling(); }
   @Get('refunds') getRefunds() { return { refunds: [] }; }
   @Get('reports') getReports() { return this.managementService.getAccountsOverview(); }
-  @Get('notifications') getNotifications() { return []; }
+  @Get('notifications') getNotifications() { return this.managementService.getAccountsNotifications(); }
   @Post('payment-reminders') sendReminder(@Body('invoiceId') invoiceId?: string) { return this.managementService.sendPaymentReminder(invoiceId); }
 }

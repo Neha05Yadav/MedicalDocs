@@ -27,25 +27,24 @@ export class SuperAdminController {
 
   @Get('audit-logs')
   async getAuditLogs() {
-    return [
-      { id: "1", action_type: "Login", user_email: "admin@medidoc.com", details: "Successful login", created_at: new Date() },
-      { id: "2", action_type: "Update", user_email: "admin@medidoc.com", details: "Updated settings", created_at: new Date() }
-    ];
+    return this.superAdminService.getAuditLogs();
   }
 
   @Get('settings')
   async getSettings() {
-    return {
-      website_name: "Medidoc",
-      maintenance_mode: false,
-      require_2fa: true
-    };
+    return this.superAdminService.getPlatformSettings();
   }
+
+  @Patch('settings')
+  async saveSettings(@Body() body: Record<string, any>) { return this.superAdminService.savePlatformSettings(body); }
 
   @Get('notifications')
   async getNotifications() {
-    return [];
+    return this.superAdminService.getPlatformNotifications();
   }
+
+  @Patch('notifications')
+  async updateNotifications(@Body() body: { id?: string, action: string }) { return this.superAdminService.updatePlatformNotifications(body.id, body.action === 'mark_all_read'); }
 
   @Get('team')
   async getAdmins() {
@@ -69,12 +68,7 @@ export class SuperAdminController {
 
   @Get('team/logs')
   async getAdminLogs(@Query('id') id: string) {
-    return {
-      logs: [
-        { id: 1, action: "Logged in", date: new Date().toISOString() },
-        { id: 2, action: "Updated facility status", date: new Date(Date.now() - 86400000).toISOString() }
-      ]
-    };
+    return { logs: [] };
   }
 
   @Get('users')

@@ -100,7 +100,7 @@ export default function HomePage() {
                 className="mt-8 w-full text-pretty text-base leading-7 text-slate-200 drop-shadow-[0_3px_18px_rgba(0,0,0,0.9)] sm:w-[52vw] sm:text-lg sm:leading-8"
               >
                 A prescription in one clinic. A report in another lab. A decision inside a hospital.
-                MediDoc brings every moment together as one secure, living patient story.
+                MedicalDocs brings every moment together as one secure, living patient story.
               </motion.p>
 
               <motion.div variants={reveal} className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -127,13 +127,13 @@ export default function HomePage() {
               transition={{ duration: 0.9, delay: 0.75, ease: [0.22, 1, 0.36, 1] }}
               className={`${styles.storyRibbon} absolute inset-x-0 bottom-10`}
             >
-              <p>The MediDoc journey</p>
+              <p>The MedicalDocs journey</p>
               <div><span>01 · PATIENT</span><strong>Arrives at the hospital</strong><small>their health identity comes too</small></div>
               <div><span>02 · LAB</span><strong>Verifies the result</strong><small>the report joins their record</small></div>
               <div><span>03 · HOSPITAL</span><strong>Makes an informed decision</strong><small>the full story is in view</small></div>
             </motion.div>
           </motion.div>
-          <a href="#experience" className={styles.scrollCue} aria-label="Scroll to the MediDoc experience">
+          <a href="#experience" className={styles.scrollCue} aria-label="Scroll to the MedicalDocs experience">
             <span>Scroll to explore</span>
             <ChevronDown className="size-4" />
           </a>
@@ -166,7 +166,7 @@ function Navbar() {
   return (
     <header className="fixed inset-x-0 top-3 z-50 transition-all duration-500">
       <nav className={`mx-auto flex h-[4.75rem] w-[94vw] items-center justify-between rounded-full border px-4 transition-all duration-500 sm:px-5 ${scrolled ? "border-white/12 bg-[#061019]/88 shadow-[0_18px_55px_rgba(0,0,0,.34)] backdrop-blur-2xl" : "border-white/[.08] bg-[#061019]/42 backdrop-blur-xl"}`} aria-label="Main navigation">
-        <Link href="/" className="origin-left scale-[.86] rounded-xl transition-opacity hover:opacity-90 sm:scale-[.9]" aria-label="MediDoc home">
+        <Link href="/" className="origin-left scale-[.86] rounded-xl transition-opacity hover:opacity-90 sm:scale-[.9]" aria-label="MedicalDocs home">
           <MediDocBrand />
         </Link>
 
@@ -213,7 +213,7 @@ function Navbar() {
 function NetworkStrip() {
   const items = ["PATIENTS", "CLINICS", "HOSPITALS", "LABORATORIES", "CARE TEAMS", "HEALTH RECORDS"];
   return (
-    <section className="overflow-hidden border-b border-white/10 bg-cyan-300 py-4 text-slate-950" aria-label="Connected MediDoc network">
+    <section className="overflow-hidden border-b border-white/10 bg-cyan-300 py-4 text-slate-950" aria-label="Connected MedicalDocs network">
       <div className={styles.marquee}>
         {[...items, ...items].map((item, index) => (
           <div key={`${item}-${index}`} className="flex shrink-0 items-center gap-6 px-6 text-xs font-black tracking-[0.22em]">
@@ -239,9 +239,9 @@ function ExperienceSection() {
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={stagger} className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
           <motion.div variants={reveal}>
             <p className="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-cyan-300">How the story unfolds</p>
-            <h2 className="w-full text-5xl font-semibold leading-[0.94] tracking-[-0.055em] sm:text-7xl lg:w-[54vw]">A patient enters the hospital.<br /><span className={styles.displayItalic}>MediDoc carries the story.</span></h2>
+            <h2 className="w-full text-5xl font-semibold leading-[0.94] tracking-[-0.055em] sm:text-7xl lg:w-[54vw]">A patient enters the hospital.<br /><span className={styles.displayItalic}>MedicalDocs carries the story.</span></h2>
           </motion.div>
-          <motion.p variants={reveal} className="w-full text-lg leading-8 text-slate-300 lg:w-[38vw] lg:justify-self-end">MediDoc is the thread between every healthcare moment. It lets the patient move forward without leaving prescriptions, reports or clinical context behind.</motion.p>
+          <motion.p variants={reveal} className="w-full text-lg leading-8 text-slate-300 lg:w-[38vw] lg:justify-self-end">MedicalDocs is the thread between every healthcare moment. It lets the patient move forward without leaving prescriptions, reports or clinical context behind.</motion.p>
         </motion.div>
 
         <div className="mt-16 grid gap-5 lg:grid-cols-[1.3fr_.7fr]">
@@ -254,7 +254,7 @@ function ExperienceSection() {
             <div className="absolute inset-x-0 bottom-0 z-10 p-7 sm:p-10">
               <span className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-300">Chapter 01 · Patient + Hospital</span>
               <h3 className="mt-4 w-full text-4xl font-semibold leading-[1.02] tracking-[-0.045em] sm:text-5xl xl:w-[40vw]">The patient arrives. Their medical history arrives with them.</h3>
-              <p className="mt-4 w-full leading-7 text-slate-300 xl:w-[34vw]">A verified MediDoc identity brings essential medical context into the room from the very first conversation.</p>
+              <p className="mt-4 w-full leading-7 text-slate-300 xl:w-[34vw]">A verified MedicalDocs identity brings essential medical context into the room from the very first conversation.</p>
             </div>
           </motion.article>
 
@@ -325,8 +325,8 @@ function CapabilitiesSection() {
       <div className={styles.capabilityAura} aria-hidden="true" />
       <div className="mx-auto w-[90vw]">
         <div className="relative mb-16 flex flex-col justify-between gap-7 md:flex-row md:items-end">
-          <div><p className="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-cyan-300">See MediDoc working</p><h2 className="text-5xl font-semibold tracking-[-0.055em] sm:text-7xl">The story stays alive.<br /><span className={styles.displayItalic}>Every step stays visible.</span></h2></div>
-          <p className="w-full text-base leading-7 text-slate-300 md:w-[34vw]">Not another static record vault. MediDoc turns every care event into a clear, useful timeline for the people who need it.</p>
+          <div><p className="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-cyan-300">See MedicalDocs working</p><h2 className="text-5xl font-semibold tracking-[-0.055em] sm:text-7xl">The story stays alive.<br /><span className={styles.displayItalic}>Every step stays visible.</span></h2></div>
+          <p className="w-full text-base leading-7 text-slate-300 md:w-[34vw]">Not another static record vault. MedicalDocs turns every care event into a clear, useful timeline for the people who need it.</p>
         </div>
 
         <div className="relative grid gap-5 lg:grid-cols-[1.45fr_.75fr]">
@@ -407,7 +407,7 @@ function VisionSection() {
         <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="w-full lg:w-[76vw]">
           <p className="mb-5 text-xs font-black uppercase tracking-[0.26em] text-cyan-700">Our vision for connected healthcare</p>
           <h2 className="text-balance text-5xl font-semibold leading-[.94] tracking-[-.06em] sm:text-7xl md:text-8xl">Information should arrive <span className={styles.displayItalic}>before a patient has to repeat it.</span></h2>
-          <p className="mt-7 w-full text-lg leading-8 text-slate-700 md:w-[52vw]">MediDoc imagines healthcare as one trusted continuum—not a collection of disconnected visits, PDFs and counters.</p>
+          <p className="mt-7 w-full text-lg leading-8 text-slate-700 md:w-[52vw]">MedicalDocs imagines healthcare as one trusted continuum—not a collection of disconnected visits, PDFs and counters.</p>
         </motion.div>
 
         <div className="mt-16 grid gap-4 lg:grid-cols-3">
@@ -438,7 +438,7 @@ function SecuritySection() {
         <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
           <p className="mb-4 text-xs font-bold uppercase tracking-[0.25em] text-cyan-300">Trust is the infrastructure</p>
           <h2 className="text-5xl font-semibold leading-[0.95] tracking-[-0.055em] sm:text-7xl">Sensitive by nature.<br /><span className={styles.displayItalic}>Protected by design.</span></h2>
-          <p className="mt-7 w-full text-lg leading-8 text-slate-400 lg:w-[38vw]">Patient information deserves more than a password. MediDoc builds security into every identity, permission and exchange.</p>
+          <p className="mt-7 w-full text-lg leading-8 text-slate-400 lg:w-[38vw]">Patient information deserves more than a password. MedicalDocs builds security into every identity, permission and exchange.</p>
           <div className="mt-9 grid gap-3 sm:grid-cols-2">{points.map(point => <div key={point} className="flex items-center gap-3 text-sm font-semibold text-slate-300"><span className="grid size-6 place-items-center rounded-full bg-emerald-300/10 text-emerald-300"><Check className="size-3.5" /></span>{point}</div>)}</div>
         </motion.div>
         <motion.div initial={{ opacity: 0, scale: 0.88 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.9 }} className="relative mx-auto grid aspect-square w-[78vw] place-items-center sm:w-[55vw] lg:w-[34vw]">
@@ -463,7 +463,7 @@ function FinalCTA() {
           <Globe2 className="mx-auto mb-7 size-9" />
           <h2 className="text-balance text-5xl font-semibold leading-[0.9] tracking-[-0.065em] sm:text-7xl md:text-8xl">The future of care is already connected.</h2>
           <p className="mx-auto mt-7 w-full text-base font-medium leading-7 text-slate-800/75 md:w-[44vw]">Bring your patients, teams and medical data into one clear, secure experience.</p>
-          <Link href="/signup" className="group mx-auto mt-9 inline-flex items-center gap-3 rounded-full bg-slate-950 px-7 py-4 text-sm font-bold text-white transition hover:scale-[1.03]">Start with MediDoc <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></Link>
+          <Link href="/signup" className="group mx-auto mt-9 inline-flex items-center gap-3 rounded-full bg-slate-950 px-7 py-4 text-sm font-bold text-white transition hover:scale-[1.03]">Start with MedicalDocs <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></Link>
         </div>
       </div>
     </section>
@@ -474,9 +474,9 @@ function Footer() {
   return (
     <footer className="px-5 py-12 sm:px-8 lg:px-12">
       <div className="mx-auto flex w-[92vw] flex-col justify-between gap-8 border-t border-white/10 pt-10 md:flex-row md:items-end">
-        <div><Link href="/" aria-label="MediDoc home"><MediDocBrand compact /></Link><p className="mt-4 w-full text-sm leading-6 text-slate-500 md:w-[28vw]">Connected healthcare, designed around people.</p></div>
+        <div><Link href="/" aria-label="MedicalDocs home"><MediDocBrand compact /></Link><p className="mt-4 w-full text-sm leading-6 text-slate-500 md:w-[28vw]">Connected healthcare, designed around people.</p></div>
         <div className="flex flex-wrap gap-x-7 gap-y-3 text-sm font-medium text-slate-500"><Link href="/patient" className="hover:text-white">Patient</Link><Link href="/clinic" className="hover:text-white">Clinic</Link><Link href="/hospital" className="hover:text-white">Hospital</Link><Link href="/laboratory" className="hover:text-white">Laboratory</Link></div>
-        <p className="text-xs text-slate-600">© {new Date().getFullYear()} MediDoc</p>
+        <p className="text-xs text-slate-600">© {new Date().getFullYear()} MedicalDocs</p>
       </div>
     </footer>
   );

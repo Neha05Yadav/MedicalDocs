@@ -31,7 +31,7 @@ export class HospitalController {
   @Get('doctors')
   async getDoctors(@Request() req: any) {
     try {
-      return await this.hospitalService.getDoctors('hospital@demo.com');
+      return await this.hospitalService.getDoctors(req.user.email);
     } catch (error) {
       console.error("GET DOCTORS ERROR:", error);
       throw error;

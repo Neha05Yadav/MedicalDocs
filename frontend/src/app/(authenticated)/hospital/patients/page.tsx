@@ -244,11 +244,11 @@ export default function PatientSearchVerificationPage() {
       const safePhone = newPatientData.mobile || '000';
       const last3Phone = safePhone.length >= 3 ? safePhone.slice(-3) : safePhone.padStart(3, '0');
       const last2Year = new Date().getFullYear().toString().slice(-2);
-      const mockPatientId = (newPatientData.patientId && newPatientData.patientId.trim() !== '') ? newPatientData.patientId : `${initials}${last3Phone}${last2Year}`;
+      const patientId = (newPatientData.patientId && newPatientData.patientId.trim() !== '') ? newPatientData.patientId : `${initials}${last3Phone}${last2Year}`;
       
       setHospitalPatients([{ 
         name: newPatientData.name, 
-        patientId: mockPatientId,
+        patientId,
         department: newPatientData.department, 
         doctor: doctorName, 
         status: "Stable" 

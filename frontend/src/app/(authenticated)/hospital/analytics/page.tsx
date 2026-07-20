@@ -43,50 +43,58 @@ export default function AnalyticsPage() {
   const monthlyData = Array.isArray(data?.monthlyData) ? data.monthlyData : [];
   const deptDistribution = Array.isArray(data?.deptDistribution) ? data.deptDistribution : [];
   return (
-    <div className="p-8">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,.09),transparent_28rem)] p-5 md:p-8">
       {/* KPI Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="mb-7 flex items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[.18em] text-cyan-600">Live operational view</p>
+          <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-900">Performance at a glance</h2>
+          <p className="mt-1 text-sm text-slate-500">Updated from your hospital records and appointment activity.</p>
+        </div>
+        <span className="hidden items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 sm:flex"><span className="size-2 animate-pulse rounded-full bg-emerald-500" />Live database</span>
+      </div>
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((k: any, i: number) => {
           // Map icons based on index since backend just sends labels
           const Icon = i === 0 ? Users : i === 1 ? Activity : i === 2 ? CalendarDays : FileText;
           return (
-            <div key={k.label} className="bg-card ring-1 ring-black/5 rounded-xl p-5">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{k.label}</p>
-                <Icon className="size-4 text-muted-foreground" />
+            <div key={k.label} className="group rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,.045)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(15,23,42,.08)]">
+              <div className="mb-4 flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-[.12em] text-slate-500">{k.label}</p>
+                <span className="grid size-10 place-items-center rounded-xl bg-slate-50 text-cyan-600 transition group-hover:bg-cyan-50"><Icon className="size-5" /></span>
               </div>
               <div className="flex items-end gap-2">
-                <p className="text-2xl font-bold">{k.value}</p>
-                {k.trend && <span className={`text-xs font-medium mb-1 ${String(k.trend).startsWith("+") ? "text-emerald-500" : "text-red-500"}`}>{k.trend}</span>}
+                <p className="text-3xl font-black tracking-tight text-slate-900">{k.value}</p>
+                {k.trend && <span className={`mb-1 rounded-full px-2 py-0.5 text-xs font-bold ${String(k.trend).startsWith("-") ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}>{k.trend}</span>}
               </div>
             </div>
           );
         })}
       </div>
-      <div className="grid lg:grid-cols-2 gap-8 mb-8">
+      <div className="mb-6">
         {/* Monthly Trend */}
-        <div className="bg-card ring-1 ring-black/5 rounded-xl p-6">
-          <h2 className="text-sm font-semibold mb-6">Monthly Trends</h2>
-          <MonthlyTrendChart data={monthlyData} />
-        </div>
-        {/* Department Distribution */}
-        <div className="bg-card ring-1 ring-black/5 rounded-xl p-6">
-          <h2 className="text-sm font-semibold mb-6">Department Distribution</h2>
-          <DepartmentDistributionChart data={deptDistribution} />
-          <div className="flex flex-wrap gap-3 mt-4 justify-center">
-            {deptDistribution.map((d: any) => (
-              <span key={d.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="size-2 rounded-full" style={{ backgroundColor: d.color }} />
-                {d.name}
-              </span>
-            ))}
+        <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-[0_16px_50px_rgba(15,23,42,.06)]">
+          <div className="h-1 w-full bg-gradient-to-r from-cyan-500 via-indigo-500 to-violet-500" />
+          <div className="p-5 md:p-7">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div><span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-cyan-700">Clinical flow</span><h2 className="mt-3 text-xl font-black text-slate-900">Patient activity trend</h2><p className="mt-1 text-sm text-slate-500">Unique patients and appointments across the last six months</p></div>
+            <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-1.5 text-xs font-bold text-slate-600"><span className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 shadow-sm"><i className="size-2.5 rounded-full bg-cyan-500" />Patients</span><span className="flex items-center gap-2 px-3 py-2"><i className="size-2.5 rounded-full bg-indigo-500" />Appointments</span></div>
           </div>
-        </div>
+          <MonthlyTrendChart data={monthlyData} />
+          </div>
+        </section>
       </div>
-      {/* Report Stats */}
-      <div className="bg-card ring-1 ring-black/5 rounded-xl p-6">
-        <h2 className="text-sm font-semibold mb-6">Report Statistics</h2>
-        <ReportStatisticsChart data={monthlyData} />
+      <div className="grid gap-6 xl:grid-cols-2">
+        {/* Department Distribution */}
+        <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,.05)] md:p-6">
+          <div className="mb-4 flex items-start justify-between gap-3"><div><h2 className="text-lg font-black text-slate-900">Department ranking</h2><p className="mt-1 text-sm text-slate-500">Appointments by clinical department</p></div><span className="grid size-11 place-items-center rounded-2xl bg-cyan-50 text-cyan-600"><BarChart3 className="size-5" /></span></div>
+          <DepartmentDistributionChart data={deptDistribution} />
+        </section>
+        {/* Report Stats */}
+        <section className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,.05)] md:p-6">
+          <div className="mb-4 flex items-start justify-between gap-3"><div><h2 className="text-lg font-black text-slate-900">Report volume</h2><p className="mt-1 text-sm text-slate-500">Medical records uploaded each month</p></div><span className="rounded-xl bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700">Last 6 months</span></div>
+          <ReportStatisticsChart data={monthlyData} />
+        </section>
       </div>
     </div>
   );

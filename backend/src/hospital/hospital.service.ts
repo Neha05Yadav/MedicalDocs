@@ -3,6 +3,7 @@ import { MysqlService } from '../mysql.service';
 import { v4 as uuidv4 } from 'uuid';
 import * as bcrypt from 'bcrypt';
 import { RedisService } from '../redis/redis.service';
+import { formatPrescriptionId, formatPrescriptionRecord } from '../prescription-id';
 
 @Injectable()
 export class HospitalService {
@@ -12,7 +13,13 @@ export class HospitalService {
   ) {}
 
   private async getHospitalByEmail(userEmail: string) {
-    const hospital = await this.db.queryOne('SELECT * FROM hospital WHERE email = ? AND type = "HOSPITAL"', [userEmail]);
+    let hospital = await this.db.queryOne('SELECT * FROM hospital WHERE email = ? AND type = "HOSPITAL"', [userEmail]);
+    if (!hospital) {
+      const user = await this.db.queryOne('SELECT hospitalId FROM user WHERE email = ?', [userEmail]);
+      if (user && user.hospitalId) {
+        hospital = await this.db.queryOne('SELECT * FROM hospital WHERE id = ? AND type = "HOSPITAL"', [user.hospitalId]);
+      }
+    }
     if (!hospital) throw new UnauthorizedException('No hospital workspace is linked to this identity.');
     return hospital;
   }
@@ -61,10 +68,10 @@ export class HospitalService {
         name: req.hospitalPatientName || req.patientName,
         mobile: req.hospitalPatientMobile || req.patientPhone,
         admissionInfo: req.admissionInfo || '',
-        department: req.doctorSpec || 'Laboratory',
+        department: req.doctorSpec || 'Not assigned',
         doctorId: req.doctorId,
-        doctor: req.doctorName || 'Lab Admin',
-        status: req.status === 'APPROVED' ? 'Stable' : 'Pending Labs'
+        doctor: req.doctorName || 'Not assigned',
+        status: req.status === 'APPROVED' ? 'Access approved' : req.status
     }));
 
     const reportRows = await this.db.query(`
@@ -73,13 +80,31 @@ export class HospitalService {
       WHERE hospitalId = ? AND date >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
       GROUP BY DATE(date)
     `, [hospital.id]);
-    const reportsByDate = new Map(reportRows.map(row => [new Date(row.reportDate).toISOString().slice(0, 10), Number(row.reports)]));
+    const localDateKey = (value: any) => { const date = new Date(value); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
+    const reportsByDate = new Map(reportRows.map(row => [localDateKey(row.reportDate), Number(row.reports)]));
     const reportStats = Array.from({ length: 7 }, (_, offset) => {
       const date = new Date();
       date.setDate(date.getDate() - (6 - offset));
-      const key = date.toISOString().slice(0, 10);
+      const key = localDateKey(date);
       return { name: date.toLocaleDateString('en-US', { weekday: 'short' }), reports: reportsByDate.get(key) || 0 };
     });
+
+    const deptStatsRow = await this.db.query(`
+      SELECT d.specialization as name, COUNT(DISTINCT d.id) as doctors, COUNT(a.id) as patients,
+        SUM(CASE WHEN a.dateTime >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) THEN 1 ELSE 0 END) AS currentWeek,
+        SUM(CASE WHEN a.dateTime >= DATE_SUB(CURDATE(), INTERVAL 13 DAY) AND a.dateTime < DATE_SUB(CURDATE(), INTERVAL 6 DAY) THEN 1 ELSE 0 END) AS previousWeek
+      FROM doctor d
+      LEFT JOIN appointment a ON d.id = a.doctorId
+      WHERE d.hospitalId = ?
+      GROUP BY d.specialization
+    `, [hospital.id]);
+    
+    const departmentsData = deptStatsRow.map(row => ({
+      name: row.name,
+      doctors: Number(row.doctors),
+      patients: Number(row.patients),
+      trend: Number(row.previousWeek) === 0 ? (Number(row.currentWeek) === 0 ? '0%' : 'New') : `${Number(row.currentWeek) >= Number(row.previousWeek) ? '+' : ''}${Math.round(((Number(row.currentWeek) - Number(row.previousWeek)) / Number(row.previousWeek)) * 100)}%`
+    }));
 
     const result = {
         totalDoctors: doctorsCountRow ? Number(doctorsCountRow.c) : 0,
@@ -87,7 +112,8 @@ export class HospitalService {
         reportsUploaded: recordsCountRow ? Number(recordsCountRow.c) : 0,
         totalDepartments: distinctDeptsRow.length,
         activePatients: activePatients,
-        reportStats
+        reportStats,
+        departments: departmentsData
     };
     await this.redisService.set(cacheKey, result, 300);
     return result;
@@ -336,7 +362,7 @@ export class HospitalService {
       });
     }
 
-    return reports;
+    return reports.map(formatPrescriptionRecord);
   }
 
   async createLabRequest(userEmail: string, data: any) {
@@ -463,7 +489,7 @@ export class HospitalService {
 
     const formatted = reports.map((r: any) => ({
       id: r.id,
-      docName: r.title,
+      docName: String(r.type).toUpperCase() === 'PRESCRIPTION' ? formatPrescriptionId(r.title || r.id) : r.title,
       type: r.type,
       uploadDate: new Date(r.date).toLocaleDateString(),
       fileUrl: r.fileUrl

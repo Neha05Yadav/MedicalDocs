@@ -23,7 +23,7 @@ export default function RecordsAndReportsPage() {
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [activeCard, setActiveCard] = useState<string | null>(null);
+  const [activeCard, setActiveCard] = useState<string>("All Providers");
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -49,7 +49,7 @@ export default function RecordsAndReportsPage() {
       });
       if (!res.ok) throw new Error("Failed to fetch records");
       const data = await res.json();
-      setRecords(data.myUploads || []);
+      setRecords((data.myUploads || []).filter((record: any) => record.type?.toUpperCase() !== "PRESCRIPTION"));
     } catch (e) {
       console.error(e);
       toast.error("Failed to load records");
@@ -103,100 +103,50 @@ export default function RecordsAndReportsPage() {
     </div>;
   }
 
+  const patientUploads = records.filter((record) => record.hospitalName === "Uploaded by Patient");
+  const providerReports = records.filter((record) => record.hospitalName !== "Uploaded by Patient");
+  const visibleReports = activeCard === "My Uploads"
+    ? patientUploads
+    : providerReports.filter((record) => {
+        if (activeCard === "All Providers") return true;
+        const facilityType = record.hospitalType?.toUpperCase();
+        if (activeCard === "Laboratory") return facilityType === "LAB" || facilityType === "LABORATORY";
+        return facilityType === activeCard.toUpperCase();
+      });
+
   return (
     <div className="p-6 md:p-10 max-w-[1200px] mx-auto min-h-screen">
-      {/* My Uploads Section */}
+      {/* Provider reports and patient uploads */}
       <section className="bg-white rounded-2xl border border-slate-200/80 p-1 mb-8 shadow-sm">
         <div className="p-7 2xl:p-8">
-          <div className="mb-7 flex items-start justify-between">
-            <div className="flex items-center gap-5">
-              <div className="rounded-2xl bg-cyan-50/80 p-4 text-cyan-600">
-                <User className="size-8" />
-              </div>
-              <div>
-                <h2 className="text-[clamp(1.6rem,1.5vw,2rem)] font-extrabold tracking-tight text-slate-900">My Uploads</h2>
-                <p className="mt-1 text-[clamp(1rem,.9vw,1.2rem)] text-slate-500">Documents and reports uploaded by you.</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => setIsUploadModalOpen(true)}
-              className="flex items-center gap-3 rounded-xl bg-[#12224d] px-6 py-3.5 text-[clamp(1rem,.88vw,1.16rem)] font-bold text-white shadow-sm transition-colors hover:bg-cyan-900"
-            >
-              <Upload className="size-5" /> Upload Report
-            </button>
-          </div>
-          
-          <div className="overflow-x-auto rounded-xl border border-slate-200/70">
-            {records.filter(r => r.hospitalName === "Uploaded by Patient").length === 0 ? (
-               <div className="text-center py-10 text-slate-500">No personal uploads found. Click 'Upload Report' to add one.</div>
-            ) : (
-              <table className="w-full text-left text-[clamp(1rem,.88vw,1.16rem)]">
-                <thead className="bg-slate-50/50 border-b border-slate-200/70 text-slate-500 font-medium">
-                  <tr>
-                    <th className="px-6 py-5 font-bold">File Name</th>
-                    <th className="px-6 py-5 font-bold">Type</th>
-                    <th className="px-6 py-5 font-bold">Upload Date</th>
-                    <th className="px-6 py-5 font-bold">Size</th>
-                    <th className="px-6 py-5 text-center font-bold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100/80">
-                  {records.filter(r => r.hospitalName === "Uploaded by Patient").map((file) => (
-                    <tr key={file.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-4">
-                          {file.fileType === 'pdf' ? (
-                            <div className="rounded-xl bg-red-50 p-2.5 text-red-500"><FileText className="size-5" /></div>
-                          ) : (
-                            <div className="rounded-xl bg-white p-2.5 text-emerald-500"><ImageIcon className="size-5" /></div>
-                          )}
-                          <span className="font-semibold text-slate-800">{file.fileName}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <span className={`rounded-full px-3.5 py-2 text-[clamp(.88rem,.75vw,1rem)] font-extrabold ${file.typeColor}`}>
-                          {file.type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-5 font-semibold text-slate-600">{file.uploadDate}</td>
-                      <td className="px-6 py-5 font-semibold text-slate-600">{file.size}</td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center justify-center gap-4 text-slate-400">
-                          <button 
-                            onClick={() => setSelectedReportDetails(file)}
-                            className="hover:text-cyan-600 transition-colors"
-                          >
-                            <Eye className="size-6" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Hospital/Lab Uploads Section */}
-      <section className="bg-white rounded-2xl border border-slate-200/80 p-1 mb-8 shadow-sm">
-        <div className="p-7 2xl:p-8">
-          <div className="flex justify-between items-start mb-6">
+          <div className="flex justify-between items-start mb-7">
             <div className="flex items-center gap-4">
               <div className="rounded-2xl bg-emerald-50/80 p-4 text-emerald-600">
                 <Info className="size-8" />
               </div>
               <div>
-                <h2 className="text-[clamp(1.6rem,1.5vw,2rem)] font-extrabold tracking-tight text-slate-900">Hospital & Lab Reports</h2>
-                <p className="mt-1 text-[clamp(1rem,.9vw,1.2rem)] text-slate-500">Documents uploaded by healthcare facilities.</p>
+                <h2 className="text-[clamp(1.6rem,1.5vw,2rem)] font-extrabold tracking-tight text-slate-900">Health Records</h2>
+                <p className="mt-1 text-[clamp(1rem,.9vw,1.2rem)] text-slate-500">Facility reports and documents uploaded by you.</p>
               </div>
             </div>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(300px,0.8fr)]">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5">
+              <button
+                onClick={() => setActiveCard("All Providers")}
+                className="mb-4 flex w-full items-center justify-between text-left"
+              >
+                <span>
+                  <span className="block text-lg font-extrabold text-slate-900">Hospital, Clinic & Lab Reports</span>
+                  <span className="mt-1 block text-sm font-medium text-slate-500">Reports shared by your connected healthcare providers</span>
+                </span>
+                <span className="rounded-full bg-white px-3 py-1.5 text-sm font-extrabold text-slate-700 shadow-sm">{providerReports.length}</span>
+              </button>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <button 
-              onClick={() => setActiveCard(activeCard === 'Hospital' ? null : 'Hospital')}
+              onClick={() => setActiveCard('Hospital')}
               className={`flex items-center p-5 rounded-2xl border text-left transition-all ${activeCard === 'Hospital' ? 'border-emerald-500 shadow-md bg-emerald-50/20' : 'border-slate-200 hover:border-emerald-300 hover:shadow-sm bg-white'}`}
             >
               <div className={`p-3 rounded-xl mr-4 ${activeCard === 'Hospital' ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-600'}`}>
@@ -209,7 +159,7 @@ export default function RecordsAndReportsPage() {
             </button>
 
             <button 
-              onClick={() => setActiveCard(activeCard === 'Clinic' ? null : 'Clinic')}
+              onClick={() => setActiveCard('Clinic')}
               className={`flex items-center p-5 rounded-2xl border text-left transition-all ${activeCard === 'Clinic' ? 'border-blue-500 shadow-md bg-blue-50/20' : 'border-slate-200 hover:border-blue-300 hover:shadow-sm bg-white'}`}
             >
               <div className={`p-3 rounded-xl mr-4 ${activeCard === 'Clinic' ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-600'}`}>
@@ -222,7 +172,7 @@ export default function RecordsAndReportsPage() {
             </button>
 
             <button 
-              onClick={() => setActiveCard(activeCard === 'Laboratory' ? null : 'Laboratory')}
+              onClick={() => setActiveCard('Laboratory')}
               className={`flex items-center p-5 rounded-2xl border text-left transition-all ${activeCard === 'Laboratory' ? 'border-purple-500 shadow-md bg-purple-50/20' : 'border-slate-200 hover:border-purple-300 hover:shadow-sm bg-white'}`}
             >
               <div className={`p-3 rounded-xl mr-4 ${activeCard === 'Laboratory' ? 'bg-purple-500 text-white' : 'bg-purple-50 text-purple-600'}`}>
@@ -233,30 +183,63 @@ export default function RecordsAndReportsPage() {
                 <p className="text-sm text-slate-500 font-medium">{records.filter(r => r.hospitalType?.toUpperCase() === 'LAB' || r.hospitalType?.toUpperCase() === 'LABORATORY').length} Reports</p>
               </div>
             </button>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setActiveCard("My Uploads")}
+              className={`group flex min-h-full flex-col justify-between rounded-2xl border p-6 text-left transition-all ${activeCard === "My Uploads" ? "border-cyan-500 bg-cyan-50/70 shadow-md" : "border-cyan-200 bg-gradient-to-br from-cyan-50 to-white hover:border-cyan-400 hover:shadow-md"}`}
+            >
+              <span>
+                <span className="mb-5 flex items-center justify-between">
+                  <span className={`rounded-2xl p-4 ${activeCard === "My Uploads" ? "bg-cyan-600 text-white" : "bg-white text-cyan-600 shadow-sm"}`}>
+                    <User className="size-8" />
+                  </span>
+                  <span className="text-3xl font-black text-slate-900">{patientUploads.length}</span>
+                </span>
+                <span className="block text-xl font-extrabold text-slate-900">My Uploads</span>
+                <span className="mt-1 block text-sm font-medium leading-6 text-slate-500">Reports uploaded personally from your device.</span>
+              </span>
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setIsUploadModalOpen(true);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setIsUploadModalOpen(true);
+                  }
+                }}
+                className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl bg-[#12224d] px-5 py-3.5 text-base font-bold text-white shadow-sm transition-colors group-hover:bg-cyan-900"
+              >
+                <Upload className="size-5" /> Upload Report
+              </span>
+            </button>
           </div>
 
-          {activeCard && (
-            <div className="overflow-x-auto rounded-xl border border-slate-200/70 mt-4 animate-in fade-in slide-in-from-top-4 duration-300">
-              {records.filter(r => 
-                (activeCard === 'Laboratory' ? (r.hospitalType?.toUpperCase() === 'LAB' || r.hospitalType?.toUpperCase() === 'LABORATORY') : r.hospitalType?.toUpperCase() === activeCard.toUpperCase())
-              ).length === 0 ? (
-                 <div className="text-center py-10 text-slate-500 bg-slate-50">No reports found for this category.</div>
+          <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200/70 animate-in fade-in slide-in-from-top-4 duration-300">
+              {visibleReports.length === 0 ? (
+                 <div className="bg-slate-50 px-6 py-12 text-center text-slate-500">
+                   {activeCard === "My Uploads" ? "No personal uploads found. Use 'Upload Report' to add one." : "No reports found for this category."}
+                 </div>
               ) : (
                 <table className="w-full text-left text-[clamp(1rem,.88vw,1.16rem)]">
                   <thead className="bg-slate-50/50 border-b border-slate-200/70 text-slate-500 font-medium">
                     <tr>
                       <th className="px-6 py-5 font-bold">File Name</th>
                       <th className="px-6 py-5 font-bold">Type</th>
-                      <th className="px-6 py-5 font-bold">Source Facility</th>
+                      {activeCard !== "My Uploads" && <th className="px-6 py-5 font-bold">Source Facility</th>}
                       <th className="px-6 py-5 font-bold">Upload Date</th>
                       <th className="px-6 py-5 font-bold">Size</th>
                       <th className="px-6 py-5 text-center font-bold">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100/80">
-                    {records.filter(r => 
-                      (activeCard === 'Laboratory' ? (r.hospitalType?.toUpperCase() === 'LAB' || r.hospitalType?.toUpperCase() === 'LABORATORY') : r.hospitalType?.toUpperCase() === activeCard.toUpperCase())
-                    ).map((file) => (
+                    {visibleReports.map((file) => (
                       <tr key={file.id} className="hover:bg-slate-50/50 transition-colors bg-white">
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-4">
@@ -273,14 +256,14 @@ export default function RecordsAndReportsPage() {
                             {file.type}
                           </span>
                         </td>
-                        <td className="px-6 py-5">
+                        {activeCard !== "My Uploads" && <td className="px-6 py-5">
                           <div className="flex flex-col">
                             <span className="text-slate-800 font-semibold">{file.hospitalName}</span>
                             <span className="mt-1 flex items-center gap-1.5 text-[clamp(.84rem,.7vw,.94rem)] font-medium text-slate-500">
                               <User className="size-4" /> Doctor Assigned
                             </span>
                           </div>
-                        </td>
+                        </td>}
                         <td className="px-6 py-5 font-semibold text-slate-600">{file.uploadDate}</td>
                         <td className="px-6 py-5 font-semibold text-slate-600">{file.size}</td>
                         <td className="px-6 py-5">
@@ -298,8 +281,7 @@ export default function RecordsAndReportsPage() {
                   </tbody>
                 </table>
               )}
-            </div>
-          )}
+          </div>
         </div>
       </section>
 

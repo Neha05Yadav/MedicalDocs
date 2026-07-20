@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException, UnauthorizedExcepti
 import { MysqlService } from '../mysql.service';
 import { v4 as uuidv4 } from 'uuid';
 import { RedisService } from '../redis/redis.service';
+import { formatPrescriptionId } from '../prescription-id';
 
 @Injectable()
 export class LaboratoryService {
@@ -11,10 +12,16 @@ export class LaboratoryService {
   ) {}
 
 
-  private async getHospitalContext(userEmail?: string): Promise<any> {
+  private async getHospitalContext(userEmail: string | undefined) {
     let hospital: any = null;
     if (userEmail) {
       hospital = await this.db.queryOne('SELECT * FROM hospital WHERE email = ? AND type IN ("LABORATORY", "LAB")', [userEmail]);
+      if (!hospital) {
+        const user = await this.db.queryOne('SELECT hospitalId FROM user WHERE email = ?', [userEmail]);
+        if (user && user.hospitalId) {
+          hospital = await this.db.queryOne('SELECT * FROM hospital WHERE id = ? AND type IN ("LABORATORY", "LAB")', [user.hospitalId]);
+        }
+      }
     }
     if (!hospital) throw new UnauthorizedException('No laboratory workspace is linked to this identity.');
     return hospital;
@@ -66,6 +73,9 @@ export class LaboratoryService {
     const reportTypeRows = await this.db.query(`SELECT COALESCE(testType, 'Other') AS name, COUNT(*) AS value FROM testrequest WHERE hospitalId = ? GROUP BY testType ORDER BY value DESC LIMIT 6`, [hospital.id]);
     const reportColors = ['#3b82f6', '#10b981', '#f59e0b', '#6366f1', '#ec4899', '#14b8a6'];
 
+    const monthlyRows = await this.db.query(`SELECT DATE_FORMAT(createdAt, '%b') AS name, COUNT(DISTINCT patientId) AS patients FROM testrequest WHERE hospitalId = ? AND createdAt >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH) GROUP BY name ORDER BY MIN(createdAt)`, [hospital.id]);
+    const recentNotifications = await this.db.query('SELECT id, type, title, message, createdAt FROM notification WHERE hospitalId = ? ORDER BY createdAt DESC LIMIT 3', [hospital.id]);
+
     const result = {
       kpis: {
         totalRequests,
@@ -80,8 +90,9 @@ export class LaboratoryService {
         { name: 'Completed', value: completedTests, color: '#10b981' }
       ],
       reportsSummaryData: reportTypeRows.map((row, index) => ({ name: row.name, value: Number(row.value), color: reportColors[index % reportColors.length] })),
+      patientChartData: monthlyRows.length > 0 ? monthlyRows.map(r => ({ name: r.name, patients: Number(r.patients) })) : [],
       recentTestRequests: recentRequests,
-      recentNotifications: []
+      recentNotifications
     };
 
     await this.redisService.set(cacheKey, result, 300);
@@ -193,8 +204,8 @@ export class LaboratoryService {
       title: r.title,
       category: r.description || 'Lab Report',
       date: new Date(r.date).toLocaleDateString(),
-      size: '1.2 MB',
-      status: 'Sent'
+      size: r.fileSize ? `${(Number(r.fileSize) / 1048576).toFixed(1)} MB` : 'Stored securely',
+      status: r.status || 'Available'
       ,fileUrl: r.fileUrl
     }));
   }
@@ -320,7 +331,7 @@ export class LaboratoryService {
 
     return records.map(r => ({
       id: r.id,
-      name: r.title,
+      name: String(r.type).toUpperCase() === 'PRESCRIPTION' ? formatPrescriptionId(r.title || r.id) : r.title,
       date: new Date(r.date).toLocaleDateString(),
       facility: r.hospitalName || 'Unknown Facility',
       type: r.type,

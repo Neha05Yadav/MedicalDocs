@@ -58,10 +58,32 @@ export class ManagementService {
 
   async getSalesRevenue() {
     const overview = await this.getSalesOverview();
-    const total = await this.db.queryOne(`SELECT COALESCE(SUM(totalAmount), 0) AS value FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL')`);
+    const [total, currentMonth, previousMonth, currentYear, previousYear] = await Promise.all([
+      this.db.queryOne(`SELECT COALESCE(SUM(totalAmount), 0) AS value FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL')`),
+      this.db.queryOne(`SELECT COALESCE(SUM(totalAmount), 0) AS value FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL') AND date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')`),
+      this.db.queryOne(`SELECT COALESCE(SUM(totalAmount), 0) AS value FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL') AND date >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m-01') AND date < DATE_FORMAT(CURDATE(), '%Y-%m-01')`),
+      this.db.queryOne(`SELECT COALESCE(SUM(totalAmount), 0) AS value FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL') AND YEAR(date) = YEAR(CURDATE())`),
+      this.db.queryOne(`SELECT COALESCE(SUM(totalAmount), 0) AS value FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL') AND YEAR(date) = YEAR(CURDATE()) - 1`),
+    ]);
     const totalValue = Number(total?.value || 0);
-    const monthlyValue = overview.revenueData.at(-1)?.value || 0;
-    return { kpi: { totalRevenue: this.money(totalValue), monthlyRevenue: this.money(monthlyValue), annualRevenue: this.money(totalValue), renewalRevenue: this.money(0) }, revenueData: overview.revenueData.map(row => ({ month: row.name, revenue: row.value, target: 0 })), sourceData: [{ name: 'Hospital billing', revenue: this.money(totalValue), percent: totalValue > 0 ? 100 : 0, color: 'bg-indigo-500' }] };
+    const monthlyValue = Number(currentMonth?.value || 0);
+    const annualValue = Number(currentYear?.value || 0);
+    const monthlyChange = this.change(monthlyValue, Number(previousMonth?.value || 0)).change;
+    const annualChange = this.change(annualValue, Number(previousYear?.value || 0)).change;
+    return {
+      kpi: {
+        totalRevenue: this.money(totalValue),
+        totalRevenueChange: annualChange,
+        monthlyRevenue: this.money(monthlyValue),
+        monthlyRevenueChange: monthlyChange,
+        annualRevenue: this.money(annualValue),
+        annualRevenueChange: annualChange,
+        renewalRevenue: this.money(0),
+        renewalRevenueChange: '0%',
+      },
+      revenueData: overview.revenueData.map(row => ({ month: row.name, revenue: row.value, target: 0 })),
+      sourceData: [{ name: 'Hospital billing', amount: this.money(totalValue), value: totalValue > 0 ? 100 : 0, color: '#4f46e5' }],
+    };
   }
 
   async getAccountsInvoices(status?: string) {
@@ -99,6 +121,21 @@ export class ManagementService {
       await this.db.query(`INSERT INTO notification (id, hospitalId, type, title, message, isRead, actionRequired, severity, createdAt, updatedAt) VALUES (UUID(), ?, 'PAYMENT_REMINDER', 'Payment reminder', ?, 0, 1, 'Medium', ?, ?)`, [invoice.hospitalId, `Invoice ${invoice.id} has an outstanding balance of ${this.money(Number(invoice.totalAmount || 0))}.`, new Date(), new Date()]);
     }
     return { sent: invoices.length, message: invoices.length ? `Sent ${invoices.length} in-app payment reminder${invoices.length === 1 ? '' : 's'}.` : 'No pending invoice matched.' };
+  }
+
+  async getSalesNotifications() {
+    const [subscriptions, invoices] = await Promise.all([
+      this.db.query(`SELECT hs.id, hs.status, hs.endDate, h.name AS facility, sp.name AS plan FROM hospitalsubscription hs INNER JOIN hospital h ON h.id = hs.hospitalId INNER JOIN subscriptionplan sp ON sp.id = hs.planId WHERE hs.endDate IS NOT NULL AND hs.endDate <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) ORDER BY hs.endDate ASC LIMIT 20`),
+      this.db.query(`SELECT i.id, i.status, i.totalAmount, i.date, h.name AS facility FROM invoice i LEFT JOIN hospital h ON h.id = i.hospitalId WHERE UPPER(i.status) = 'PENDING' ORDER BY i.date DESC LIMIT 20`),
+    ]);
+    const expiry = subscriptions.map(row => ({ id: `subscription-${row.id}`, type: new Date(row.endDate) < new Date() ? 'expired' : 'expiry', title: `${row.plan} subscription ${new Date(row.endDate) < new Date() ? 'expired' : 'expires soon'}`, facility: row.facility, desc: `End date: ${new Date(row.endDate).toLocaleDateString('en-IN')}`, time: new Date(row.endDate).toLocaleDateString('en-IN') }));
+    const payment = invoices.map(row => ({ id: `invoice-${row.id}`, type: 'payment', title: 'Payment pending', facility: row.facility || 'Unknown facility', desc: `Invoice ${row.id} · ${this.money(Number(row.totalAmount || 0))}`, time: new Date(row.date).toLocaleDateString('en-IN') }));
+    return { notifications: [...expiry, ...payment] };
+  }
+
+  async getAccountsNotifications() {
+    const rows = await this.db.query(`SELECT i.id, i.status, i.totalAmount, i.date, h.name AS facility FROM invoice i LEFT JOIN hospital h ON h.id = i.hospitalId ORDER BY i.date DESC LIMIT 30`);
+    return { notifications: rows.map(row => { const paid = ['PAID','SUCCESSFUL'].includes(String(row.status).toUpperCase()); return { id: row.id, tab: paid ? 'Invoices' : 'Payment Alerts', type: paid ? 'invoice' : 'payment', title: paid ? 'Invoice paid' : 'Payment requires attention', facility: row.facility || 'Unknown facility', desc: `Invoice ${row.id} · ${this.money(Number(row.totalAmount || 0))} · ${row.status}`, time: new Date(row.date).toLocaleDateString('en-IN') }; }) };
   }
 
   async getStatus() {

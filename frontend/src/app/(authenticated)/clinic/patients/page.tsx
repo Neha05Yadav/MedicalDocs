@@ -183,21 +183,6 @@ export default function DoctorPatientsPage() {
     }
   };
 
-  // Test feature: Auto Approve
-  const handleAutoApprove = async (patientId: string) => {
-    try {
-      await fetch('/api/clinic/patients/approve-access', {
-        method: 'POST',
-        headers: authHeaders(true),
-        body: JSON.stringify({ patientId })
-      });
-      toast.success(`Access Approved (Test Mode)`);
-      fetchPatients(searchTerm);
-    } catch (error) {
-      toast.error("Failed to approve");
-    }
-  };
-
   // View Records logic
   const handleOpenRecordsModal = async (patient: any) => {
     setSelectedPatient(patient);
@@ -306,7 +291,7 @@ export default function DoctorPatientsPage() {
                           gender: dp.gender, 
                           bloodGroup: dp.bloodGroup, 
                           diagnosis: dp.diagnosis, 
-                          followUp: '', // skip date mapping for mock simplicity
+                          followUp: '',
                           status: dp.status 
                         });
                         setIsNewPatientModalOpen(true);
@@ -399,7 +384,13 @@ export default function DoctorPatientsPage() {
                               Edit Details
                             </button>
                             <button 
-                              onClick={() => { setActiveDropdown(null); toast.info("Delete functionality not implemented yet"); }} 
+                              onClick={async () => {
+                                if (!confirm(`Delete ${patient.name} from your clinic list?`)) return;
+                                const response = await fetch(`/api/clinic/my-patients/${patient.id}`, { method: 'DELETE', headers: authHeaders() });
+                                if (response.ok) { toast.success("Patient removed from clinic list."); fetchMyPatients(); }
+                                else toast.error("Patient could not be removed.");
+                                setActiveDropdown(null);
+                              }}
                               className="w-full text-left px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
                             >
                               Delete Patient
@@ -438,8 +429,6 @@ export default function DoctorPatientsPage() {
                       <Clock className="size-3.5" /> Pending
                     </div>
                     <p className="text-xs text-slate-500 font-medium ml-1">Request sent: {patient.requestSent}</p>
-                    {/* TEST BUTTON - REMOVE IN PROD */}
-                    <button onClick={() => handleAutoApprove(patient.id)} className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] rounded hover:bg-green-200">Test: Auto Approve</button>
                   </>
                 )}
                 {patient.status === "Rejected" && (

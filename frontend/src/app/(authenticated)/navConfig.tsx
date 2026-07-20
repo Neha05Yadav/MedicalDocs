@@ -32,7 +32,7 @@ export const hospitalNav = [
 ];
 
 export const laboratoryNav = [
-  { title: "Dashboard", subtitle: "Welcome to Apex Labs. Monitor your testing queue and uploaded reports.", url: "/laboratory/overview", iconName: "LayoutDashboard" },
+  { title: "Dashboard", subtitle: "Monitor your live testing queue and uploaded reports.", url: "/laboratory/overview", iconName: "LayoutDashboard" },
   { title: "Test Requests", subtitle: "Manage incoming test orders from doctors and walk-in patients.", url: "/laboratory/test-requests", iconName: "ClipboardList" },
   { title: "Reports", subtitle: "Manage uploaded reports and dispatch new results to patients.", url: "/laboratory/reports", iconName: "FileText" },
   { title: "Sample Management", subtitle: "Track physical samples from collection to analysis.", url: "/laboratory/sample-management", iconName: "Activity" },

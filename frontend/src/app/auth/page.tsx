@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   ArrowLeft,
@@ -24,8 +23,21 @@ const ROLE_DASHBOARD: Record<string, string> = {
   PATIENT: "/patient/overview",
   HOSPITAL: "/hospital/overview",
   LAB: "/laboratory/overview",
+  LABORATORY: "/laboratory/overview",
+  LAB_MANAGER: "/laboratory/overview",
+  TECHNICIAN: "/laboratory/overview",
   CLINIC: "/clinic/overview",
   DOCTOR: "/clinic/overview",
+  ADMIN: "/management/admin/overview",
+  SUPER_ADMIN: "/management/super-admin/overview",
+  "SUPER ADMIN": "/management/super-admin/overview",
+  MANAGEMENT: "/management/admin/overview",
+  SALES: "/management/sales/overview",
+  "SALES MANAGER": "/management/sales/overview",
+  SUPPORT: "/management/support/overview",
+  "SUPPORT TEAM": "/management/support/overview",
+  ACCOUNTS: "/management/accounts/overview",
+  "ACCOUNTS MANAGER": "/management/accounts/overview",
 };
 
 export default function AuthPage() {
@@ -33,7 +45,6 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
 
   async function handleEmailLogin(event: React.FormEvent) {
     event.preventDefault();
@@ -67,7 +78,23 @@ export default function AuthPage() {
       document.cookie = `token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
 
       toast.success(`Welcome back, ${data.user.name}!`);
-      router.push(ROLE_DASHBOARD[userRole] ?? "/patient/overview");
+      
+      const roleDashboard = ROLE_DASHBOARD[userRole] ?? "/patient/overview";
+      const portalRoot = `/${roleDashboard.split("/")[1]}`;
+      let redirectUrl = roleDashboard;
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const returnUrl = params.get("returnUrl");
+        // Never let a stale returnUrl move a successfully authenticated user
+        // outside the portal allowed for their role.
+        if (returnUrl && (returnUrl === portalRoot || returnUrl.startsWith(`${portalRoot}/`))) {
+          redirectUrl = returnUrl;
+        }
+      }
+
+      // A full navigation guarantees the freshly written auth cookie is
+      // available to the route proxy before the protected page is evaluated.
+      window.location.replace(redirectUrl);
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Failed to connect to server");
     } finally {
@@ -139,7 +166,7 @@ export default function AuthPage() {
             </div>
 
             <div className="flex items-center justify-between border-t border-white/10 pt-6 text-[10px] font-medium uppercase tracking-[0.18em] text-white/35">
-              <span>MediDoc identity gateway</span>
+              <span>MedicalDocs identity gateway</span>
               <span>Protected / 24×7</span>
             </div>
           </div>
@@ -151,7 +178,7 @@ export default function AuthPage() {
 
           <div className={`relative z-10 w-full max-w-[620px] ${styles.loginCard}`}>
             <div className="mb-10">
-              <Link href="/" className="mb-10 inline-flex lg:hidden" aria-label="MediDoc home">
+              <Link href="/" className="mb-10 inline-flex lg:hidden" aria-label="MedicalDocs home">
                 <MediDocBrand compact />
               </Link>
 
@@ -246,7 +273,7 @@ export default function AuthPage() {
             </form>
 
             <p className="mt-8 text-center text-base text-slate-500">
-              New to MediDoc? <Link href="/signup" className="font-semibold text-white transition hover:text-cyan-300">Create your account</Link>
+              New to MedicalDocs? <Link href="/signup" className="font-semibold text-white transition hover:text-cyan-300">Create your account</Link>
             </p>
 
             <Link href="/management" className="mt-6 flex items-center justify-center gap-2.5 text-xs font-bold uppercase tracking-[0.17em] text-slate-600 transition hover:text-slate-400">

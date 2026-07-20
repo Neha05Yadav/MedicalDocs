@@ -1,9 +1,7 @@
 "use client";
 
-import VerificationList from "../VerificationList";
-import { verificationRequests } from "../data";
+import LiveVerificationList from "../LiveVerificationList";
 
 export default function RejectedVerificationPage() {
-  const rejectedRequests = verificationRequests.filter(req => req.status === "Rejected");
-  return <VerificationList requests={rejectedRequests} />;
+  return <LiveVerificationList mode="rejected" />;
 }

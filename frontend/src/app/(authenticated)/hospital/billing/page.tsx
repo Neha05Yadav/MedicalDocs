@@ -359,7 +359,7 @@ export default function BillingPage() {
                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm w-full max-w-sm text-left">
                  <div className="flex justify-between items-start mb-6">
                    <div>
-                     <p className="font-bold text-slate-900">MediDoc Hospital</p>
+                     <p className="font-bold text-slate-900">MedicalDocs Hospital</p>
                      <p className="text-xs text-slate-500">Invoice #INV-PREVIEW</p>
                    </div>
                    <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded-md border ${

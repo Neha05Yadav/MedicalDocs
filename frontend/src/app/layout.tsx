@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MediDoc | Premium Healthcare Platform",
+  title: "MedicalDocs | Premium Healthcare Platform",
   description: "Securely manage medical records, connect hospitals, laboratories, clinics, and patients on one intelligent platform.",
 };
 

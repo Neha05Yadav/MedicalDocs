@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { MysqlService } from '../mysql.service';
 import { v4 as uuidv4 } from 'uuid';
 import { RedisService } from '../redis/redis.service';
+import { formatPrescriptionId } from '../prescription-id';
 
 @Injectable()
 export class PatientService {
@@ -81,7 +82,7 @@ export class PatientService {
         id: 'rec-' + rec.id,
         date: d,
         dateStr: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-        title: rec.title,
+        title: String(rec.type).toUpperCase() === 'PRESCRIPTION' ? formatPrescriptionId(rec.title || rec.id) : rec.title,
         desc: rec.description || rec.type,
         type: 'RECORD'
       });
@@ -89,6 +90,21 @@ export class PatientService {
 
     timelineEvents.sort((a, b) => b.date.getTime() - a.date.getTime());
     const recentTimeline = timelineEvents.slice(0, 4);
+    
+    // Extract recent highlights and vitals from medical records
+    const recentHighlights = records.filter(r => r.type === 'LAB_REPORT').slice(0, 2).map(r => ({
+      name: r.title,
+      status: r.status || 'Available',
+      value: 'Open report'
+    }));
+
+    // Find BP from descriptions or default to N/A
+    let bloodPressure = 'N/A';
+    const bpRecord = records.find(r => r.description && r.description.match(/\b\d{2,3}\/\d{2,3}\b/));
+    if (bpRecord) {
+      const match = bpRecord.description.match(/\b(\d{2,3}\/\d{2,3})\b/);
+      if (match) bloodPressure = match[1];
+    }
 
     const result = {
       patientInfo: {
@@ -99,18 +115,22 @@ export class PatientService {
         lastVisit: lastVisitStr,
         gender: patient.gender || 'Not Specified',
       },
+      vitals: {
+        bloodPressure: bloodPressure
+      },
+      recentHighlights: recentHighlights,
       timeline: recentTimeline,
       testResultsStats: {
         completed: records.filter(r => r.type === 'LAB_REPORT').length,
         pending: appointments.filter(a => a.status === 'SCHEDULED').length,
-        abnormal: 0,
+        abnormal: records.filter(r => String(r.status || '').toUpperCase() === 'ABNORMAL').length,
       },
       recentReports: records.slice(0, 3).map(r => ({
         id: r.id,
-        name: r.title,
+        name: String(r.type).toUpperCase() === 'PRESCRIPTION' ? formatPrescriptionId(r.title || r.id) : r.title,
         date: new Date(r.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
         type: r.type,
-        size: '1.2 MB'
+        size: r.fileSize ? `${(Number(r.fileSize) / 1048576).toFixed(1)} MB` : 'Stored securely'
       }))
     };
 
@@ -206,7 +226,7 @@ export class PatientService {
   }
 
   async getRecords(userEmail: string) {
-    const cacheKey = `patient:records:${userEmail}`;
+    const cacheKey = `patient:records:v2:${userEmail}`;
     const cached = await this.redisService.get(cacheKey);
     if (cached) return cached;
 
@@ -218,6 +238,7 @@ export class PatientService {
       FROM medicalrecord m
       LEFT JOIN hospital h ON m.hospitalId = h.id
       WHERE m.patientId = ?
+        AND UPPER(COALESCE(m.type, '')) <> 'PRESCRIPTION'
       ORDER BY m.date DESC
     `, [patient.id]);
 
@@ -341,12 +362,12 @@ export class PatientService {
       SELECT m.*, h.name as hospitalName, h.type as hospitalType 
       FROM medicalrecord m
       LEFT JOIN hospital h ON m.hospitalId = h.id
-      WHERE m.patientId = ? AND m.type = 'PRESCRIPTION'
+      WHERE m.patientId = ? AND UPPER(COALESCE(m.type, '')) = 'PRESCRIPTION'
       ORDER BY m.date DESC
     `, [patient.id]);
 
     const formattedRecords = records.map(r => ({
-      id: r.title,
+      id: formatPrescriptionId(r.title || r.id),
       doctor: r.description || 'Unknown Doctor',
       date: new Date(r.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       status: 'Active',
@@ -365,7 +386,7 @@ export class PatientService {
     `, [patient.id]);
 
     const formattedDoctorPrescriptions = doctorPrescriptions.map(p => ({
-      id: 'RX-' + p.id.substring(0, 4).toUpperCase(),
+      id: formatPrescriptionId(p.id),
       doctor: p.doctorName ? 'Dr. ' + p.doctorName : 'Unknown Doctor',
       date: new Date(p.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       status: p.status || 'Active',
@@ -387,18 +408,47 @@ export class PatientService {
     if (!patient) throw new Error("Patient not found");
 
     const newId = uuidv4();
+    const prescriptionId = await this.allocatePrescriptionId();
     const d = data.date ? new Date(data.date) : new Date();
     await this.db.query(
       "INSERT INTO medicalrecord (id, patientId, type, title, description, date, updatedAt) VALUES (?, ?, 'PRESCRIPTION', ?, ?, ?, ?)",
-      [newId, patient.id, data.id, data.doctor, d, new Date()]
+      [newId, patient.id, prescriptionId, data.doctor, d, new Date()]
     );
 
     return {
-      id: data.id,
+      id: prescriptionId,
       doctor: data.doctor,
       date: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       status: 'Active',
     };
+  }
+
+  private async allocatePrescriptionId(): Promise<string> {
+    const connection = await this.db.getPool().getConnection();
+    try {
+      await connection.beginTransaction();
+      const [rows]: any = await connection.execute(
+        `SELECT nextValue FROM prescription_id_sequence
+         WHERE sequenceName = 'prescription' FOR UPDATE`,
+      );
+      if (!rows.length) throw new Error('Prescription ID sequence is not initialized.');
+
+      const nextValue = Number(rows[0].nextValue);
+      if (nextValue > 99999) throw new Error('Prescription ID range is exhausted.');
+      const prescriptionId = `RX${String(nextValue).padStart(5, '0')}`;
+      await connection.execute(
+        `UPDATE prescription_id_sequence SET nextValue = ?, updatedAt = ?
+         WHERE sequenceName = 'prescription'`,
+        [nextValue + 1, new Date()],
+      );
+      await connection.commit();
+      return prescriptionId;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 
   async getAccessRequests(userEmail: string) {
@@ -437,7 +487,7 @@ export class PatientService {
     await this.db.query('UPDATE accessrequest SET status = ?, updatedAt = ? WHERE id = ?', [status, new Date(), id]);
 
     if (status === 'APPROVED') {
-      const notifId = `NOTIF-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const notifId = uuidv4();
       await this.db.query(
         'INSERT INTO notification (id, hospitalId, type, title, message, isRead, actionRequired, severity, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, false, false, "Low", ?, ?)',
         [notifId, req.hospitalId, `PATIENT_APPROVED|${patient.id}`, "Access Request Approved", `${patient.name} has approved your request to access their medical records.`, new Date(), new Date()]

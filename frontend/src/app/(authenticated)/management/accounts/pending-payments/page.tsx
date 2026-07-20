@@ -235,7 +235,7 @@ export default function PendingPaymentsPage() {
                 <label className="block text-sm font-bold text-slate-700 mb-2">Message:</label>
                 <textarea 
                   rows={5}
-                  value={`A payment reminder will be delivered to ${reminderClient} inside the MediDoc notification centre for ${reminderInvoiceId || 'all pending invoices'}.`}
+                  value={`A payment reminder will be delivered to ${reminderClient} inside the MedicalDocs notification centre for ${reminderInvoiceId || 'all pending invoices'}.`}
                   readOnly
                   className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 resize-none leading-relaxed"
                 ></textarea>

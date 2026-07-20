@@ -103,7 +103,7 @@ export default function DashboardHeaderClient() {
     if (isSupport) return { title: "Support Dashboard", subtitle: "Support operations and ticket metrics at a glance." };
     if (isAdmin) return { title: "Admin Dashboard", subtitle: "System overview, KPIs, and recent activities." };
     if (isHospital) return { title: "Hospital Dashboard", subtitle: "Overview of hospital operations and patient flow." };
-    if (isLaboratory) return { title: "Laboratory Dashboard", subtitle: "Welcome to Apex Labs. Monitor your testing queue." };
+    if (isLaboratory) return { title: "Laboratory Dashboard", subtitle: "Monitor your live testing queue and reports." };
     if (isClinic) return { title: "Clinic Dashboard", subtitle: "Welcome to the clinic dashboard." };
     return { title: "Patient Dashboard", subtitle: "Your comprehensive health overview at a glance." };
   };

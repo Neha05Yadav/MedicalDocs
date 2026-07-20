@@ -67,7 +67,10 @@ export default function LabPatientsPage() {
   const fetchPatients = async () => {
     try {
       const token = localStorage.getItem("token");
-      if (!token) return router.push("/auth");
+      if (!token) {
+        window.location.href = `/auth?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+        return;
+      }
       const res = await fetch("/api/laboratory/patients", { headers: { "Authorization": `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();

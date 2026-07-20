@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { MysqlService } from '../../mysql.service';
 import { v4 as uuidv4 } from 'uuid';
+import { formatPrescriptionRecord } from '../../prescription-id';
 
 @Injectable()
 export class AdminService {
@@ -15,6 +16,61 @@ export class AdminService {
     const invoices = await this.db.query('SELECT totalAmount FROM invoice WHERE status = "Paid"');
     const totalRevenue = invoices.reduce((acc, curr) => acc + (curr.totalAmount || 0), 0);
 
+    const userDistributionData = [
+      { name: 'Patients', value: Number(totalPatientsRow.c), color: '#3b82f6' },
+      { name: 'Doctors', value: Number(totalDoctorsRow.c), color: '#10b981' },
+      { name: 'Hospitals', value: Number(totalHospitalsRow.c), color: '#8b5cf6' }
+    ];
+
+    const [dailyReports, dailyTests, monthlyReports, monthlyTests] = await Promise.all([
+      this.db.query(`SELECT DATE(createdAt) AS day, COUNT(*) AS c FROM medicalrecord WHERE createdAt >= DATE_SUB(CURDATE(), INTERVAL 13 DAY) GROUP BY DATE(createdAt)`),
+      this.db.query(`SELECT DATE(createdAt) AS day, COUNT(*) AS c FROM testrequest WHERE createdAt >= DATE_SUB(CURDATE(), INTERVAL 13 DAY) GROUP BY DATE(createdAt)`),
+      this.db.query(`SELECT WEEK(createdAt, 3) - WEEK(DATE_FORMAT(CURDATE(), '%Y-%m-01'), 3) + 1 AS weekNo, COUNT(*) AS c FROM medicalrecord WHERE createdAt >= DATE_FORMAT(CURDATE(), '%Y-%m-01') GROUP BY weekNo`),
+      this.db.query(`SELECT WEEK(createdAt, 3) - WEEK(DATE_FORMAT(CURDATE(), '%Y-%m-01'), 3) + 1 AS weekNo, COUNT(*) AS c FROM testrequest WHERE createdAt >= DATE_FORMAT(CURDATE(), '%Y-%m-01') GROUP BY weekNo`),
+    ]);
+    const dayKey = (value: any) => { const date = new Date(value); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
+    const reportsByDay = new Map(dailyReports.map(row => [dayKey(row.day), Number(row.c)]));
+    const testsByDay = new Map(dailyTests.map(row => [dayKey(row.day), Number(row.c)]));
+    const calendarWeek = (weekOffset: number) => {
+      const weekStart = new Date();
+      weekStart.setHours(0, 0, 0, 0);
+      const daysSinceMonday = (weekStart.getDay() + 6) % 7;
+      weekStart.setDate(weekStart.getDate() - daysSinceMonday + (weekOffset * 7));
+      return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(weekStart); date.setDate(weekStart.getDate() + index);
+      const key = dayKey(date);
+      return { name: date.toLocaleDateString('en-US', { weekday: 'short' }), date: date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }), reports: reportsByDay.get(key) || 0, tests: testsByDay.get(key) || 0 };
+      });
+    };
+    const reportsByWeek = new Map(monthlyReports.map(row => [Number(row.weekNo), Number(row.c)]));
+    const testsByWeek = new Map(monthlyTests.map(row => [Number(row.weekNo), Number(row.c)]));
+    const activityDataByPeriod = {
+      'This Week': calendarWeek(0),
+      'Last Week': calendarWeek(-1),
+      'This Month': Array.from({ length: 5 }, (_, index) => ({ name: `Week ${index + 1}`, date: `Week ${index + 1}`, reports: reportsByWeek.get(index + 1) || 0, tests: testsByWeek.get(index + 1) || 0 })),
+    };
+
+    const recentHospitals = await this.db.query(`SELECT id, name, createdAt FROM hospital ORDER BY createdAt DESC LIMIT 2`);
+    const recentDocs = await this.db.query(`SELECT id, name, createdAt FROM doctor ORDER BY createdAt DESC LIMIT 2`);
+    const recentActivities = [
+      ...recentHospitals.map(h => ({
+        id: `hospital-${h.id}`,
+        type: 'New Hospital',
+        title: 'New Hospital Registered',
+        description: `${h.name} joined the network`,
+        time: new Date(h.createdAt).toLocaleTimeString(),
+        status: 'completed'
+      })),
+      ...recentDocs.map(d => ({
+        id: `doctor-${d.id}`,
+        type: 'New Doctor',
+        title: 'New Doctor Registered',
+        description: `Dr. ${d.name} joined the network`,
+        time: new Date(d.createdAt).toLocaleTimeString(),
+        status: 'completed'
+      }))
+    ];
+
     return {
       kpis: {
         patients: Number(totalPatientsRow.c),
@@ -22,7 +78,10 @@ export class AdminService {
         hospitals: Number(totalHospitalsRow.c),
         reports: Number(totalReportsRow.c),
         revenue: totalRevenue
-      }
+      },
+      userDistributionData,
+      activityDataByPeriod,
+      recentActivities
     };
   }
 
@@ -93,8 +152,10 @@ export class AdminService {
       const trCount = await this.db.queryOne('SELECT COUNT(*) as c FROM testrequest WHERE hospitalId = ?', [l.id]);
       const sCount = await this.db.queryOne('SELECT COUNT(*) as c FROM sample WHERE hospitalId = ?', [l.id]);
       const uCount = await this.db.queryOne('SELECT COUNT(*) as c FROM user WHERE hospitalId = ?', [l.id]);
+      const recentActivity = await this.db.query(`SELECT id, testType, status, updatedAt FROM testrequest WHERE hospitalId = ? ORDER BY updatedAt DESC LIMIT 3`, [l.id]);
       return {
         ...l,
+        recentActivity: recentActivity.map(row => ({ id: row.id, title: row.status === 'Completed' ? 'Test completed' : 'Test request updated', desc: `${row.testType || 'Laboratory test'} · ${row.status}`, time: new Date(row.updatedAt).toLocaleString('en-IN') })),
         _count: {
           testrequest: Number(trCount.c),
           sample: Number(sCount.c),
@@ -114,7 +175,7 @@ export class AdminService {
     `);
     
     return reports.map(r => ({
-      ...r,
+      ...formatPrescriptionRecord(r),
       patient: { id: r.patientId, name: r.patientName },
       hospital: { id: r.hospitalId, name: r.hospitalName }
     }));

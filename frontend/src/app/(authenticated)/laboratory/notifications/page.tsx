@@ -31,7 +31,10 @@ export default function LabNotificationsPage() {
   const fetchNotifications = async () => {
     try {
       const token = localStorage.getItem("token");
-      if (!token) return router.push("/auth");
+      if (!token) {
+        window.location.href = `/auth?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+        return;
+      }
       
       const res = await fetch("/api/laboratory/notifications", {
         headers: { "Authorization": `Bearer ${token}` }

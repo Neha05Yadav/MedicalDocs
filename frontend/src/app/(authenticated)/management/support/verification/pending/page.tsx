@@ -1,11 +1,7 @@
 "use client";
 
-import VerificationList from "../VerificationList";
-import { verificationRequests } from "../data";
+import LiveVerificationList from "../LiveVerificationList";
 
 export default function PendingVerificationPage() {
-  const pendingRequests = verificationRequests.filter(req => 
-    ["Under Review", "Pending Verification", "Missing Documents"].includes(req.status)
-  );
-  return <VerificationList requests={pendingRequests} />;
+  return <LiveVerificationList mode="pending" />;
 }

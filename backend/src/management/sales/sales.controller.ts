@@ -32,6 +32,6 @@ export class SalesController {
 
   @Get('notifications')
   getNotifications() {
-    return [];
+    return this.managementService.getSalesNotifications();
   }
 }

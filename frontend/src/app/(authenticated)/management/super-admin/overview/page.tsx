@@ -92,7 +92,7 @@ export default function SuperAdminDashboard() {
                 </div>
                 <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50/80 px-2.5 py-1 rounded-full border border-emerald-100">
                   <TrendingUp className="size-3" />
-                  <span>+12%</span>
+                  <span>Live</span>
                 </div>
               </div>
               
@@ -120,25 +120,25 @@ export default function SuperAdminDashboard() {
               </div>
               
               <div className="flex-1 flex items-end gap-3 sm:gap-6 mt-auto px-2">
-                {data?.revenueData?.map((height: number, i: number) => (
+                {data?.revenueData?.map((entry: any, i: number) => (
                   <div key={i} className="flex-1 flex flex-col items-center gap-3 group h-full justify-end relative">
                     {/* Tooltip */}
                     <div className="opacity-0 group-hover:opacity-100 absolute -top-10 bg-slate-900 text-white text-xs font-bold px-3 py-2 rounded-xl transition-all translate-y-2 group-hover:translate-y-0 whitespace-nowrap z-10 pointer-events-none shadow-xl">
-                      ${Math.floor(height * 1250)}
+                      ₹{Number(entry.amount || 0).toLocaleString('en-IN')}
                       <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-slate-900" />
                     </div>
                     
                     <div className="w-full max-w-[60px] mx-auto bg-slate-100 rounded-t-lg relative flex-1 flex items-end overflow-hidden group-hover:bg-slate-200 transition-colors cursor-pointer">
                       <div 
                         className="w-full bg-gradient-to-t from-blue-500 to-indigo-600 rounded-t-lg group-hover:from-blue-600 group-hover:to-indigo-700 transition-colors relative overflow-hidden shadow-sm" 
-                        style={{ height: `${height}%` }}
+                        style={{ height: `${entry.percent}%` }}
                       >
                         {/* Shimmer effect */}
                         <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/20 to-transparent -translate-y-full group-hover:animate-[shimmer_1s_ease-in-out_infinite]" />
                       </div>
                     </div>
                     <span className="text-xs font-bold text-slate-500 group-hover:text-slate-900 transition-colors">
-                      {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'][i]}
+                      {entry.month}
                     </span>
                   </div>
                 ))}
@@ -149,8 +149,8 @@ export default function SuperAdminDashboard() {
            <div className="bg-white/80 backdrop-blur-md rounded-2xl p-6 border border-white/50 shadow-sm flex flex-col h-[320px] hover:shadow-md transition-shadow">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h3 className="font-bold text-slate-900 text-lg tracking-tight">User Distribution</h3>
-                  <p className="text-xs text-slate-500 mt-1 font-medium">Platform users by region</p>
+                  <h3 className="font-bold text-slate-900 text-lg tracking-tight">Platform Composition</h3>
+                  <p className="text-xs text-slate-500 mt-1 font-medium">Live registered entities by type</p>
                 </div>
               </div>
               

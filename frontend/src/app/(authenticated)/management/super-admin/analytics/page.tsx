@@ -54,11 +54,11 @@ export default function PlatformAnalyticsPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-slate-500">System Uptime</h3>
+            <h3 className="text-sm font-medium text-slate-500">Database Status</h3>
             <Server className="size-4 text-slate-400" />
           </div>
           <div>
-            <p className="text-3xl font-bold text-slate-900">{data.kpis.systemUptime}%</p>
+            <p className="text-3xl font-bold text-slate-900">Connected</p>
             <p className="text-xs font-medium text-emerald-600 mt-1 flex items-center gap-1">
               <span className="size-1.5 rounded-full bg-emerald-500" /> All systems operational
             </p>
@@ -72,7 +72,7 @@ export default function PlatformAnalyticsPage() {
           </div>
           <div>
             <p className="text-3xl font-bold text-slate-900">₹{(data.kpis.monthlyRevenue / 100000).toFixed(1)}L</p>
-            <p className="text-xs font-medium text-emerald-600 mt-1">+12% from last month</p>
+            <p className="text-xs font-medium text-slate-500 mt-1">Paid invoices this month</p>
           </div>
         </div>
 
@@ -83,20 +83,18 @@ export default function PlatformAnalyticsPage() {
           </div>
           <div>
             <p className="text-3xl font-bold text-slate-900">{data.kpis.activeFacilities}</p>
-            <p className="text-xs font-medium text-slate-500 mt-1">+4 new this week</p>
+            <p className="text-xs font-medium text-slate-500 mt-1">Verified and active</p>
           </div>
         </div>
 
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-slate-500">Storage Used</h3>
+            <h3 className="text-sm font-medium text-slate-500">Stored Records</h3>
             <Database className="size-4 text-slate-400" />
           </div>
           <div>
-            <p className="text-3xl font-bold text-slate-900">{data.kpis.storageUsedGb} <span className="text-sm font-semibold text-slate-500">GB</span></p>
-            <div className="w-full bg-slate-100 rounded-full h-1 mt-2">
-              <div className="bg-indigo-500 h-1 rounded-full" style={{ width: `${(data.kpis.storageUsedGb / data.kpis.storageTotalGb) * 100}%` }}></div>
-            </div>
+            <p className="text-3xl font-bold text-slate-900">{Number(data.kpis.storedRecords || 0).toLocaleString()}</p>
+            <p className="text-xs font-medium text-slate-500 mt-1">Medical records in MySQL</p>
           </div>
         </div>
       </div>
@@ -107,7 +105,7 @@ export default function PlatformAnalyticsPage() {
         {/* Area Chart: API Usage */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
           <div className="mb-4">
-            <h3 className="text-base font-bold text-slate-900">API Request Volume</h3>
+            <h3 className="text-base font-bold text-slate-900">Clinical Activity Volume</h3>
           </div>
           <div className="flex-1 min-h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">

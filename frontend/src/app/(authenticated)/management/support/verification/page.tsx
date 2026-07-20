@@ -1,8 +1,7 @@
 "use client";
 
-import VerificationList from "./VerificationList";
-import { verificationRequests } from "./data";
+import LiveVerificationList from "./LiveVerificationList";
 
 export default function VerificationAllPage() {
-  return <VerificationList requests={verificationRequests} />;
+  return <LiveVerificationList />;
 }

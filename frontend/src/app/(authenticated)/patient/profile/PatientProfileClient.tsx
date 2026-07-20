@@ -14,6 +14,8 @@ const Droplets = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/s
 const Calendar = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>;
 const Save = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"></path><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"></path><path d="M7 3v4a1 1 0 0 0 1 1h7"></path></svg>;
 const HeartPulse = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"></path><path d="M3.22 13H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"></path></svg>;
+const ShieldCheck = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>;
+const Edit = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>;
 
 export default function PatientProfileClient() {
   const router = useRouter();
@@ -116,211 +118,116 @@ export default function PatientProfileClient() {
     return <div className="p-8 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div></div>;
   }
 
+  const completedFields = [profile.name, profile.dob, profile.gender, profile.bloodGroup, profile.email, profile.phone, profile.logoUrl]
+    .filter((value) => Boolean(String(value || "").trim())).length;
+  const profileCompletion = Math.round((completedFields / 7) * 100);
+
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      {/* Profile Cover & Header */}
-      <div className="h-32 bg-gradient-to-r from-[#0891b2] to-cyan-400 relative"></div>
-      <div className="px-8 pb-8 relative flex flex-col items-center sm:items-start">
-        <div className="-mt-16 mb-4 relative z-10">
-          <div 
-            className="size-32 rounded-full border-4 border-white bg-cyan-100 text-[#0891b2] flex items-center justify-center shadow-md relative overflow-hidden group cursor-pointer"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {profile.logoUrl ? (
-              <img src={profile.logoUrl} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-              <User className="size-16" />
-            )}
-            
-            {/* Hover Overlay */}
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <Upload className="w-8 h-8 text-white" />
-            </div>
-          </div>
-          
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            className="hidden" 
-            accept=".jpg,.jpeg,.png"
-            onChange={handleLogoUpload}
-          />
-        </div>
-        <div className="w-full text-center sm:text-left mb-8">
-          {isEditing ? (
-            <input 
-              type="text" 
-              name="name"
-              value={profile.name} 
-              onChange={handleChange}
-              className="text-2xl sm:text-3xl font-bold text-slate-900 bg-white/80 border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/20 rounded-xl px-4 py-2 mb-3 w-full max-w-md shadow-sm transition-all"
-            />
-          ) : (
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3">{profile.name}</h1>
-          )}
-          <p className="text-slate-500 font-medium mb-3">Patient</p>
-          {/* Patient ID Badge */}
-          {profile.id && (
-            <div className="flex items-center justify-center sm:justify-start gap-2 px-3 py-1.5 bg-gradient-to-r from-cyan-50 to-indigo-50 border border-cyan-200 rounded-xl w-fit mx-auto sm:mx-0 shadow-sm">
-              <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse shrink-0"></div>
-              <span className="text-xs text-slate-500 font-medium shrink-0">Patient ID:</span>
-              <span className="text-xs font-mono font-bold text-cyan-700 tracking-wider truncate" title={profile.id}>{profile.id}</span>
-              <button
-                onClick={() => { 
-                  navigator.clipboard.writeText(profile.id); 
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                }}
-                title="Copy Patient ID"
-                className="shrink-0 text-slate-400 hover:text-cyan-600 transition-colors ml-1 p-0.5"
-              >
-                {copied ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0891b2" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                )}
-              </button>
-            </div>
-          )}
-        </div>
-        {/* Profile Details */}
-        <div className="grid md:grid-cols-2 gap-8 mt-4">
-          <div className="space-y-6">
-            <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 shadow-sm">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200">
-                <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
-                  <User className="size-5" />
-                </div>
-                <h3 className="text-base font-bold text-slate-800 uppercase tracking-wider">Personal Information</h3>
-              </div>
-              <div className="space-y-5">
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Date of Birth</p>
-                  {isEditing ? (
-                    <input type="date" name="dob" value={profile.dob} onChange={handleChange} className="w-full text-sm font-semibold text-slate-900 bg-slate-50 border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-lg px-2 py-1.5 transition-all" />
-                  ) : (
-                    <p className="text-sm font-semibold text-slate-900">{profile.dob || "Not provided"}</p>
-                  )}
-                </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Gender</p>
-                  {isEditing ? (
-                    <select name="gender" value={profile.gender} onChange={handleChange} className="w-full text-sm font-semibold text-slate-900 bg-slate-50 border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-lg px-2 py-1.5 transition-all">
-                      <option>Male</option>
-                      <option>Female</option>
-                      <option>Other</option>
-                    </select>
-                  ) : (
-                    <p className="text-sm font-semibold text-slate-900">{profile.gender || "Not provided"}</p>
-                  )}
-                </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Blood Group</p>
-                  {isEditing ? (
-                    <select name="bloodGroup" value={profile.bloodGroup} onChange={handleChange} className="w-full text-sm font-semibold text-slate-900 bg-slate-50 border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-lg px-2 py-1.5 transition-all">
-                      <option>O+</option><option>O-</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option>
-                    </select>
-                  ) : (
-                    <p className="text-sm font-semibold text-slate-900">{profile.bloodGroup || "Not provided"}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="space-y-6">
-            <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 shadow-sm">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200">
-                <div className="p-2 bg-cyan-100 text-[#0891b2] rounded-lg">
-                  <MapPin className="size-5" />
-                </div>
-                <h3 className="text-base font-bold text-slate-800 uppercase tracking-wider">Contact Details</h3>
-              </div>
-              <div className="space-y-5">
-                <div className="flex items-start gap-4 group">
-                  <div className="p-2.5 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-400 group-hover:text-[#0891b2] group-hover:border-cyan-200 transition-colors">
-                    <Phone className="size-5" />
-                  </div>
-                  <div className="flex-1 pt-1">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Phone Number</p>
-                    {isEditing ? (
-                      <input type="text" name="phone" value={profile.phone} onChange={handleChange} className="w-full text-sm font-semibold text-slate-900 bg-white border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-xl px-3 py-2 transition-all" />
-                    ) : (
-                      <p className="text-sm font-bold text-slate-700">{profile.phone || "Not provided"}</p>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-4 group">
-                  <div className="p-2.5 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-400 group-hover:text-[#0891b2] group-hover:border-cyan-200 transition-colors">
-                    <HeartPulse className="size-5 text-rose-400" />
-                  </div>
-                  <div className="flex-1 pt-1">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Emergency Contact</p>
-                    {isEditing ? (
-                      <input type="text" name="emergencyContact" value={profile.emergencyContact} onChange={handleChange} className="w-full text-sm font-semibold text-slate-900 bg-white border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-xl px-3 py-2 transition-all" />
-                    ) : (
-                      <p className="text-sm font-bold text-slate-700">{profile.emergencyContact || "Not provided"}</p>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-4 group">
-                  <div className="p-2.5 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-400 group-hover:text-[#0891b2] group-hover:border-cyan-200 transition-colors">
-                    <Mail className="size-5" />
-                  </div>
-                  <div className="flex-1 pt-1">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Email Address</p>
-                    {isEditing ? (
-                      <input type="email" name="email" value={profile.email} onChange={handleChange} className="w-full text-sm font-semibold text-slate-900 bg-white border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-xl px-3 py-2 transition-all" />
-                    ) : (
-                      <p className="text-sm font-bold text-slate-700">{profile.email || "Not provided"}</p>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-4 group">
-                  <div className="p-2.5 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-400 group-hover:text-[#0891b2] group-hover:border-cyan-200 transition-colors">
-                    <MapPin className="size-5" />
-                  </div>
-                  <div className="flex-1 pt-1">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Address</p>
-                    {isEditing ? (
-                      <textarea name="address" value={profile.address} onChange={handleChange} rows={3} className="w-full text-sm font-semibold text-slate-900 bg-white border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-xl px-3 py-2 resize-none transition-all" />
-                    ) : (
-                      <p className="text-sm font-medium text-slate-600 leading-relaxed bg-white p-3 rounded-xl border border-slate-100 shadow-sm">{profile.address || "No address provided."}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end gap-3">
-          {isEditing ? (
-            <>
-              <button 
-                onClick={() => setIsEditing(false)}
-                className="px-6 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleSave}
-                className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-[#0891b2] hover:bg-cyan-700 transition-colors flex items-center gap-2 shadow-sm"
-              >
-                <Save className="size-4" /> Save Changes
-              </button>
-            </>
-          ) : (
-            <button 
-              onClick={() => setIsEditing(true)}
-              className="px-6 py-2.5 rounded-xl text-sm font-bold text-[#0891b2] bg-cyan-50 hover:bg-cyan-100 transition-colors border border-cyan-100"
-            >
-              Edit Profile
+    <div className="space-y-6 pb-8">
+      <section className="relative overflow-hidden rounded-[2rem] border border-slate-800 bg-[#071827] px-6 py-8 text-white shadow-xl sm:px-9 lg:px-11 lg:py-10">
+        <div className="absolute -right-24 -top-32 size-80 rounded-full bg-cyan-400/20 blur-3xl" />
+        <div className="absolute -bottom-40 left-1/3 size-80 rounded-full bg-emerald-400/10 blur-3xl" />
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "linear-gradient(rgba(103,232,249,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(103,232,249,.12) 1px, transparent 1px)", backgroundSize: "42px 42px" }} />
+
+        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:text-left">
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="group relative size-36 shrink-0 overflow-hidden rounded-[2rem] border-4 border-white/15 bg-gradient-to-br from-cyan-300 to-cyan-600 text-white shadow-2xl" title="Change profile picture">
+              {profile.logoUrl ? <img src={profile.logoUrl} alt={profile.name || "Patient profile"} className="size-full object-cover" /> : <User className="m-auto size-16" />}
+              <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 bg-slate-950/75 py-3 text-xs font-bold opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100"><Upload className="size-4" /> Change photo</span>
             </button>
-          )}
+            <input type="file" ref={fileInputRef} className="hidden" accept=".jpg,.jpeg,.png" onChange={handleLogoUpload} />
+
+            <div>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[.18em] text-emerald-200"><ShieldCheck className="size-4" /> Patient identity</div>
+              <h1 className="text-3xl font-black tracking-tight sm:text-4xl">{profile.name || "Your profile"}</h1>
+              <p className="mt-2 text-base font-medium text-slate-300">Your personal and medical identity in one secure place.</p>
+              {profile.id && (
+                <button onClick={() => { navigator.clipboard.writeText(profile.id); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="mt-5 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-white/15" title="Copy Patient ID">
+                  <span className="size-2 rounded-full bg-cyan-300" /> Patient ID <span className="font-mono font-black tracking-wider text-cyan-200">{profile.id}</span>
+                  <span className="text-xs text-slate-400">{copied ? "Copied" : "Copy"}</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid w-full grid-cols-3 gap-2 sm:gap-3 lg:w-auto lg:min-w-[28rem]">
+            {[{ label: "Blood group", value: profile.bloodGroup || "—", icon: Droplets }, { label: "Gender", value: profile.gender || "—", icon: User }, { label: "Date of birth", value: profile.dob || "—", icon: Calendar }].map((item) => (
+              <div key={item.label} className="rounded-2xl border border-white/10 bg-white/[.07] p-4 backdrop-blur-md sm:p-5">
+                <item.icon className="mb-3 size-5 text-cyan-300" />
+                <p className="text-[.68rem] font-bold uppercase tracking-wider text-slate-400">{item.label}</p>
+                <p className="mt-1 truncate text-base font-extrabold text-white sm:text-lg">{item.value}</p>
+              </div>
+            ))}
+          </div>
         </div>
+      </section>
+
+      <div className="grid gap-6 xl:grid-cols-[.72fr_1.28fr]">
+        <div className="space-y-6">
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-[.14em] text-cyan-700">Profile strength</p>
+                <h2 className="mt-1 text-2xl font-black text-slate-900">{profileCompletion}% complete</h2>
+              </div>
+              <div className="relative grid size-16 place-items-center rounded-full" style={{ background: `conic-gradient(#06b6d4 ${profileCompletion * 3.6}deg, #e2e8f0 0deg)` }}>
+                <div className="absolute size-12 rounded-full bg-white" />
+                <span className="relative text-xs font-black text-slate-800">{profileCompletion}%</span>
+              </div>
+            </div>
+            <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all" style={{ width: `${profileCompletion}%` }} /></div>
+            <p className="mt-4 text-sm font-medium leading-6 text-slate-500">Complete medical basics and contact information so connected care teams can identify you accurately.</p>
+          </section>
+
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+            <div className="mb-5 flex items-center gap-3"><span className="rounded-xl bg-emerald-50 p-3 text-emerald-600"><ShieldCheck className="size-6" /></span><div><h2 className="text-lg font-black text-slate-900">Secure identity</h2><p className="text-sm font-medium text-slate-500">Protected patient information</p></div></div>
+            <div className="space-y-3">
+              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Account email</p><p className="mt-1 break-all font-bold text-slate-800">{profile.email || "Not provided"}</p></div>
+              <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Record owner</p><p className="mt-1 font-bold text-slate-800">{profile.name || "Not provided"}</p></div>
+            </div>
+          </section>
+        </div>
+
+        <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-4 border-b border-slate-100 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+            <div><p className="text-sm font-bold uppercase tracking-[.14em] text-cyan-700">Patient details</p><h2 className="mt-1 text-2xl font-black text-slate-900">Personal information</h2></div>
+            {!isEditing && <button onClick={() => setIsEditing(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#12224d] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-cyan-900"><Edit className="size-4" /> Edit profile</button>}
+          </div>
+
+          <div className="grid gap-5 p-6 sm:grid-cols-2 sm:p-8">
+            <div className="sm:col-span-2">
+              <label className="mb-2 block text-xs font-extrabold uppercase tracking-wider text-slate-500">Full name</label>
+              {isEditing ? <input name="name" value={profile.name} onChange={handleChange} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base font-bold text-slate-900 outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-500/10" /> : <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3.5"><User className="size-5 text-cyan-600" /><span className="font-bold text-slate-800">{profile.name || "Not provided"}</span></div>}
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-extrabold uppercase tracking-wider text-slate-500">Date of birth</label>
+              {isEditing ? <input type="date" name="dob" value={profile.dob} onChange={handleChange} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 font-bold text-slate-900 outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-500/10" /> : <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3.5"><Calendar className="size-5 text-cyan-600" /><span className="font-bold text-slate-800">{profile.dob || "Not provided"}</span></div>}
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-extrabold uppercase tracking-wider text-slate-500">Gender</label>
+              {isEditing ? <select name="gender" value={profile.gender} onChange={handleChange} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 font-bold text-slate-900 outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-500/10"><option value="">Select gender</option><option>Male</option><option>Female</option><option>Other</option></select> : <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3.5"><User className="size-5 text-blue-600" /><span className="font-bold text-slate-800">{profile.gender || "Not provided"}</span></div>}
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-extrabold uppercase tracking-wider text-slate-500">Blood group</label>
+              {isEditing ? <select name="bloodGroup" value={profile.bloodGroup} onChange={handleChange} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 font-bold text-slate-900 outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-500/10"><option value="">Select blood group</option><option>O+</option><option>O-</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option></select> : <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3.5"><Droplets className="size-5 text-rose-500" /><span className="font-bold text-slate-800">{profile.bloodGroup || "Not provided"}</span></div>}
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-extrabold uppercase tracking-wider text-slate-500">Phone number</label>
+              {isEditing ? <input type="tel" name="phone" value={profile.phone} onChange={handleChange} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 font-bold text-slate-900 outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-500/10" /> : <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3.5"><Phone className="size-5 text-emerald-600" /><span className="font-bold text-slate-800">{profile.phone || "Not provided"}</span></div>}
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="mb-2 block text-xs font-extrabold uppercase tracking-wider text-slate-500">Email address</label>
+              <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3.5"><Mail className="size-5 text-violet-600" /><span className="break-all font-bold text-slate-800">{profile.email || "Not provided"}</span><span className="ml-auto hidden rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 sm:inline">Account email</span></div>
+            </div>
+          </div>
+
+          {isEditing && <div className="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50/70 px-6 py-5 sm:flex-row sm:justify-end sm:px-8"><button onClick={() => setIsEditing(false)} className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-100">Cancel</button><button onClick={handleSave} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0891b2] px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-cyan-700"><Save className="size-4" /> Save changes</button></div>}
+        </section>
       </div>
     </div>
   );

@@ -35,7 +35,8 @@ export default function LabProfilePage() {
     phone: "",
     address: "",
     description: "",
-    logoUrl: ""
+    logoUrl: "",
+    established: ""
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -47,7 +48,10 @@ export default function LabProfilePage() {
   const fetchProfile = async () => {
     try {
       const token = localStorage.getItem("token");
-      if (!token) return router.push("/auth");
+      if (!token) {
+        window.location.href = `/auth?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+        return;
+      }
       
       const res = await fetch("/api/laboratory/profile", {
         headers: { "Authorization": `Bearer ${token}` }
@@ -63,7 +67,8 @@ export default function LabProfilePage() {
           labId: data.id || "",
           type: data.type || "",
           licenseNo: data.licenseNo || "",
-          logoUrl: data.logoUrl || ""
+          logoUrl: data.logoUrl || "",
+          established: data.established || ""
         }));
       }
     } catch (error) {
@@ -119,175 +124,69 @@ export default function LabProfilePage() {
       toast.error("Error updating profile");
     }
   };
+
+  if (loading) {
+    return <div className="grid min-h-[70vh] place-items-center"><div className="size-10 animate-spin rounded-full border-4 border-violet-100 border-t-violet-600" /></div>;
+  }
+
+  const establishedDate = profile.established
+    ? new Date(profile.established).toLocaleDateString("en-IN", { month: "short", year: "numeric" })
+    : "Not available";
+
   return (
-    <div className="p-8 max-w-4xl mx-auto w-full min-h-screen">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        {/* Profile Cover & Header */}
-        <div className="h-32 bg-gradient-to-r from-cyan-600 via-[#0891b2] to-cyan-400 relative"></div>
-        <div className="px-8 pb-8 relative flex flex-col items-center sm:items-start">
-          <div className="-mt-16 mb-4 relative z-10">
-            <div 
-              className="size-32 rounded-2xl border-4 border-white bg-cyan-50 text-[#0891b2] flex items-center justify-center shadow-md relative overflow-hidden group cursor-pointer"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {profile.logoUrl ? (
-                <img src={profile.logoUrl} alt="Profile" className="w-full h-full object-cover" />
-              ) : (
-                <Microscope className="size-16" />
-              )}
-              
-              {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <Upload className="w-8 h-8 text-white" />
-              </div>
-            </div>
-            
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              accept=".jpg,.jpeg,.png"
-              onChange={handleLogoUpload}
-            />
-          </div>
-          <div className="w-full text-center sm:text-left mb-8">
-            {isEditing ? (
-              <input 
-                type="text" 
-                name="labName"
-                value={profile.labName} 
-                onChange={handleChange}
-                className="text-2xl sm:text-3xl font-bold text-slate-900 bg-white/80 border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/20 rounded-xl px-4 py-2 mb-3 w-full max-w-md shadow-sm transition-all"
-              />
-            ) : (
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3">{profile.labName}</h2>
-            )}
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-sm font-medium">
-              <div className="flex items-center gap-2 bg-gradient-to-r from-cyan-50 to-blue-50 text-[#0891b2] px-4 py-1.5 rounded-full border border-cyan-100 shadow-sm">
-                <Building2 className="size-4" />
-                {isEditing ? (
-                  <input name="type" value={profile.type} onChange={handleChange} className="bg-transparent border-b border-cyan-300 focus:outline-none w-48 font-bold placeholder:text-cyan-300" placeholder="Type" />
-                ) : <span className="font-bold">{profile.type}</span>}
-              </div>
-              <div className="flex items-center gap-2 bg-slate-50 text-slate-600 px-4 py-1.5 rounded-full border border-slate-200 shadow-sm">
-                <ShieldCheck className="size-4 text-emerald-500" /> <span className="font-bold text-slate-700">NABL Accredited</span>
-              </div>
-            </div>
-          </div>
-          <div className="grid md:grid-cols-2 gap-8 mt-4">
-            <div className="space-y-6">
-              <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 shadow-sm">
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200">
-                  <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
-                    <Building2 className="size-5" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-800 uppercase tracking-wider">Facility Registration</h3>
-                </div>
-                <div className="space-y-5">
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Laboratory ID</p>
-                    {isEditing ? (
-                      <input name="labId" value={profile.labId} onChange={handleChange} className="w-full text-sm font-semibold text-slate-900 bg-slate-50 border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-lg px-2 py-1.5 transition-all" />
-                    ) : (
-                      <p className="text-sm font-semibold text-slate-900 font-mono w-fit">{profile.labId || "N/A"}</p>
-                    )}
-                  </div>
-                  
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">License Number</p>
-                    {isEditing ? (
-                      <input name="licenseNo" value={profile.licenseNo} onChange={handleChange} className="w-full text-sm font-semibold text-slate-900 bg-slate-50 border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-lg px-2 py-1.5 transition-all" />
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <FileCheck className="size-4 text-emerald-500" />
-                        <p className="text-sm font-bold text-slate-700 uppercase">{profile.licenseNo}</p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Description</p>
-                    {isEditing ? (
-                      <textarea name="description" value={profile.description} onChange={handleChange} rows={4} className="w-full text-sm font-medium text-slate-900 bg-slate-50 border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-xl px-3 py-2 resize-none transition-all" />
-                    ) : (
-                      <p className="text-sm font-medium text-slate-600 leading-relaxed">{profile.description || "No description provided."}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
+    <div className="min-h-screen w-full bg-[#f7f8fc] p-4 sm:p-6 lg:p-8">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div><p className="text-xs font-black uppercase tracking-[.22em] text-violet-600">Laboratory workspace</p><h1 className="mt-1 text-3xl font-black tracking-tight text-slate-950">Profile & quality identity</h1><p className="mt-2 text-base font-medium text-slate-500">Manage the verified information presented across your diagnostic network.</p></div>
+        {!isEditing && <button onClick={() => setIsEditing(true)} className="rounded-xl bg-violet-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700">Edit laboratory profile</button>}
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[.7fr_1.3fr]">
+        <aside className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#2e1065] via-violet-800 to-indigo-950 p-7 text-white shadow-xl sm:p-9">
+          <div className="absolute -right-24 top-16 size-64 rounded-full border border-white/10" /><div className="absolute -right-12 top-28 size-40 rounded-full border border-cyan-300/20" /><div className="absolute bottom-0 left-0 h-40 w-full bg-gradient-to-t from-black/30 to-transparent" />
+          <div className="relative flex min-h-[34rem] flex-col">
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="group relative flex size-32 items-center justify-center overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-2xl backdrop-blur" title="Upload laboratory logo">
+              {profile.logoUrl ? <img src={profile.logoUrl} alt={profile.labName || "Laboratory logo"} className="size-full object-cover" /> : <Microscope className="size-16 text-cyan-200" />}
+              <span className="absolute inset-0 flex items-center justify-center bg-slate-950/70 opacity-0 transition group-hover:opacity-100"><Upload className="size-7" /></span>
+            </button>
+            <input type="file" ref={fileInputRef} className="hidden" accept=".jpg,.jpeg,.png" onChange={handleLogoUpload} />
+
+            <div className="mt-8"><span className="inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1.5 text-xs font-black uppercase tracking-[.16em] text-cyan-200"><Microscope className="size-4" /> Diagnostic facility</span><h2 className="mt-4 text-3xl font-black leading-tight">{profile.labName || "Laboratory name"}</h2><p className="mt-2 text-base font-semibold text-violet-200">{profile.type || "Laboratory"}</p></div>
+
+            <div className="mt-8 space-y-3">
+              <div className="rounded-2xl border border-white/10 bg-white/[.08] p-4 backdrop-blur"><p className="text-[.68rem] font-black uppercase tracking-wider text-violet-300">Laboratory ID</p><p className="mt-1 break-all font-mono text-sm font-bold text-white">{profile.labId || "Not available"}</p></div>
+              <div className="rounded-2xl border border-white/10 bg-white/[.08] p-4 backdrop-blur"><p className="text-[.68rem] font-black uppercase tracking-wider text-violet-300">License record</p><p className="mt-1 flex items-center gap-2 text-sm font-bold text-white"><FileCheck className={`size-5 ${profile.licenseNo ? "text-emerald-300" : "text-amber-300"}`} /> {profile.licenseNo || "License not provided"}</p></div>
             </div>
 
-            <div className="space-y-6">
-              <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 shadow-sm">
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200">
-                  <div className="p-2 bg-cyan-100 text-[#0891b2] rounded-lg">
-                    <MapPin className="size-5" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-800 uppercase tracking-wider">Contact Details</h3>
-                </div>
-                <div className="space-y-5">
-                  <div className="flex items-start gap-4 group">
-                    <div className="p-2.5 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-400 group-hover:text-[#0891b2] group-hover:border-cyan-200 transition-colors">
-                      <Mail className="size-5" />
-                    </div>
-                    <div className="flex-1 pt-1">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Email Address</p>
-                      {isEditing ? (
-                        <input name="email" value={profile.email} onChange={handleChange} className="w-full text-sm font-semibold text-slate-900 bg-white border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-xl px-3 py-2 transition-all" />
-                      ) : (
-                        <p className="text-sm font-bold text-slate-700">{profile.email}</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-4 group">
-                    <div className="p-2.5 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-400 group-hover:text-[#0891b2] group-hover:border-cyan-200 transition-colors">
-                      <Phone className="size-5" />
-                    </div>
-                    <div className="flex-1 pt-1">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Helpline / Phone</p>
-                      {isEditing ? (
-                        <input name="phone" value={profile.phone} onChange={handleChange} className="w-full text-sm font-semibold text-slate-900 bg-white border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-xl px-3 py-2 transition-all" />
-                      ) : (
-                        <p className="text-sm font-bold text-slate-700">{profile.phone}</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-4 group">
-                    <div className="p-2.5 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-400 group-hover:text-[#0891b2] group-hover:border-cyan-200 transition-colors">
-                      <MapPin className="size-5" />
-                    </div>
-                    <div className="flex-1 pt-1">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Facility Address</p>
-                      {isEditing ? (
-                        <textarea name="address" value={profile.address} onChange={handleChange} rows={3} className="w-full text-sm font-semibold text-slate-900 bg-white border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-xl px-3 py-2 resize-none transition-all" />
-                      ) : (
-                        <p className="text-sm font-medium text-slate-600 leading-relaxed bg-white p-3 rounded-xl border border-slate-100 shadow-sm">{profile.address || "No address provided."}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="mt-auto pt-8"><div className="flex items-center gap-3 border-t border-white/10 pt-6"><ShieldCheck className="size-6 text-cyan-200" /><div><p className="text-sm font-bold">Database-backed identity</p><p className="text-xs font-medium text-violet-300">Created {establishedDate}</p></div></div></div>
+          </div>
+        </aside>
+
+        <main className="space-y-6">
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="mb-4 flex size-11 items-center justify-center rounded-xl bg-violet-50 text-violet-600"><Building2 className="size-5" /></div><p className="text-xs font-black uppercase tracking-wider text-slate-400">Facility type</p><p className="mt-1 text-lg font-black text-slate-900">{profile.type || "Not set"}</p></div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="mb-4 flex size-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><FileCheck className="size-5" /></div><p className="text-xs font-black uppercase tracking-wider text-slate-400">License status</p><p className="mt-1 text-lg font-black text-slate-900">{profile.licenseNo ? "On record" : "Incomplete"}</p></div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="mb-4 flex size-11 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600"><MapPin className="size-5" /></div><p className="text-xs font-black uppercase tracking-wider text-slate-400">Location</p><p className="mt-1 truncate text-lg font-black text-slate-900">{profile.address || "Not set"}</p></div>
+          </section>
+
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 px-6 py-6 sm:px-8"><p className="text-xs font-black uppercase tracking-[.16em] text-violet-600">Identity record</p><h2 className="mt-1 text-2xl font-black text-slate-950">Laboratory details</h2></div>
+            <div className="grid gap-5 p-6 sm:grid-cols-2 sm:p-8">
+              <div className="sm:col-span-2"><label className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500">Laboratory name</label>{isEditing ? <input name="labName" value={profile.labName} onChange={handleChange} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base font-bold text-slate-900 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10" /> : <div className="rounded-xl bg-slate-50 px-4 py-3.5 text-base font-bold text-slate-900">{profile.labName || "Not provided"}</div>}</div>
+              <div><label className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500">Laboratory ID</label><div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3.5 font-mono text-sm font-bold text-slate-700">{profile.labId || "Not available"}</div></div>
+              <div><label className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500">License number</label><div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-700"><FileCheck className="size-5 text-emerald-600" />{profile.licenseNo || "Not provided"}</div></div>
             </div>
-          </div>
-          <div className="mt-10 flex justify-end gap-4 border-t border-slate-100 pt-6">
-            {isEditing ? (
-              <>
-                <button onClick={() => setIsEditing(false)} className="px-6 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors">
-                  Cancel
-                </button>
-                <button onClick={handleSave} className="px-6 py-2.5 bg-[#0891b2] hover:bg-cyan-700 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors shadow-sm">
-                  <Save className="size-4" /> Save Changes
-                </button>
-              </>
-            ) : (
-              <button onClick={() => setIsEditing(true)} className="px-6 py-2.5 bg-[#0891b2] hover:bg-cyan-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm">
-                Edit Profile
-              </button>
-            )}
-          </div>
-        </div>
+          </section>
+
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 px-6 py-6 sm:px-8"><p className="text-xs font-black uppercase tracking-[.16em] text-cyan-700">Network contact</p><h2 className="mt-1 text-2xl font-black text-slate-950">Communication & location</h2></div>
+            <div className="grid gap-5 p-6 sm:grid-cols-2 sm:p-8">
+              <div><label className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500">Official email</label>{isEditing ? <input type="email" name="email" value={profile.email} onChange={handleChange} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 font-bold text-slate-900 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10" /> : <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3.5 font-bold text-slate-800"><Mail className="size-5 text-violet-600" /><span className="break-all">{profile.email || "Not provided"}</span></div>}</div>
+              <div><label className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500">Helpline / phone</label>{isEditing ? <input type="tel" name="phone" value={profile.phone} onChange={handleChange} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 font-bold text-slate-900 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10" /> : <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3.5 font-bold text-slate-800"><Phone className="size-5 text-emerald-600" />{profile.phone || "Not provided"}</div>}</div>
+              <div className="sm:col-span-2"><label className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500">Facility address</label>{isEditing ? <textarea name="address" value={profile.address} onChange={handleChange} rows={3} className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 font-semibold text-slate-900 outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10" /> : <div className="flex items-start gap-3 rounded-xl bg-slate-50 px-4 py-3.5 font-semibold leading-6 text-slate-700"><MapPin className="mt-0.5 size-5 shrink-0 text-cyan-600" />{profile.address || "No address provided"}</div>}</div>
+            </div>
+            {isEditing && <div className="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50/70 px-6 py-5 sm:flex-row sm:justify-end sm:px-8"><button onClick={() => { setIsEditing(false); fetchProfile(); }} className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-100">Cancel</button><button onClick={handleSave} className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-violet-200 transition hover:bg-violet-700"><Save className="size-4" /> Save changes</button></div>}
+          </section>
+        </main>
       </div>
     </div>
   );

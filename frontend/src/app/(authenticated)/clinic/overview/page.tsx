@@ -69,40 +69,54 @@ export default function DoctorDashboard() {
   const appointments = Array.isArray(data?.appointments) ? data.appointments : [];
 
   const kpiCards = [
-    { label: kpis[0]?.label || "Total Patients", value: kpis[0]?.value || "0", icon: Users, color: "border-[#0891b2]", bgColor: "bg-cyan-50 text-[#0891b2]" },
-    { label: kpis[1]?.label || "Pending Reports", value: kpis[1]?.value || "0", icon: FileText, color: "border-amber-500", bgColor: "bg-amber-50 text-amber-600" },
-    { label: kpis[2]?.label || "Reviewed Reports", value: kpis[2]?.value || "0", icon: CheckCircle2, color: "border-emerald-500", bgColor: "bg-white text-emerald-600" },
-    { label: kpis[3]?.label || "Prescriptions Issued", value: kpis[3]?.value || "0", icon: Pill, color: "border-purple-500", bgColor: "bg-purple-50 text-purple-600" },
+    { label: kpis[0]?.label || "Total Patients", value: kpis[0]?.value || "0", icon: Users, accent: "bg-cyan-500", iconColor: "bg-cyan-50 text-cyan-700" },
+    { label: kpis[1]?.label || "Pending Reports", value: kpis[1]?.value || "0", icon: FileText, accent: "bg-amber-500", iconColor: "bg-amber-50 text-amber-700" },
+    { label: kpis[2]?.label || "Reviewed Reports", value: kpis[2]?.value || "0", icon: CheckCircle2, accent: "bg-emerald-500", iconColor: "bg-emerald-50 text-emerald-700" },
+    { label: kpis[3]?.label || "Prescriptions Issued", value: kpis[3]?.value || "0", icon: Pill, accent: "bg-violet-500", iconColor: "bg-violet-50 text-violet-700" },
   ];
+  const todayLabel = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
+
   return (
-    <div className="p-8 max-w-7xl mx-auto w-full min-h-screen">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div className="min-h-screen w-full bg-[#f4f7f6] p-4 sm:p-6 lg:p-8">
+      <section className="relative mb-6 overflow-hidden rounded-[2rem] bg-[#062e2b] px-6 py-8 text-white shadow-xl sm:px-9 lg:px-11 lg:py-10">
+        <div className="absolute -right-24 -top-28 size-80 rounded-full border-[50px] border-emerald-300/10" /><div className="absolute bottom-0 right-1/3 h-28 w-56 rounded-t-full bg-cyan-300/5 blur-2xl" />
+        <div className="relative flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
+          <div><div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200/15 bg-emerald-200/10 px-3 py-1.5 text-xs font-black uppercase tracking-[.18em] text-emerald-200"><Activity className="size-4" /> Live practice briefing</div><h1 className="text-3xl font-black tracking-tight sm:text-5xl">Your clinic, at a glance.</h1><p className="mt-3 max-w-2xl text-base font-medium leading-7 text-emerald-50/65">Prioritize today’s consultations, pending reports and recent patient activity from one operational view.</p></div>
+          <div className="grid min-w-full grid-cols-2 gap-3 sm:min-w-[30rem]">
+            <div className="rounded-2xl border border-white/10 bg-white/[.08] p-5 backdrop-blur"><div className="flex items-center justify-between"><Calendar className="size-6 text-cyan-300"/><span className="text-xs font-bold text-emerald-100/50">{todayLabel}</span></div><p className="mt-5 text-4xl font-black">{Number(data?.todaysAppointments || 0)}</p><p className="mt-1 text-sm font-bold text-emerald-100/70">Appointments today</p></div>
+            <div className="rounded-2xl border border-white/10 bg-white/[.08] p-5 backdrop-blur"><div className="flex items-center justify-between"><Clock className="size-6 text-amber-300"/><span className="text-xs font-bold text-emerald-100/50">Queue</span></div><p className="mt-5 text-4xl font-black">{Number(data?.pendingAppointments || 0)}</p><p className="mt-1 text-sm font-bold text-emerald-100/70">Pending appointments</p></div>
+          </div>
+        </div>
+      </section>
+
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpiCards.map((card) => (
-          <div key={card.label} className={`p-6 bg-white border-t-4 border border-slate-200 shadow-sm rounded-xl ${card.color}`}>
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{card.label}</p>
-              <div className={`p-2 rounded-lg ${card.bgColor}`}>
-                <card.icon className="size-5" />
-              </div>
-            </div>
-            <p className="text-3xl font-extrabold tracking-tight text-slate-900">{card.value}</p>
+          <div key={card.label} className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+            <span className={`absolute inset-x-0 top-0 h-1 ${card.accent}`} />
+            <div className="flex items-start justify-between"><div><p className="text-xs font-black uppercase tracking-[.12em] text-slate-400">{card.label}</p><p className="mt-4 text-4xl font-black tracking-tight text-slate-950">{card.value}</p></div><span className={`rounded-2xl p-3 ${card.iconColor}`}><card.icon className="size-6" /></span></div>
+            <p className="mt-4 text-xs font-semibold text-slate-400">Live database total</p>
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Today's Appointments */}
-        <AppointmentsListClient appointments={appointments} />
-        <div className="lg:col-span-2 bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden flex flex-col">
-          <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <h2 className="text-base font-bold text-slate-800">Recent Patients</h2>
-            <Link href="/clinic/patients" className="text-sm font-semibold text-[#0891b2] hover:underline flex items-center gap-1.5">
+
+      <section className="mb-6 grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-3">
+        <Link href="/clinic/patients" className="group flex items-center justify-between rounded-xl bg-cyan-50 px-5 py-4 transition hover:bg-cyan-100"><span className="flex items-center gap-3 font-bold text-cyan-950"><Users className="size-5 text-cyan-700"/>Open patient registry</span><ArrowUpRight className="size-5 text-cyan-700"/></Link>
+        <Link href="/clinic/prescriptions" className="group flex items-center justify-between rounded-xl bg-violet-50 px-5 py-4 transition hover:bg-violet-100"><span className="flex items-center gap-3 font-bold text-violet-950"><Pill className="size-5 text-violet-700"/>Issue a prescription</span><ArrowUpRight className="size-5 text-violet-700"/></Link>
+        <Link href="/clinic/reports" className="group flex items-center justify-between rounded-xl bg-amber-50 px-5 py-4 transition hover:bg-amber-100"><span className="flex items-center gap-3 font-bold text-amber-950"><FileText className="size-5 text-amber-700"/>Review reports</span><ArrowUpRight className="size-5 text-amber-700"/></Link>
+      </section>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[.85fr_1.6fr]">
+        <AppointmentsListClient appointments={appointments} mode={data?.scheduleMode === "recent" ? "recent" : "upcoming"} />
+        <div className="flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 px-6 py-6 sm:px-8">
+            <div><p className="text-xs font-black uppercase tracking-[.16em] text-cyan-700">Patient activity</p><h2 className="mt-1 text-2xl font-black text-slate-950">Recent patients</h2></div>
+            <Link href="/clinic/patients" className="flex items-center gap-1.5 rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-800">
               View all <ArrowUpRight className="size-4" />
             </Link>
           </div>
           <div className="overflow-x-auto flex-1">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-white border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <table className="w-full text-left text-base">
+              <thead className="border-b border-slate-100 bg-slate-50/70 text-xs font-black uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="px-6 py-4">Patient Name</th>
                   <th className="px-6 py-4">Age/Condition</th>
@@ -113,27 +127,27 @@ export default function DoctorDashboard() {
               <tbody className="divide-y divide-slate-100">
                 {patients.length === 0 && <tr><td colSpan={4} className="px-6 py-14 text-center text-base text-slate-500">No patient activity has been recorded yet.</td></tr>}
                 {patients.map((patient) => (
-                  <tr key={patient.id} className="group hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4">
+                  <tr key={patient.id} className="group transition-colors hover:bg-cyan-50/40">
+                    <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
-                        <div className="size-10 bg-slate-100 rounded-xl flex items-center justify-center border border-slate-200/60 shrink-0 text-slate-500 font-bold">
+                        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-cyan-100 bg-cyan-50 font-black text-cyan-800">
                            {patient.name.charAt(0)}
                         </div>
                         <div className="font-semibold text-slate-900">{patient.name}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-slate-900">{patient.condition || "Not recorded"}</div>
-                      <div className="text-xs text-slate-500">{patient.age} yrs</div>
+                    <td className="px-6 py-5">
+                      <div className="text-sm font-bold text-slate-900">{patient.condition || "Not recorded"}</div>
+                      <div className="mt-1 text-xs font-medium text-slate-500">{patient.age} yrs</div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600 font-medium">
+                    <td className="px-6 py-5 font-semibold text-slate-600">
                       {patient.last_visit ? new Date(patient.last_visit).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" }) : "No visit yet"}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-5">
                       <div className="flex items-center justify-center gap-3 transition-opacity">
-                        <button className="p-1.5 text-[#0891b2] border border-[#0891b2]/20 rounded-md hover:bg-cyan-50 transition-colors inline-flex items-center justify-center" title="View Records">
+                        <Link href="/clinic/patients" className="inline-flex items-center justify-center rounded-xl border border-cyan-200 p-2.5 text-cyan-700 transition hover:bg-cyan-50" title="View Records">
                           <FileText className="size-4" />
-                        </button>
+                        </Link>
                       </div>
                     </td>
                   </tr>

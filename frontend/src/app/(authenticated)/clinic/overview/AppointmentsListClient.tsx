@@ -5,34 +5,40 @@ const Clock = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg"
 const Calendar = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>;
 const X = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>;
 
-export default function AppointmentsListClient({ appointments }: { appointments: any[] }) {
+export default function AppointmentsListClient({ appointments, mode = "upcoming" }: { appointments: any[]; mode?: "upcoming" | "recent" }) {
   const [selectedAppt, setSelectedAppt] = useState<any | null>(null);
   
   return (
     <>
-      <div className="lg:col-span-1 bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden flex flex-col">
-        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <h2 className="text-base font-bold text-slate-800">Today's Schedule</h2>
-          <span className="bg-cyan-100 text-cyan-700 text-xs font-bold px-2 py-1 rounded-full">{appointments.length} Left</span>
+      <div className="flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-6">
+          <div><p className="text-xs font-black uppercase tracking-[.16em] text-emerald-700">Consultation queue</p><h2 className="mt-1 text-2xl font-black text-slate-950">{mode === "recent" ? "Recent schedule" : "Upcoming schedule"}</h2></div>
+          <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700">{appointments.length}</span>
         </div>
-        <div className="p-4 space-y-4">
-          {appointments.map((appt) => (
-            <div key={appt.id} className="p-4 border border-slate-100 rounded-xl hover:border-cyan-200 transition-colors cursor-pointer bg-slate-50/50">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-semibold text-slate-900">{appt.patient_name}</span>
-                <span className="text-xs font-bold text-slate-500">{appt.time}</span>
+        <div className="space-y-3 p-5">
+          {appointments.map((appt, index) => (
+            <div key={appt.id} className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-slate-50/70 p-4 transition hover:border-emerald-200 hover:bg-emerald-50/40">
+              <span className="absolute bottom-0 left-0 top-0 w-1 bg-emerald-500" />
+              <div className="mb-3 flex items-start justify-between pl-2">
+                <div><span className="text-xs font-black uppercase tracking-wider text-slate-400">Queue {String(index + 1).padStart(2, "0")}</span><p className="mt-1 font-black text-slate-900">{appt.patientName || "Patient"}</p></div>
+                <span className="rounded-lg bg-white px-2.5 py-1.5 text-xs font-bold text-slate-500 shadow-sm">{appt.date}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-500 bg-white px-2 py-1 rounded-md border border-slate-200">{appt.type}</span>
+              <div className="flex items-center justify-between pl-2">
+                <span className="text-xs text-slate-500 bg-white px-2 py-1 rounded-md border border-slate-200">{appt.time} · {appt.status}</span>
                 <button 
                   onClick={() => setSelectedAppt(appt)}
-                  className="text-xs font-medium text-cyan-600 hover:text-cyan-700 hover:underline"
+                  className="text-xs font-bold text-emerald-700 hover:underline"
                 >
                   View Details
                 </button>
               </div>
             </div>
           ))}
+          {appointments.length === 0 && (
+            <div className="grid min-h-56 place-items-center rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-6 text-center">
+              <div><Calendar className="mx-auto size-8 text-slate-300" /><p className="mt-3 text-sm font-semibold text-slate-600">No appointments recorded</p><p className="mt-1 text-xs text-slate-400">New database bookings will appear here automatically.</p></div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -55,7 +61,7 @@ export default function AppointmentsListClient({ appointments }: { appointments:
             <div className="p-6 space-y-4">
               <div>
                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Patient Name</p>
-                <p className="text-base font-semibold text-slate-900">{selectedAppt.patient_name}</p>
+                <p className="text-base font-semibold text-slate-900">{selectedAppt.patientName || "Patient"}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -67,9 +73,14 @@ export default function AppointmentsListClient({ appointments }: { appointments:
                 <div>
                   <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Type</p>
                   <span className="text-xs text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md font-medium border border-slate-200">
-                    {selectedAppt.type}
+                    {selectedAppt.status}
                   </span>
                 </div>
+              </div>
+              <div>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Date & Notes</p>
+                <p className="text-sm font-medium text-slate-800">{selectedAppt.date}</p>
+                <p className="mt-1 text-sm text-slate-500">{selectedAppt.notes}</p>
               </div>
             </div>
             <div className="px-6 py-4 border-t border-slate-100 flex justify-end bg-slate-50">

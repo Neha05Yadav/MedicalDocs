@@ -224,278 +224,59 @@ export default function DoctorProfilePage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto w-full min-h-screen">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        {/* Profile Cover & Header */}
-        <div className="h-32 bg-gradient-to-r from-[#0891b2] to-cyan-400 relative"></div>
-        <div className="px-8 pb-8 relative flex flex-col items-center sm:items-start">
-          <div className="-mt-16 mb-4 relative z-10">
-            <div 
-              className="size-32 rounded-full border-4 border-white bg-cyan-100 text-[#0891b2] flex items-center justify-center shadow-md relative overflow-hidden group cursor-pointer"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {profile.logoUrl ? (
-                <img src={profile.logoUrl} alt="Profile" className="w-full h-full object-cover" />
-              ) : (
-                <User className="size-16" />
-              )}
-              
-              {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <Upload className="w-8 h-8 text-white" />
-              </div>
-            </div>
-            
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              accept=".jpg,.jpeg,.png"
-              onChange={handleLogoUpload}
-            />
-          </div>
+    <div className="min-h-screen w-full bg-[#fbfaf6] p-4 sm:p-6 lg:p-8">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div><p className="text-xs font-black uppercase tracking-[.22em] text-amber-700">Practice workspace</p><h1 className="mt-1 text-3xl font-black tracking-tight text-slate-950">Clinic profile</h1><p className="mt-2 text-base font-medium text-slate-500">Keep your practitioner identity and patient-facing contact details current.</p></div>
+        {!isEditing && <button onClick={() => setIsEditing(true)} className="rounded-xl bg-emerald-700 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-100 transition hover:bg-emerald-800">Edit practice profile</button>}
+      </div>
 
-          <div className="w-full text-center sm:text-left mb-8">
-            {isEditing ? (
-              <input
-                type="text"
-                name="hospital"
-                value={profile.hospital}
-                onChange={handleChange}
-                className="text-2xl sm:text-3xl font-bold text-slate-900 bg-white/80 border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/20 rounded-xl px-4 py-2 mb-3 w-full max-w-md shadow-sm transition-all"
-                placeholder="Clinic Name"
-              />
-            ) : (
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3">{profile.hospital || "Clinic Name"}</h2>
-            )}
-
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-sm font-medium">
-              <div className="flex items-center gap-2 bg-gradient-to-r from-cyan-50 to-blue-50 text-[#0891b2] px-4 py-1.5 rounded-full border border-cyan-100 shadow-sm">
-                <Stethoscope className="size-4" />
-                {isEditing ? (
-                  <input
-                    name="specialization"
-                    value={profile.specialization}
-                    onChange={handleChange}
-                    className="bg-transparent border-b border-cyan-300 focus:outline-none w-32 font-bold placeholder:text-cyan-300"
-                    placeholder="Specialization"
-                  />
-                ) : (
-                  <span className="font-bold">{profile.specialization}</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2 bg-slate-50 text-slate-600 px-4 py-1.5 rounded-full border border-slate-200 shadow-sm">
-                <Award className="size-4 text-slate-400" />{" "}
-                <span className="text-slate-500">MCI Reg:</span>
-                {isEditing ? (
-                  <input
-                    name="registrationNo"
-                    value={profile.registrationNo}
-                    onChange={handleChange}
-                    className="bg-transparent border-b border-slate-300 focus:outline-none w-28 font-bold placeholder:text-slate-300"
-                    placeholder="Registration No"
-                  />
-                ) : (
-                  <span className="font-bold text-slate-700">{profile.registrationNo}</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8 mt-4">
-            <div className="space-y-6">
-              <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 shadow-sm">
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200">
-                  <div className="p-2 bg-cyan-100 text-[#0891b2] rounded-lg">
-                    <MapPin className="size-5" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-800 uppercase tracking-wider">
-                    Contact Information
-                  </h3>
-                </div>
-                <div className="space-y-5">
-                  <div className="flex items-start gap-4 group">
-                    <div className="p-2.5 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-400 group-hover:text-[#0891b2] group-hover:border-cyan-200 transition-colors">
-                      <Mail className="size-5" />
-                    </div>
-                    <div className="flex-1 pt-1">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                        Email Address
-                      </p>
-                      {isEditing ? (
-                        <input
-                          name="email"
-                          value={profile.email}
-                          onChange={handleChange}
-                          className="w-full text-sm font-semibold text-slate-900 bg-white border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-xl px-3 py-2 transition-all"
-                        />
-                      ) : (
-                        <p className="text-sm font-bold text-slate-700">{profile.email}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4 group">
-                    <div className="p-2.5 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-400 group-hover:text-[#0891b2] group-hover:border-cyan-200 transition-colors">
-                      <Phone className="size-5" />
-                    </div>
-                    <div className="flex-1 pt-1">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                        Phone Number
-                      </p>
-                      {isEditing ? (
-                        <input
-                          name="phone"
-                          value={profile.phone}
-                          onChange={handleChange}
-                          className="w-full text-sm font-semibold text-slate-900 bg-white border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-xl px-3 py-2 transition-all"
-                        />
-                      ) : (
-                        <p className="text-sm font-bold text-slate-700">{profile.phone}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4 group">
-                    <div className="p-2.5 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-400 group-hover:text-[#0891b2] group-hover:border-cyan-200 transition-colors">
-                      <MapPin className="size-5" />
-                    </div>
-                    <div className="flex-1 pt-1">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                        Clinic / Home Address
-                      </p>
-                      {isEditing ? (
-                        <textarea
-                          name="address"
-                          value={profile.address}
-                          onChange={handleChange}
-                          rows={3}
-                          className="w-full text-sm font-semibold text-slate-900 bg-white border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-xl px-3 py-2 resize-none transition-all"
-                        />
-                      ) : (
-                        <p className="text-sm font-medium text-slate-600 leading-relaxed bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                          {profile.address || "No address provided."}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 shadow-sm">
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200">
-                  <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
-                    <Award className="size-5" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-800 uppercase tracking-wider">
-                    Professional Details
-                  </h3>
-                </div>
-                <div className="space-y-5">
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                      Doctor Name
-                    </p>
-                    {isEditing ? (
-                      <input
-                        name="name"
-                        value={profile.name}
-                        onChange={handleChange}
-                        className="w-full text-sm font-semibold text-slate-900 bg-slate-50 border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-lg px-2 py-1.5 transition-all"
-                      />
-                    ) : (
-                      <p className="text-sm font-bold text-[#0891b2]">{profile.name || "N/A"}</p>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                        Department
-                      </p>
-                      {isEditing ? (
-                        <input
-                          name="department"
-                          value={profile.department}
-                          onChange={handleChange}
-                          className="w-full text-sm font-semibold text-slate-900 bg-slate-50 border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-lg px-2 py-1.5 transition-all"
-                        />
-                      ) : (
-                        <p className="text-sm font-bold text-slate-700">{profile.department}</p>
-                      )}
-                    </div>
-
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                        Experience
-                      </p>
-                      {isEditing ? (
-                        <input
-                          name="experience"
-                          value={profile.experience}
-                          onChange={handleChange}
-                          className="w-full text-sm font-semibold text-slate-900 bg-slate-50 border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-lg px-2 py-1.5 transition-all"
-                        />
-                      ) : (
-                        <p className="text-sm font-bold text-slate-700">{profile.experience}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                      Bio / About
-                    </p>
-                    {isEditing ? (
-                      <textarea
-                        name="bio"
-                        value={profile.bio}
-                        onChange={handleChange}
-                        rows={4}
-                        className="w-full text-sm font-medium text-slate-900 bg-slate-50 border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 rounded-xl px-3 py-2 resize-none transition-all"
-                      />
-                    ) : (
-                      <p className="text-sm font-medium text-slate-600 leading-relaxed">
-                        {profile.bio || "No bio available."}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end gap-4">
-            {isEditing ? (
-              <>
-                <button
-                  onClick={() => {
-                    setIsEditing(false);
-                    fetchProfile();
-                  }}
-                  className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-sm font-bold transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  className="px-6 py-2.5 bg-[#0891b2] hover:bg-cyan-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm flex items-center gap-2"
-                >
-                  <Save className="size-4" /> Save Changes
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="px-6 py-2.5 bg-[#0891b2] hover:bg-cyan-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm"
-              >
-                Edit Profile
+      <section className="overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm">
+        <div className="grid lg:grid-cols-[19rem_1fr]">
+          <div className="relative overflow-hidden bg-[#f2b84b] p-7 sm:p-9">
+            <div className="absolute -right-20 -top-20 size-56 rounded-full border-[28px] border-white/15" /><div className="absolute -bottom-20 -left-16 size-48 rounded-full bg-emerald-900/10" />
+            <div className="relative flex h-full min-h-[20rem] flex-col">
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="group relative flex size-36 items-center justify-center overflow-hidden rounded-[2rem] border-4 border-white/50 bg-white/80 text-emerald-800 shadow-xl" title="Change practitioner photo">
+                {profile.logoUrl ? <img src={profile.logoUrl} alt={profile.name || "Doctor profile"} className="size-full object-cover" /> : <User className="size-16" />}
+                <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 bg-emerald-950/80 py-3 text-xs font-bold text-white opacity-0 transition group-hover:opacity-100"><Upload className="size-4" /> Change photo</span>
               </button>
-            )}
+              <input type="file" ref={fileInputRef} className="hidden" accept=".jpg,.jpeg,.png" onChange={handleLogoUpload} />
+              <div className="mt-auto pt-8"><p className="text-xs font-black uppercase tracking-[.18em] text-amber-950/60">Affiliated practice</p><h2 className="mt-2 text-2xl font-black leading-tight text-amber-950">{profile.hospital || "Clinic not assigned"}</h2><p className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/50 px-3 py-1.5 text-xs font-bold text-amber-950"><MapPin className="size-4" /> Practice location on record</p></div>
+            </div>
+          </div>
+
+          <div className="p-6 sm:p-8 lg:p-10">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between"><div><span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-emerald-700"><Stethoscope className="size-4" /> Practitioner profile</span><h2 className="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{profile.name || "Doctor name"}</h2><p className="mt-2 text-lg font-bold text-emerald-700">{profile.specialization || "Specialization not provided"}</p></div><div className="rounded-2xl border border-stone-200 bg-[#fbfaf6] px-5 py-4"><p className="text-xs font-black uppercase tracking-wider text-stone-400">Registration</p><p className="mt-1 flex items-center gap-2 font-mono text-sm font-black text-slate-800"><Award className="size-5 text-amber-600" />{profile.registrationNo || "Not provided"}</p></div></div>
+
+            <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {[{label:"Specialization",value:profile.specialization || "Not set",icon:Stethoscope},{label:"Department",value:profile.department || "Not set",icon:Award},{label:"Experience",value:profile.experience || "Not set",icon:User}].map((item) => <div key={item.label} className="rounded-2xl border border-stone-200 bg-[#fbfaf6] p-5"><item.icon className="mb-3 size-5 text-emerald-700"/><p className="text-xs font-black uppercase tracking-wider text-stone-400">{item.label}</p><p className="mt-1 truncate text-base font-black text-slate-900">{item.value}</p></div>)}
+            </div>
           </div>
         </div>
+      </section>
+
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1.08fr_.92fr]">
+        <section className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-sm">
+          <div className="border-b border-stone-100 px-6 py-6 sm:px-8"><p className="text-xs font-black uppercase tracking-[.16em] text-emerald-700">Professional record</p><h2 className="mt-1 text-2xl font-black text-slate-950">Practitioner details</h2></div>
+          <div className="grid gap-5 p-6 sm:grid-cols-2 sm:p-8">
+            <div className="sm:col-span-2"><label className="mb-2 block text-xs font-black uppercase tracking-wider text-stone-500">Doctor name</label>{isEditing ? <input name="name" value={profile.name} onChange={handleChange} className="w-full rounded-xl border border-stone-200 bg-[#fbfaf6] px-4 py-3.5 text-base font-bold outline-none focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"/> : <div className="rounded-xl bg-[#fbfaf6] px-4 py-3.5 font-bold text-slate-900">{profile.name || "Not provided"}</div>}</div>
+            <div><label className="mb-2 block text-xs font-black uppercase tracking-wider text-stone-500">Specialization</label>{isEditing ? <input name="specialization" value={profile.specialization} onChange={handleChange} className="w-full rounded-xl border border-stone-200 bg-[#fbfaf6] px-4 py-3.5 font-bold outline-none focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"/> : <div className="rounded-xl bg-[#fbfaf6] px-4 py-3.5 font-bold text-slate-800">{profile.specialization || "Not provided"}</div>}</div>
+            <div><label className="mb-2 block text-xs font-black uppercase tracking-wider text-stone-500">Registration number</label>{isEditing ? <input name="registrationNo" value={profile.registrationNo} onChange={handleChange} className="w-full rounded-xl border border-stone-200 bg-[#fbfaf6] px-4 py-3.5 font-bold outline-none focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"/> : <div className="rounded-xl bg-[#fbfaf6] px-4 py-3.5 font-mono font-bold text-slate-800">{profile.registrationNo || "Not provided"}</div>}</div>
+            <div><label className="mb-2 block text-xs font-black uppercase tracking-wider text-stone-500">Department</label>{isEditing ? <input name="department" value={profile.department} onChange={handleChange} className="w-full rounded-xl border border-stone-200 bg-[#fbfaf6] px-4 py-3.5 font-bold outline-none focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"/> : <div className="rounded-xl bg-[#fbfaf6] px-4 py-3.5 font-bold text-slate-800">{profile.department || "Not provided"}</div>}</div>
+            <div><label className="mb-2 block text-xs font-black uppercase tracking-wider text-stone-500">Experience</label>{isEditing ? <input name="experience" value={profile.experience} onChange={handleChange} className="w-full rounded-xl border border-stone-200 bg-[#fbfaf6] px-4 py-3.5 font-bold outline-none focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"/> : <div className="rounded-xl bg-[#fbfaf6] px-4 py-3.5 font-bold text-slate-800">{profile.experience || "Not provided"}</div>}</div>
+            <div className="sm:col-span-2"><label className="mb-2 block text-xs font-black uppercase tracking-wider text-stone-500">Professional bio</label>{isEditing ? <textarea name="bio" value={profile.bio} onChange={handleChange} rows={4} className="w-full resize-none rounded-xl border border-stone-200 bg-[#fbfaf6] px-4 py-3.5 font-medium leading-6 outline-none focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"/> : <div className="rounded-xl bg-[#fbfaf6] px-4 py-4 font-medium leading-7 text-slate-600">{profile.bio || "No bio available"}</div>}</div>
+          </div>
+        </section>
+
+        <section className="overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-sm">
+          <div className="border-b border-stone-100 px-6 py-6 sm:px-8"><p className="text-xs font-black uppercase tracking-[.16em] text-amber-700">Patient contact</p><h2 className="mt-1 text-2xl font-black text-slate-950">Contact & practice</h2></div>
+          <div className="space-y-5 p-6 sm:p-8">
+            <div><label className="mb-2 block text-xs font-black uppercase tracking-wider text-stone-500">Email address</label>{isEditing ? <input type="email" name="email" value={profile.email} onChange={handleChange} className="w-full rounded-xl border border-stone-200 bg-[#fbfaf6] px-4 py-3.5 font-bold outline-none focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"/> : <div className="flex items-center gap-3 rounded-xl bg-[#fbfaf6] px-4 py-3.5 font-bold text-slate-800"><Mail className="size-5 text-emerald-700"/><span className="break-all">{profile.email || "Not provided"}</span></div>}</div>
+            <div><label className="mb-2 block text-xs font-black uppercase tracking-wider text-stone-500">Phone number</label>{isEditing ? <input type="tel" name="phone" value={profile.phone} onChange={handleChange} className="w-full rounded-xl border border-stone-200 bg-[#fbfaf6] px-4 py-3.5 font-bold outline-none focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"/> : <div className="flex items-center gap-3 rounded-xl bg-[#fbfaf6] px-4 py-3.5 font-bold text-slate-800"><Phone className="size-5 text-amber-600"/>{profile.phone || "Not provided"}</div>}</div>
+            <div><label className="mb-2 block text-xs font-black uppercase tracking-wider text-stone-500">Practice address</label>{isEditing ? <textarea name="address" value={profile.address} onChange={handleChange} rows={4} className="w-full resize-none rounded-xl border border-stone-200 bg-[#fbfaf6] px-4 py-3.5 font-semibold leading-6 outline-none focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"/> : <div className="flex items-start gap-3 rounded-xl bg-[#fbfaf6] px-4 py-4 font-semibold leading-6 text-slate-700"><MapPin className="mt-0.5 size-5 shrink-0 text-amber-600"/>{profile.address || "No address provided"}</div>}</div>
+            <div><label className="mb-2 block text-xs font-black uppercase tracking-wider text-stone-500">Affiliated clinic</label><div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3.5 font-bold text-slate-700">{profile.hospital || "Not assigned"}</div></div>
+          </div>
+          {isEditing && <div className="flex flex-col-reverse gap-3 border-t border-stone-100 bg-[#fbfaf6] px-6 py-5 sm:flex-row sm:justify-end sm:px-8"><button onClick={() => {setIsEditing(false);fetchProfile();}} className="rounded-xl border border-stone-200 bg-white px-6 py-3 text-sm font-bold text-slate-600 hover:bg-stone-100">Cancel</button><button onClick={handleSave} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-100 hover:bg-emerald-800"><Save className="size-4"/> Save changes</button></div>}
+        </section>
       </div>
     </div>
   );

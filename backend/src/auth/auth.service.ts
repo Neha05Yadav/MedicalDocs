@@ -100,6 +100,8 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const user = await this.validateCredentials(loginDto);
 
+    user.role = await this.resolvePortalRole(user);
+
     if (!this.isPublicAuthRole(user.role)) {
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -115,6 +117,36 @@ export class AuthService {
     }
 
     return this.createLoginResponse(user);
+  }
+
+  /**
+   * Legacy records can contain a portal role that disagrees with the linked
+   * facility (for example a laboratory saved as HOSPITAL). The facility link is
+   * the authoritative tenant boundary, so derive only the portal-facing role
+   * from its type. This changes neither ownership nor database data.
+   */
+  private async resolvePortalRole(user: any): Promise<string> {
+    if (this.isManagementRole(user.role) || !user.hospitalId) {
+      return user.role;
+    }
+
+    const facility = await this.db.queryOne<{ type: string | null }>(
+      'SELECT type FROM hospital WHERE id = ? LIMIT 1',
+      [user.hospitalId],
+    );
+    const facilityType = (facility?.type || '').toUpperCase();
+
+    if (facilityType === 'LAB' || facilityType === 'LABORATORY') {
+      return 'LABORATORY';
+    }
+    if (facilityType === 'HOSPITAL') {
+      return 'HOSPITAL';
+    }
+    if (facilityType === 'CLINIC') {
+      return 'CLINIC';
+    }
+
+    return user.role;
   }
 
   private async validateCredentials(loginDto: LoginDto) {
@@ -167,7 +199,16 @@ export class AuthService {
 
   private isPublicAuthRole(role: string | null | undefined): boolean {
     const normalizedRole = (role || '').toUpperCase();
-    return (PUBLIC_SIGNUP_ROLES as readonly string[]).includes(normalizedRole);
+    const allowedLoginRoles = [
+      ...PUBLIC_SIGNUP_ROLES, 
+      'LAB_MANAGER', 
+      'TECHNICIAN', 
+      'LABORATORY',
+      'ACCOUNTS MANAGER',
+      'SALES MANAGER',
+      'SUPPORT TEAM'
+    ];
+    return allowedLoginRoles.includes(normalizedRole as any) || !this.isManagementRole(role);
   }
 
   /**

@@ -8,6 +8,11 @@ const Eye = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" w
 const FileText = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>;
 const Search = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>;
 const X = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>;
+const Building = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></svg>;
+const Stethoscope = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 12 0V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3M8 15v1a6 6 0 0 0 12 0v-4"/><circle cx="20" cy="10" r="2"/></svg>;
+const Flask = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 2v7.31M14 9.3V2M8.5 2h7M14 9.3a6.5 6.5 0 1 1-4 0M5.52 16h12.96"/></svg>;
+const User = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+const Upload = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12m5-7-5-5-5 5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>;
 
 export default function PrescriptionsClient() {
   const router = useRouter();
@@ -15,11 +20,12 @@ export default function PrescriptionsClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
-  const [uploadId, setUploadId] = useState("");
   const [uploadDoctor, setUploadDoctor] = useState("");
   const [uploadDate, setUploadDate] = useState("");
   const [isPending, setIsPending] = useState(false);
   const [selectedPrescriptionDetails, setSelectedPrescriptionDetails] = useState<any | null>(null);
+  const [activeSource, setActiveSource] = useState("All Providers");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchPrescriptions();
@@ -60,7 +66,6 @@ export default function PrescriptionsClient() {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          id: uploadId,
           doctor: uploadDoctor,
           date: uploadDate
         })
@@ -70,7 +75,6 @@ export default function PrescriptionsClient() {
       
       toast.success("Prescription added successfully!");
       setShowUpload(false);
-      setUploadId("");
       setUploadDoctor("");
       setUploadDate("");
       fetchPrescriptions();
@@ -103,6 +107,25 @@ export default function PrescriptionsClient() {
     );
   }
 
+  const facilityType = (prescription: any) => String(prescription.hospitalType || "").toUpperCase();
+  const selfPrescriptions = prescriptions.filter((prescription) => !prescription.hospitalType);
+  const providerPrescriptions = prescriptions.filter((prescription) => Boolean(prescription.hospitalType));
+  const visiblePrescriptions = prescriptions.filter((prescription) => {
+    const type = facilityType(prescription);
+    const matchesSource = activeSource === "Self"
+      ? !prescription.hospitalType
+      : activeSource === "All Providers"
+        ? Boolean(prescription.hospitalType)
+        : activeSource === "Laboratory"
+          ? type === "LAB" || type === "LABORATORY"
+          : type === activeSource.toUpperCase();
+    const searchableText = [prescription.id, prescription.doctor, prescription.hospitalName, prescription.medicine]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return matchesSource && searchableText.includes(searchQuery.trim().toLowerCase());
+  });
+
   return (
     <>
       {/* Upload Modal */}
@@ -116,16 +139,9 @@ export default function PrescriptionsClient() {
               </button>
             </div>
             <form onSubmit={handleAddPrescription} className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-slate-700 mb-1.5 block">Prescription ID *</label>
-                <input
-                  type="text"
-                  value={uploadId}
-                  onChange={(e) => setUploadId(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
-                  placeholder="e.g. PRE003"
-                  required
-                />
+              <div className="rounded-xl border border-cyan-100 bg-cyan-50/70 px-4 py-3">
+                <p className="text-sm font-semibold text-cyan-900">Prescription ID will be generated automatically</p>
+                <p className="mt-1 text-xs font-medium text-cyan-700">Format: RX followed by a unique 5-digit number.</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700 mb-1.5 block">Doctor Name *</label>
@@ -178,22 +194,64 @@ export default function PrescriptionsClient() {
           </div>
         </div>
       )}
-      <div className="flex justify-between items-center mb-6">
-        <div className="relative max-w-md w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search prescriptions by ID or Doctor..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] shadow-sm"
-          />
+      <section className="mb-7 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm 2xl:p-8">
+        <div className="mb-7">
+          <h2 className="text-[clamp(1.6rem,1.5vw,2rem)] font-extrabold tracking-tight text-slate-900">Prescriptions</h2>
+          <p className="mt-1 text-[clamp(1rem,.9vw,1.2rem)] text-slate-500">Prescriptions from connected facilities and documents added by you.</p>
         </div>
-        <button 
-          onClick={() => setShowUpload(true)}
-          className="px-4 py-2 bg-[#0891b2] text-white rounded-lg font-semibold text-sm hover:bg-cyan-700 transition-colors"
-        >
-          Add Prescription
-        </button>
+
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(300px,0.8fr)]">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5">
+            <button onClick={() => setActiveSource("All Providers")} className="mb-4 flex w-full items-center justify-between text-left">
+              <span>
+                <span className="block text-lg font-extrabold text-slate-900">Hospital, Clinic & Lab Prescriptions</span>
+                <span className="mt-1 block text-sm font-medium text-slate-500">Prescriptions issued by your healthcare providers</span>
+              </span>
+              <span className="rounded-full bg-white px-3 py-1.5 text-sm font-extrabold text-slate-700 shadow-sm">{providerPrescriptions.length}</span>
+            </button>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <button onClick={() => setActiveSource("Hospital")} className={`flex items-center rounded-2xl border p-5 text-left transition-all ${activeSource === "Hospital" ? "border-emerald-500 bg-emerald-50/40 shadow-md" : "border-slate-200 bg-white hover:border-emerald-300 hover:shadow-sm"}`}>
+                <span className={`mr-4 rounded-xl p-3 ${activeSource === "Hospital" ? "bg-emerald-500 text-white" : "bg-emerald-50 text-emerald-600"}`}><Building className="size-8" /></span>
+                <span><span className="block text-lg font-bold text-slate-900">Hospitals</span><span className="text-sm font-medium text-slate-500">{prescriptions.filter((p) => facilityType(p) === "HOSPITAL").length} Prescriptions</span></span>
+              </button>
+
+              <button onClick={() => setActiveSource("Clinic")} className={`flex items-center rounded-2xl border p-5 text-left transition-all ${activeSource === "Clinic" ? "border-blue-500 bg-blue-50/40 shadow-md" : "border-slate-200 bg-white hover:border-blue-300 hover:shadow-sm"}`}>
+                <span className={`mr-4 rounded-xl p-3 ${activeSource === "Clinic" ? "bg-blue-500 text-white" : "bg-blue-50 text-blue-600"}`}><Stethoscope className="size-8" /></span>
+                <span><span className="block text-lg font-bold text-slate-900">Clinics</span><span className="text-sm font-medium text-slate-500">{prescriptions.filter((p) => facilityType(p) === "CLINIC").length} Prescriptions</span></span>
+              </button>
+
+              <button onClick={() => setActiveSource("Laboratory")} className={`flex items-center rounded-2xl border p-5 text-left transition-all ${activeSource === "Laboratory" ? "border-purple-500 bg-purple-50/40 shadow-md" : "border-slate-200 bg-white hover:border-purple-300 hover:shadow-sm"}`}>
+                <span className={`mr-4 rounded-xl p-3 ${activeSource === "Laboratory" ? "bg-purple-500 text-white" : "bg-purple-50 text-purple-600"}`}><Flask className="size-8" /></span>
+                <span><span className="block text-lg font-bold text-slate-900">Laboratories</span><span className="text-sm font-medium text-slate-500">{prescriptions.filter((p) => ["LAB", "LABORATORY"].includes(facilityType(p))).length} Prescriptions</span></span>
+              </button>
+            </div>
+          </div>
+
+          <div className={`flex min-h-full flex-col justify-between rounded-2xl border p-6 transition-all ${activeSource === "Self" ? "border-cyan-500 bg-cyan-50/70 shadow-md" : "border-cyan-200 bg-gradient-to-br from-cyan-50 to-white"}`}>
+            <button onClick={() => setActiveSource("Self")} className="w-full text-left">
+              <span className="mb-5 flex items-center justify-between">
+                <span className={`rounded-2xl p-4 ${activeSource === "Self" ? "bg-cyan-600 text-white" : "bg-white text-cyan-600 shadow-sm"}`}><User className="size-8" /></span>
+                <span className="text-3xl font-black text-slate-900">{selfPrescriptions.length}</span>
+              </span>
+              <span className="block text-xl font-extrabold text-slate-900">My Prescriptions</span>
+              <span className="mt-1 block text-sm font-medium leading-6 text-slate-500">Prescriptions uploaded personally by you.</span>
+            </button>
+            <button onClick={() => setShowUpload(true)} className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl bg-[#12224d] px-5 py-3.5 text-base font-bold text-white shadow-sm transition-colors hover:bg-cyan-900">
+              <Upload className="size-5" /> Add Prescription
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div className="mb-5 flex items-center justify-between gap-4">
+        <div className="relative w-full md:w-[32rem]">
+          <Search className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+          <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} type="text" placeholder="Search prescriptions by ID, doctor or facility..." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-12 pr-4 text-base shadow-sm focus:border-[#0891b2] focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20" />
+        </div>
+        <p className="hidden text-sm font-bold text-slate-500 md:block">Showing {visiblePrescriptions.length} prescription{visiblePrescriptions.length === 1 ? "" : "s"}</p>
       </div>
+
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -201,26 +259,27 @@ export default function PrescriptionsClient() {
               <tr>
                 <th className="px-6 py-4">Prescription ID</th>
                 <th className="px-6 py-4">Doctor Name</th>
+                <th className="px-6 py-4">Source</th>
                 <th className="px-6 py-4">Date</th>
                 <th className="px-6 py-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {prescriptions.length === 0 ? (
+              {visiblePrescriptions.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-16 text-center">
+                  <td colSpan={5} className="px-6 py-16 text-center">
                     <div className="flex flex-col items-center">
                       <div className="size-14 bg-slate-100 rounded-full flex items-center justify-center mb-3">
                         <FileText className="size-6 text-slate-400" />
                       </div>
-                      <p className="text-sm font-semibold text-slate-600 mb-1">No prescriptions yet</p>
-                      <p className="text-xs text-slate-400 mb-4">Click "Add Prescription" to add your first one.</p>
+                      <p className="text-sm font-semibold text-slate-600 mb-1">No prescriptions found</p>
+                      <p className="text-xs text-slate-400 mb-4">Select another source or add your prescription.</p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                prescriptions.map((prescription) => (
-                <tr key={prescription.id} className="hover:bg-slate-50/80 transition-colors">
+                visiblePrescriptions.map((prescription, index) => (
+                <tr key={`${prescription.id}-${index}`} className="hover:bg-slate-50/80 transition-colors">
                   <td className="px-6 py-4 font-medium text-[#0891b2] flex items-center gap-2">
                     <div className="size-8 bg-cyan-50 text-[#0891b2] rounded-lg flex items-center justify-center border border-cyan-100/50">
                        <FileText className="size-4" />
@@ -229,6 +288,10 @@ export default function PrescriptionsClient() {
                   </td>
                   <td className="px-6 py-4 font-medium text-slate-800">
                     {prescription.doctor}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="font-semibold text-slate-800">{prescription.hospitalName || "Uploaded by You"}</span>
+                    <span className="mt-0.5 block text-xs font-medium uppercase tracking-wide text-slate-400">{prescription.hospitalType || "Self"}</span>
                   </td>
                   <td className="px-6 py-4 text-slate-600 font-medium">
                     {prescription.date}
@@ -249,74 +312,6 @@ export default function PrescriptionsClient() {
             </tbody>
           </table>
         </div>
-      </div>
-
-      <div className="mt-8">
-        <h2 className="text-lg font-bold text-slate-800 mb-4">Hospital Prescriptions</h2>
-        {prescriptions.filter(p => p.hospitalType === 'HOSPITAL').length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {prescriptions.filter(p => p.hospitalType === 'HOSPITAL').map(p => (
-              <div key={p.id} className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedPrescriptionDetails(p)}>
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg border border-blue-100">
-                      <FileText className="size-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-slate-800">{p.id}</h3>
-                      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{p.hospitalName}</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-bold px-2 py-1 bg-slate-100 text-slate-600 rounded-md border border-slate-200 uppercase">{p.date}</span>
-                </div>
-                <div className="pt-3 border-t border-slate-100 mt-3 flex justify-between items-center">
-                  <span className="text-sm font-medium text-slate-700">{p.doctor}</span>
-                  <span className="text-[#0891b2] text-xs font-bold uppercase hover:underline">View Details</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-            <FileText className="size-8 text-slate-300 mx-auto mb-3" />
-            <p className="text-sm font-medium text-slate-600">No hospital prescriptions found.</p>
-            <p className="text-xs text-slate-400 mt-1">Prescriptions saved by hospitals will appear here.</p>
-          </div>
-        )}
-      </div>
-
-      <div className="mt-8">
-        <h2 className="text-lg font-bold text-slate-800 mb-4">Clinic Prescriptions</h2>
-        {prescriptions.filter(p => p.hospitalType === 'CLINIC').length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {prescriptions.filter(p => p.hospitalType === 'CLINIC').map(p => (
-              <div key={p.id} className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedPrescriptionDetails(p)}>
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100">
-                      <FileText className="size-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-slate-800">{p.id}</h3>
-                      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{p.hospitalName}</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-bold px-2 py-1 bg-slate-100 text-slate-600 rounded-md border border-slate-200 uppercase">{p.date}</span>
-                </div>
-                <div className="pt-3 border-t border-slate-100 mt-3 flex justify-between items-center">
-                  <span className="text-sm font-medium text-slate-700">{p.doctor}</span>
-                  <span className="text-[#0891b2] text-xs font-bold uppercase hover:underline">View Details</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-            <FileText className="size-8 text-slate-300 mx-auto mb-3" />
-            <p className="text-sm font-medium text-slate-600">No clinic prescriptions found.</p>
-            <p className="text-xs text-slate-400 mt-1">Prescriptions saved by clinics will appear here.</p>
-          </div>
-        )}
       </div>
       {/* PRESCRIPTION DETAILS MODAL */}
       {selectedPrescriptionDetails && (

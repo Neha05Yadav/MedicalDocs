@@ -13,7 +13,7 @@ if (typeof window !== "undefined") {
     const res = await originalFetch(...args);
     if (res.status === 401 && !window.location.pathname.includes("/login") && !window.location.pathname.includes("/auth")) {
       localStorage.removeItem("token");
-      window.location.href = "/login";
+      window.location.href = `/auth?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`;
     }
     return res;
   };

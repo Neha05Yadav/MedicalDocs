@@ -65,7 +65,7 @@ export default function ManagementLoginPage() {
 
   return (
     <main className="relative min-h-[100svh] overflow-hidden bg-[#05070b] text-white">
-      <video className="absolute inset-0 size-full object-cover object-center" autoPlay muted loop playsInline preload="metadata" poster="/medidoc-campaign/hero-video-poster.jpg" aria-label="MediDoc healthcare operations">
+      <video className="absolute inset-0 size-full object-cover object-center" autoPlay muted loop playsInline preload="metadata" poster="/medidoc-campaign/hero-video-poster.jpg" aria-label="MedicalDocs healthcare operations">
         <source src="/medidoc-lab-verification.mp4" type="video/mp4" />
       </video>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,7,12,.96)_0%,rgba(3,7,12,.86)_48%,rgba(3,7,12,.72)_100%),linear-gradient(0deg,rgba(3,7,12,.9),transparent_65%)]" />
@@ -79,7 +79,7 @@ export default function ManagementLoginPage() {
           <MediDocBrand />
           <div className="mt-14 inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/[.07] px-4 py-2 text-xs font-bold uppercase tracking-[.2em] text-emerald-200 backdrop-blur-xl"><span className="size-2 rounded-full bg-emerald-300 shadow-[0_0_12px_#6ee7b7]" /> Protected operations gateway</div>
           <h1 className="mt-7 text-6xl font-semibold leading-[.92] tracking-[-.06em] xl:text-7xl">The care network, <span className={styles.displayItalic}>under clear control.</span></h1>
-          <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300">A dedicated operating layer for authorized MediDoc teams. Govern access, facilities, service health and support without exposing administrative identities through public sign-in.</p>
+          <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300">A dedicated operating layer for authorized MedicalDocs teams. Govern access, facilities, service health and support without exposing administrative identities through public sign-in.</p>
           <div className="mt-10 grid gap-4 xl:grid-cols-3">
             {CAPABILITIES.map(({ icon: Icon, title, copy }) => <article key={title} className="rounded-2xl border border-white/10 bg-white/[.045] p-5 backdrop-blur-xl"><Icon className="size-6 text-cyan-300" /><h2 className="mt-4 text-base font-semibold">{title}</h2><p className="mt-2 text-sm leading-6 text-slate-400">{copy}</p></article>)}
           </div>

@@ -15,27 +15,42 @@ export default function SalesRevenuePage() {
   const [activeRange, setActiveRange] = useState("This Year");
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetch('/api/management/sales/revenue')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`Revenue request failed (${res.status})`);
+        return res.json();
+      })
       .then(json => {
         setData(json);
         setLoading(false);
       })
       .catch(err => {
         console.error("Failed to load revenue data", err);
+        setError(err instanceof Error ? err.message : "Revenue data could not be loaded");
         setLoading(false);
       });
   }, []);
 
-  if (loading || !data) {
+  if (loading) {
     return (
       <div className="p-8 flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
       </div>
     );
   }
+
+  if (error || !data) {
+    return <div className="grid min-h-[60vh] place-items-center p-8 text-center"><div><h2 className="text-xl font-bold text-slate-900">Revenue data is unavailable</h2><p className="mt-2 text-sm text-slate-500">{error || "The server returned an empty response."}</p><button onClick={() => window.location.reload()} className="mt-5 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white">Retry</button></div></div>;
+  }
+
+  const kpi = data?.kpi || {};
+  const revenueData = Array.isArray(data?.revenueData) ? data.revenueData : [];
+  const sourceData = Array.isArray(data?.sourceData) ? data.sourceData : [];
+  const changeText = (value: unknown) => String(value ?? "0%");
+  const isNegative = (value: unknown) => changeText(value).trim().startsWith("-");
 
   return (
     <div className="p-8 max-w-[1600px] mx-auto w-full min-h-screen font-sans bg-slate-50/50">
@@ -46,11 +61,11 @@ export default function SalesRevenuePage() {
             <h3 className="font-bold text-slate-500">Total Revenue 💰</h3>
             <div className="p-2 bg-indigo-50 rounded-lg"><IndianRupee className="size-5 text-indigo-600" /></div>
           </div>
-          <p className="text-3xl font-black text-slate-900 mb-2">{data.kpi.totalRevenue}</p>
+          <p className="text-3xl font-black text-slate-900 mb-2">{kpi.totalRevenue || "₹ 0"}</p>
           <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
-            <span className={`flex items-center font-bold ${data.kpi.totalRevenueChange.includes('-') ? 'text-rose-600' : 'text-emerald-600'}`}>
-              {data.kpi.totalRevenueChange.includes('-') ? <ArrowDownRight className="size-3 mr-1" /> : <ArrowUpRight className="size-3 mr-1" />}
-              {data.kpi.totalRevenueChange.replace(/[+-]/, '')}
+            <span className={`flex items-center font-bold ${isNegative(kpi.totalRevenueChange) ? 'text-rose-600' : 'text-emerald-600'}`}>
+              {isNegative(kpi.totalRevenueChange) ? <ArrowDownRight className="size-3 mr-1" /> : <ArrowUpRight className="size-3 mr-1" />}
+              {changeText(kpi.totalRevenueChange).replace(/[+-]/, '')}
             </span>
             vs last year
           </div>
@@ -60,11 +75,11 @@ export default function SalesRevenuePage() {
             <h3 className="font-bold text-slate-500">Monthly Revenue 📅</h3>
             <div className="p-2 bg-blue-50 rounded-lg"><Calendar className="size-5 text-blue-600" /></div>
           </div>
-          <p className="text-3xl font-black text-slate-900 mb-2">{data.kpi.monthlyRevenue}</p>
+          <p className="text-3xl font-black text-slate-900 mb-2">{kpi.monthlyRevenue || "₹ 0"}</p>
           <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
-            <span className={`flex items-center font-bold ${data.kpi.monthlyRevenueChange.includes('-') ? 'text-rose-600' : 'text-emerald-600'}`}>
-              {data.kpi.monthlyRevenueChange.includes('-') ? <ArrowDownRight className="size-3 mr-1" /> : <ArrowUpRight className="size-3 mr-1" />}
-              {data.kpi.monthlyRevenueChange.replace(/[+-]/, '')}
+            <span className={`flex items-center font-bold ${isNegative(kpi.monthlyRevenueChange) ? 'text-rose-600' : 'text-emerald-600'}`}>
+              {isNegative(kpi.monthlyRevenueChange) ? <ArrowDownRight className="size-3 mr-1" /> : <ArrowUpRight className="size-3 mr-1" />}
+              {changeText(kpi.monthlyRevenueChange).replace(/[+-]/, '')}
             </span>
             vs last month
           </div>
@@ -74,11 +89,11 @@ export default function SalesRevenuePage() {
             <h3 className="font-bold text-slate-500">Annual Revenue 📈</h3>
             <div className="p-2 bg-emerald-50 rounded-lg"><TrendingUp className="size-5 text-emerald-600" /></div>
           </div>
-          <p className="text-3xl font-black text-slate-900 mb-2">{data.kpi.annualRevenue}</p>
+          <p className="text-3xl font-black text-slate-900 mb-2">{kpi.annualRevenue || "₹ 0"}</p>
           <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
-            <span className={`flex items-center font-bold ${data.kpi.annualRevenueChange.includes('-') ? 'text-rose-600' : 'text-emerald-600'}`}>
-              {data.kpi.annualRevenueChange.includes('-') ? <ArrowDownRight className="size-3 mr-1" /> : <ArrowUpRight className="size-3 mr-1" />}
-              {data.kpi.annualRevenueChange.replace(/[+-]/, '')}
+            <span className={`flex items-center font-bold ${isNegative(kpi.annualRevenueChange) ? 'text-rose-600' : 'text-emerald-600'}`}>
+              {isNegative(kpi.annualRevenueChange) ? <ArrowDownRight className="size-3 mr-1" /> : <ArrowUpRight className="size-3 mr-1" />}
+              {changeText(kpi.annualRevenueChange).replace(/[+-]/, '')}
             </span>
             vs last year
           </div>
@@ -88,11 +103,11 @@ export default function SalesRevenuePage() {
             <h3 className="font-bold text-slate-500">Renewal Revenue 🔄</h3>
             <div className="p-2 bg-orange-50 rounded-lg"><RefreshCw className="size-5 text-orange-600" /></div>
           </div>
-          <p className="text-3xl font-black text-slate-900 mb-2">{data.kpi.renewalRevenue}</p>
+          <p className="text-3xl font-black text-slate-900 mb-2">{kpi.renewalRevenue || "₹ 0"}</p>
           <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
-            <span className={`flex items-center font-bold ${data.kpi.renewalRevenueChange.includes('-') ? 'text-rose-600' : 'text-emerald-600'}`}>
-              {data.kpi.renewalRevenueChange.includes('-') ? <ArrowDownRight className="size-3 mr-1" /> : <ArrowUpRight className="size-3 mr-1" />}
-              {data.kpi.renewalRevenueChange.replace(/[+-]/, '')}
+            <span className={`flex items-center font-bold ${isNegative(kpi.renewalRevenueChange) ? 'text-rose-600' : 'text-emerald-600'}`}>
+              {isNegative(kpi.renewalRevenueChange) ? <ArrowDownRight className="size-3 mr-1" /> : <ArrowUpRight className="size-3 mr-1" />}
+              {changeText(kpi.renewalRevenueChange).replace(/[+-]/, '')}
             </span>
             vs last month
           </div>
@@ -119,7 +134,7 @@ export default function SalesRevenuePage() {
           </div>
           <div className="h-[350px] w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.4}/>
@@ -146,7 +161,7 @@ export default function SalesRevenuePage() {
             <h3 className="text-xl font-bold text-slate-900 mb-2">Revenue Sources</h3>
             <p className="text-sm text-slate-500 mb-8">Breakdown of revenue generated by subscription plan type.</p>
             <div className="space-y-8">
-              {data.sourceData.map((item: any, idx: number) => (
+              {sourceData.map((item: any, idx: number) => (
                 <div key={idx} className="group">
                   <div className="flex justify-between items-end mb-3">
                     <span className="font-bold text-slate-700 group-hover:text-slate-900 transition-colors">{item.name}</span>

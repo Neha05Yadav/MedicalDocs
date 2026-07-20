@@ -35,7 +35,7 @@ export default function SettingsPage() {
 
   // Settings State
   const [settings, setSettings] = useState({
-    platform_name: "MediDoc Platform",
+    platform_name: "MedicalDocs Platform",
     support_email: "support@medidoc.com",
     timezone: "Asia/Kolkata (IST)",
     auto_backups: true,

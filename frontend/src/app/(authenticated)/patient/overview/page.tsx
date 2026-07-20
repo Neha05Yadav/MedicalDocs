@@ -21,6 +21,10 @@ const User = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" 
 const FileBarChart = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M8 18v-2"></path><path d="M12 18v-4"></path><path d="M16 18v-6"></path></svg>;
 const ChevronRight = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>;
 const ActivitySquare = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M17 12h-2l-2 5-2-10-2 5H7"></path></svg>;
+const Building2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 12h4"></path><path d="M10 8h4"></path><path d="M14 21v-3a2 2 0 0 0-4 0v3"></path><path d="M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2"></path><path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"></path></svg>;
+const FlaskConical = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"></path><path d="M6.453 15h11.094"></path><path d="M8.5 2h7"></path></svg>;
+const ShieldCheck = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg>;
+const History = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>;
 
 import Link from "next/link";
 import UploadReportClient from "./UploadReportClient";
@@ -202,35 +206,31 @@ export default function PatientDashboard() {
           <div className="grid gap-7 xl:contents">
             {/* 2. Health Stats Section (Charts) */}
             <div className="grid grid-cols-1 gap-7 md:grid-cols-2 xl:contents">
-              {/* Blood Pressure */}
+              {/* Healthcare Providers */}
               <div className="relative col-span-1 flex h-full min-h-52 flex-col overflow-hidden rounded-3xl border border-slate-200/70 bg-white p-7 shadow-[0_16px_45px_-30px_rgba(15,23,42,.28)] md:col-span-2 xl:col-span-8 xl:row-start-1 2xl:p-8">
                 <div className="pointer-events-none absolute -right-16 -top-24 size-80 rounded-full bg-cyan-100/60 blur-3xl" />
-                <div className="flex items-center justify-between">
+                <div className="relative flex items-center justify-between">
                   <h3 className="flex items-center gap-2.5 text-[clamp(1.15rem,1.05vw,1.4rem)] font-extrabold text-slate-900">
-                    <Activity className="size-6 text-rose-500" />
-                    Blood Pressure
+                    <Building2 className="size-6 text-cyan-600" />
+                    Healthcare Providers
                   </h3>
-                  <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[clamp(.85rem,.72vw,.95rem)] font-bold text-emerald-700">Normal</span>
                 </div>
-                <div className="relative mt-8 grid flex-1 items-end gap-8 sm:grid-cols-[.7fr_1.3fr]">
-                  <div>
-                    <span className="block text-[clamp(3.4rem,3.3vw,4.6rem)] font-extrabold tracking-tight text-slate-800">
-                      120/80 <span className="text-[clamp(1.1rem,1vw,1.35rem)] font-semibold tracking-normal text-slate-500">mmHg</span>
-                    </span>
-                    <span className="mt-4 block text-[clamp(.9rem,.76vw,1rem)] font-semibold text-slate-500">Latest recorded measurement</span>
+                <div className="relative mt-6 grid flex-1 grid-cols-2 gap-4">
+                  <div className="flex items-center gap-4 rounded-2xl border border-cyan-100 bg-cyan-50/70 p-4">
+                    <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-cyan-700 shadow-sm"><Building2 className="size-5" /></span>
+                    <div><p className="text-[clamp(.78rem,.68vw,.9rem)] font-semibold text-slate-500">Connected Hospitals</p><p className="mt-0.5 text-[clamp(1.35rem,1.25vw,1.7rem)] font-extrabold text-slate-900">2</p></div>
                   </div>
-                  <div className="hidden h-28 items-end sm:flex" aria-hidden="true">
-                    <svg viewBox="0 0 560 120" className="h-full w-full overflow-visible" fill="none">
-                      <defs>
-                        <linearGradient id="pressure-fill" x1="0" y1="0" x2="0" y2="1">
-                          <stop stopColor="#22d3ee" stopOpacity=".28" />
-                          <stop offset="1" stopColor="#22d3ee" stopOpacity="0" />
-                        </linearGradient>
-                      </defs>
-                      <path d="M0 90 C45 86 62 72 96 76 S150 94 188 75 S235 48 276 62 S332 95 372 72 S431 34 470 54 S521 78 560 43 V120 H0Z" fill="url(#pressure-fill)" />
-                      <path d="M0 90 C45 86 62 72 96 76 S150 94 188 75 S235 48 276 62 S332 95 372 72 S431 34 470 54 S521 78 560 43" stroke="#06b6d4" strokeWidth="4" strokeLinecap="round" />
-                      <circle cx="560" cy="43" r="7" fill="#06b6d4" stroke="white" strokeWidth="4" />
-                    </svg>
+                  <div className="flex items-center gap-4 rounded-2xl border border-violet-100 bg-violet-50/70 p-4">
+                    <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-violet-700 shadow-sm"><FlaskConical className="size-5" /></span>
+                    <div><p className="text-[clamp(.78rem,.68vw,.9rem)] font-semibold text-slate-500">Connected Labs</p><p className="mt-0.5 text-[clamp(1.35rem,1.25vw,1.7rem)] font-extrabold text-slate-900">1</p></div>
+                  </div>
+                  <div className="flex items-center gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
+                    <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-emerald-700 shadow-sm"><ShieldCheck className="size-5" /></span>
+                    <div><p className="text-[clamp(.78rem,.68vw,.9rem)] font-semibold text-slate-500">Access Granted</p><p className="mt-0.5 text-[clamp(1.35rem,1.25vw,1.7rem)] font-extrabold text-slate-900">3</p></div>
+                  </div>
+                  <div className="flex items-center gap-4 rounded-2xl border border-amber-100 bg-amber-50/70 p-4">
+                    <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-amber-700 shadow-sm"><History className="size-5" /></span>
+                    <div><p className="text-[clamp(.78rem,.68vw,.9rem)] font-semibold text-slate-500">Last Access</p><p className="mt-0.5 text-[clamp(1.05rem,1vw,1.35rem)] font-extrabold text-slate-900">Yesterday</p></div>
                   </div>
                 </div>
               </div>
@@ -261,22 +261,24 @@ export default function PatientDashboard() {
                 </div>
                 <div className="flex-1">
                   <h4 className="mb-4 text-[clamp(.85rem,.72vw,.95rem)] font-bold uppercase tracking-wider text-slate-500">Recent Highlights</h4>
-                  {testResultsStats.completed === 0 ? (
+                  {(!data?.recentHighlights || data.recentHighlights.length === 0) ? (
                     <div className="text-sm text-slate-500 text-center py-4">No recent test results</div>
                   ) : (
                     <ul className="space-y-3">
-                      <li className="group flex cursor-pointer items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/50 p-4 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md hover:shadow-slate-500/5">
-                        <div className="flex items-center gap-3">
-                          <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-600">
-                            <CheckCircle2 className="size-4" />
+                      {data.recentHighlights.map((highlight: any, idx: number) => (
+                        <li key={idx} className="group flex cursor-pointer items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/50 p-4 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md hover:shadow-slate-500/5">
+                          <div className="flex items-center gap-3">
+                            <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-600">
+                              <CheckCircle2 className="size-4" />
+                            </div>
+                            <div>
+                              <p className="text-[clamp(1rem,.88vw,1.15rem)] font-semibold text-slate-800 transition-colors group-hover:text-cyan-700">{highlight.name}</p>
+                              <p className="text-[clamp(.85rem,.72vw,.95rem)] font-medium text-slate-500">{highlight.status}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-[clamp(1rem,.88vw,1.15rem)] font-semibold text-slate-800 transition-colors group-hover:text-cyan-700">Hemoglobin</p>
-                            <p className="text-[clamp(.85rem,.72vw,.95rem)] font-medium text-slate-500">Normal</p>
-                          </div>
-                        </div>
-                        <span className="text-[clamp(1rem,.88vw,1.15rem)] font-bold text-slate-900">14.2 g/dL</span>
-                      </li>
+                          <span className="text-[clamp(1rem,.88vw,1.15rem)] font-bold text-slate-900">{highlight.value}</span>
+                        </li>
+                      ))}
                     </ul>
                   )}
                 </div>
