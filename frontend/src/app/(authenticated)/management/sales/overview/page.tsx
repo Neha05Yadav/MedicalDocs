@@ -16,13 +16,13 @@ const FlaskConical = (props: any) => <svg {...props} xmlns="http://www.w3.org/20
 const Users = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><path d="M16 3.128a4 4 0 0 1 0 7.744"></path><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><circle cx="9" cy="7" r="4"></circle></svg>;
 const Calendar = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>;
 const Bell = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>;
-const ChevronDown = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>;
 const ArrowUp = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"></path><path d="M12 19V5"></path></svg>;
 const ArrowDown = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="m19 12-7 7-7-7"></path></svg>;
 
 export default function SalesOverviewPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [revenuePeriod, setRevenuePeriod] = useState<'3m' | '6m'>('6m');
 
   useEffect(() => {
     fetch('/api/management/sales/overview')
@@ -48,6 +48,8 @@ export default function SalesOverviewPage() {
   // Map icons to the dynamic KPI data
   const icons = [IndianRupee, Bookmark, RefreshCw, Hourglass, Users];
   const bgColors = ["bg-indigo-600", "bg-blue-500", "bg-emerald-500", "bg-orange-500", "bg-amber-500"];
+  const revenueData = Array.isArray(data.revenueData) ? data.revenueData : [];
+  const visibleRevenueData = revenuePeriod === '3m' ? revenueData.slice(-3) : revenueData.slice(-6);
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto w-full min-h-screen bg-slate-50/50 font-sans">
@@ -83,13 +85,21 @@ export default function SalesOverviewPage() {
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold text-slate-900">Revenue Trend</h3>
-            <button className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">
-              Monthly
-              <ChevronDown className="size-4 text-slate-500" />
-            </button>
+            <label className="relative">
+              <span className="sr-only">Select revenue period</span>
+              <select
+                value={revenuePeriod}
+                onChange={(event) => setRevenuePeriod(event.target.value as '3m' | '6m')}
+                className="min-w-[152px] cursor-pointer appearance-auto rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none transition hover:bg-slate-50 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                aria-label="Revenue trend period"
+              >
+                <option value="3m">Last 3 Months</option>
+                <option value="6m">Last 6 Months</option>
+              </select>
+            </label>
           </div>
           <div className="h-[300px] w-full">
-            <RevenueTrendChartClient data={data.revenueData} />
+            <RevenueTrendChartClient data={visibleRevenueData} />
           </div>
         </div>
         {/* Subscription Overview Donut Chart */}

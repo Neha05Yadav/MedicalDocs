@@ -191,6 +191,7 @@ export default function TicketList({ tickets, onRefresh }: { tickets: any[], onR
                   >
                     <option value="Open">Open</option>
                     <option value="In Progress">In Progress</option>
+                    <option value="Escalated">Escalated</option>
                     <option value="Resolved">Resolved</option>
                     <option value="Closed">Closed</option>
                   </select>

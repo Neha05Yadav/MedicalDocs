@@ -304,8 +304,9 @@ export default function AccessManagementPage() {
 
       {/* View Details Modal */}
       {isViewModalOpen && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200 flex flex-col relative max-h-[90vh] overflow-y-auto">
             {/* Header with gradient */}
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-8 text-center relative">
               <button 
@@ -379,7 +380,7 @@ export default function AccessManagementPage() {
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 mt-auto">
               <button 
                 onClick={() => setIsViewModalOpen(false)}
                 className="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-xl font-bold transition-all shadow-sm"
@@ -388,13 +389,15 @@ export default function AccessManagementPage() {
               </button>
             </div>
           </div>
+          </div>
         </div>
       )}
 
       {/* Edit Role Modal */}
       {isEditRoleModalOpen && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-slate-900 mb-2">Edit Role</h2>
             <p className="text-sm text-slate-500 mb-4">Change the role for <strong>{selectedUser.name}</strong></p>
             
@@ -403,8 +406,6 @@ export default function AccessManagementPage() {
               defaultValue={selectedUser.role}
               className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 mb-6"
             >
-              <option value="ADMIN">ADMIN</option>
-              <option value="SUPER_ADMIN">SUPER_ADMIN</option>
               <option value="DOCTOR">DOCTOR</option>
               <option value="HOSPITAL">HOSPITAL</option>
               <option value="LAB">LAB</option>
@@ -432,13 +433,15 @@ export default function AccessManagementPage() {
               </button>
             </div>
           </div>
+          </div>
         </div>
       )}
 
       {/* Reset Password Modal */}
       {isResetPasswordModalOpen && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 backdrop-blur-sm">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-slate-900 mb-2">Reset Password</h2>
             <p className="text-sm text-slate-600 mb-6">
               Are you sure you want to reset the password for <strong>{selectedUser.name}</strong>? 
@@ -458,6 +461,7 @@ export default function AccessManagementPage() {
               >
                 Reset Password
               </button>
+            </div>
             </div>
           </div>
         </div>

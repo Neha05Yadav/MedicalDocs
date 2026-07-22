@@ -175,6 +175,7 @@ export class HospitalService {
         status: d.status,
         patientsCount: activePatients,
         patients: activePatients,
+        shift: d.shift || '09:00 AM - 05:00 PM',
         rating: 4.8
       };
     }));
@@ -187,8 +188,8 @@ export class HospitalService {
     const hospital = await this.getHospitalByEmail(userEmail);
     const doctorId = uuidv4();
     await this.db.query(
-      'INSERT INTO doctor (id, name, specialization, phone, email, status, hospitalId, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [doctorId, data.name, data.department || data.specialty || 'General', data.phone || '', data.email || '', data.status || 'Active', hospital.id, new Date()]
+      'INSERT INTO doctor (id, name, specialization, phone, email, status, hospitalId, updatedAt, shift) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [doctorId, data.name, data.department || data.specialty || 'General', data.phone || '', data.email || '', data.status || 'Active', hospital.id, new Date(), data.shift || '09:00 AM - 05:00 PM']
     );
     await this.redisService.del(`hospital:doctors:${userEmail}`);
     await this.redisService.del(`hospital:overview:${userEmail}`);
@@ -197,8 +198,8 @@ export class HospitalService {
 
   async updateDoctor(userEmail: string, id: string, data: any) {
     await this.db.query(
-      'UPDATE doctor SET name = ?, specialization = ?, phone = ?, email = ?, status = ? WHERE id = ?',
-      [data.name, data.department || data.specialty, data.phone || '', data.email || '', data.status, id]
+      'UPDATE doctor SET name = ?, specialization = ?, phone = ?, email = ?, status = ?, shift = ? WHERE id = ?',
+      [data.name, data.department || data.specialty, data.phone || '', data.email || '', data.status, data.shift || '09:00 AM - 05:00 PM', id]
     );
     await this.redisService.del(`hospital:doctors:${userEmail}`);
     return { success: true, message: "Doctor updated successfully" };

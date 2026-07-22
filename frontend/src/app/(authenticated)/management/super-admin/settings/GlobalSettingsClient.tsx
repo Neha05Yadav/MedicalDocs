@@ -316,7 +316,7 @@ export default function GlobalSettingsClient() {
       {/* Edit Permissions Modal */}
       {isPermissionsModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">

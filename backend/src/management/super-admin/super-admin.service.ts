@@ -8,7 +8,7 @@ export class SuperAdminService {
   constructor(private db: MysqlService) {}
 
   async getOverview() {
-    const [users, hospitals, labs, doctors, reports, admins, currentUsers, previousUsers, paidRevenue, monthlyRows] = await Promise.all([
+    const [users, hospitals, labs, doctors, reports, admins, currentUsers, previousUsers, paidRevenue, monthlyRows, yearlyRows] = await Promise.all([
       this.db.queryOne('SELECT COUNT(*) AS c FROM user'),
       this.db.queryOne(`SELECT COUNT(*) AS c FROM hospital WHERE LOWER(type) NOT LIKE '%lab%'`),
       this.db.queryOne(`SELECT COUNT(*) AS c FROM hospital WHERE LOWER(type) LIKE '%lab%'`),
@@ -19,6 +19,7 @@ export class SuperAdminService {
       this.db.queryOne(`SELECT COUNT(*) AS c FROM user WHERE createdAt >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m-01') AND createdAt < DATE_FORMAT(CURDATE(), '%Y-%m-01')`),
       this.db.queryOne(`SELECT COALESCE(SUM(totalAmount), 0) AS total FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL')`),
       this.db.query(`SELECT DATE_FORMAT(date, '%Y-%m') AS monthKey, SUM(totalAmount) AS amount FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL') AND date >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 5 MONTH) GROUP BY monthKey`),
+      this.db.query(`SELECT DATE_FORMAT(date, '%Y-%m') AS monthKey, SUM(totalAmount) AS amount FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL') AND date >= DATE_FORMAT(CURDATE(), '%Y-01-01') AND date < DATE_ADD(DATE_FORMAT(CURDATE(), '%Y-01-01'), INTERVAL 1 YEAR) GROUP BY monthKey`),
     ]);
     const number = (row: any) => Number(row?.c || 0);
     const format = (value: number) => value >= 1000000 ? `${(value / 1000000).toFixed(1)}M` : value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(value);
@@ -27,6 +28,14 @@ export class SuperAdminService {
     const monthly = new Map(monthlyRows.map(row => [row.monthKey, Number(row.amount || 0)]));
     const revenueData = Array.from({ length: 6 }, (_, index) => { const date = new Date(); date.setDate(1); date.setMonth(date.getMonth() - (5 - index)); const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; return { month: date.toLocaleDateString('en-US', { month: 'short' }), amount: monthly.get(key) || 0 }; });
     const maxRevenue = Math.max(...revenueData.map(row => row.amount), 1);
+    const yearly = new Map(yearlyRows.map(row => [row.monthKey, Number(row.amount || 0)]));
+    const currentYear = new Date().getFullYear();
+    const yearlyRevenueData = Array.from({ length: 12 }, (_, index) => {
+      const date = new Date(currentYear, index, 1);
+      const key = `${currentYear}-${String(index + 1).padStart(2, '0')}`;
+      return { month: date.toLocaleDateString('en-US', { month: 'short' }), amount: yearly.get(key) || 0 };
+    });
+    const maxYearlyRevenue = Math.max(...yearlyRevenueData.map(row => row.amount), 1);
     const composition = [
       { region: 'Registered users', count: number(users), color: 'bg-blue-500' },
       { region: 'Doctors', count: number(doctors), color: 'bg-emerald-500' },
@@ -37,6 +46,7 @@ export class SuperAdminService {
     return {
       stats: { totalUsers: format(number(users)), totalHospitals: format(number(hospitals)), totalLabs: format(number(labs)), totalDoctors: format(number(doctors)), totalReports: format(number(reports)), activeAdmins: format(number(admins)), monthlyGrowth: growth, platformRevenue: `₹${Number(paidRevenue?.total || 0).toLocaleString('en-IN')}` },
       revenueData: revenueData.map(row => ({ ...row, percent: Math.round((row.amount / maxRevenue) * 100) })),
+      yearlyRevenueData: yearlyRevenueData.map(row => ({ ...row, percent: Math.round((row.amount / maxYearlyRevenue) * 100) })),
       userDistribution: composition.map(row => ({ ...row, users: format(row.count), percent: Math.round((row.count / maxCount) * 100) })),
     };
   }
@@ -163,13 +173,85 @@ export class SuperAdminService {
   }
 
   async getAdmins() {
-    const admins = await this.db.query('SELECT id, name, email, role, phone, status, updatedAt as lastLogin FROM user WHERE role IN ("Admin", "SuperAdmin") ORDER BY createdAt DESC');
-    return admins;
+    const admins = await this.db.query(`
+      SELECT u.id, u.name, u.email, u.role, u.phone, u.status, u.createdAt,
+        (SELECT MAX(a.createdAt) FROM audit_log a
+          WHERE CONVERT(a.user_email USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(u.email USING utf8mb4) COLLATE utf8mb4_unicode_ci
+          AND UPPER(a.action_type) = 'LOGIN') AS lastLogin
+      FROM user u
+      WHERE u.role IN (
+        'Admin', 'ADMIN', 'SuperAdmin', 'Super Admin', 'SUPER_ADMIN',
+        'Sales Manager', 'SALES',
+        'Accounts Manager', 'ACCOUNTS',
+        'Support Team', 'Support Manager', 'SUPPORT'
+      )
+      ORDER BY u.createdAt DESC
+    `);
+    const displayRole = (role: unknown) => {
+      const normalized = String(role || '').trim().toUpperCase().replaceAll('_', ' ');
+      if (normalized === 'SALES' || normalized === 'SALES MANAGER') return 'Sales Manager';
+      if (normalized === 'ACCOUNTS' || normalized === 'ACCOUNTS MANAGER') return 'Accounts Manager';
+      if (normalized === 'SUPPORT' || normalized === 'SUPPORT TEAM' || normalized === 'SUPPORT MANAGER') return 'Support Team';
+      if (normalized === 'SUPERADMIN' || normalized === 'SUPER ADMIN') return 'Super Admin';
+      return 'Admin';
+    };
+    return admins.map(admin => ({ ...admin, role: displayRole(admin.role), createdBy: 'Not recorded' }));
+  }
+
+  async getAdminLogs(id: string) {
+    const admin = await this.db.queryOne(
+      'SELECT id, name, email, role, status, createdAt, updatedAt FROM user WHERE id = ?',
+      [id],
+    );
+    if (!admin) return [];
+
+    const auditRows = await this.db.query(
+      'SELECT id, action_type, entity_type, details, ip_address, createdAt FROM audit_log WHERE LOWER(user_email) = LOWER(?) ORDER BY createdAt DESC LIMIT 50',
+      [admin.email],
+    );
+    const logs = auditRows.map(row => ({
+      id: row.id,
+      action: row.details || `${row.action_type} ${row.entity_type}`,
+      type: row.action_type,
+      timestamp: row.createdAt,
+      ipAddress: row.ip_address || 'Not recorded',
+    }));
+
+    const createdAt = new Date(admin.createdAt);
+    const updatedAt = new Date(admin.updatedAt);
+    logs.push({
+      id: `account-created-${admin.id}`,
+      action: `${admin.role} account created for ${admin.name}`,
+      type: 'CREATE',
+      timestamp: createdAt,
+      ipAddress: 'System',
+    });
+    if (updatedAt.getTime() > createdAt.getTime() + 1000) {
+      logs.push({
+        id: `account-updated-${admin.id}`,
+        action: `Account updated · Current status: ${admin.status || 'Active'}`,
+        type: 'UPDATE',
+        timestamp: updatedAt,
+        ipAddress: 'System',
+      });
+    }
+
+    return logs
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 50);
   }
 
   async getAuditLogs() {
-    const rows = await this.db.query('SELECT id, type, title, message, createdAt FROM notification ORDER BY createdAt DESC LIMIT 100');
-    return rows.map(row => ({ id: row.id, action_type: String(row.type || 'INFO').toUpperCase(), user_email: 'system', details: `${row.title || 'Notification'}: ${row.message || ''}`, created_at: row.createdAt }));
+    const rows = await this.db.query('SELECT * FROM audit_log ORDER BY createdAt DESC LIMIT 100');
+    return rows.map(row => ({ 
+      id: row.id, 
+      action_type: row.action_type, 
+      user_email: row.user_email, 
+      entity_type: row.entity_type,
+      details: row.details, 
+      ip_address: row.ip_address,
+      created_at: row.createdAt 
+    }));
   }
 
   async getPlatformSettings() {
@@ -202,8 +284,9 @@ export class SuperAdminService {
     }
     const id = uuidv4();
     const hashedPassword = await bcrypt.hash(data.password, 10);
+    const createdAt = new Date();
     await this.db.query('INSERT INTO user (id, name, email, phone, role, password, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', 
-      [id, data.fullName, data.email, data.phone || null, data.role || 'Admin', hashedPassword, 'Active', new Date(), new Date()]
+      [id, data.fullName, data.email, data.phone || null, data.role || 'Admin', hashedPassword, 'Active', createdAt, createdAt]
     );
     return { 
       success: true, 
@@ -214,7 +297,9 @@ export class SuperAdminService {
         phone: data.phone,
         role: data.role || 'Admin',
         status: 'Active',
-        lastLogin: new Date()
+        lastLogin: null,
+        createdAt,
+        createdBy: 'Not recorded',
       }
     };
   }
@@ -232,7 +317,6 @@ export class SuperAdminService {
   async getAllUsers() {
     const patients = await this.db.query('SELECT id, name, email, createdAt FROM patient ORDER BY createdAt DESC');
     const doctors = await this.db.query('SELECT id, name, email, address, status, createdAt FROM doctor ORDER BY createdAt DESC');
-    const hospitals = await this.db.query('SELECT id, name, email, type, address, status, isVerified, createdAt FROM hospital ORDER BY createdAt DESC');
 
     const formattedUsers = [
       ...patients.map(p => ({
@@ -254,24 +338,7 @@ export class SuperAdminService {
         joined: new Date(d.createdAt).toISOString().split('T')[0],
         status: d.status || 'Active',
         isVerified: d.status === 'Active'
-      })),
-      ...hospitals.map(h => {
-        let mappedType = h.type ? h.type.toUpperCase() : 'HOSPITAL';
-        if (mappedType.includes('LAB')) mappedType = 'Labs';
-        else if (mappedType.includes('CLINIC')) mappedType = 'Clinic';
-        else mappedType = 'Hospital';
-
-        return {
-          id: h.id,
-          name: h.name || 'Unknown Facility',
-          email: h.email || 'No email provided',
-          type: mappedType,
-          location: h.address || 'Not specified',
-          joined: new Date(h.createdAt).toISOString().split('T')[0],
-          status: h.status || 'Pending',
-          isVerified: !!h.isVerified
-        };
-      })
+      }))
     ];
 
     // Sort by joined date descending
@@ -281,14 +348,8 @@ export class SuperAdminService {
   }
 
   async updateUserStatus(id: string, status: string, isVerified?: boolean) {
-    // We don't know the type, so we try updating all tables that have status
     try {
       await this.db.query('UPDATE doctor SET status = ? WHERE id = ?', [status, id]);
-      if (isVerified !== undefined) {
-        await this.db.query('UPDATE hospital SET status = ?, isVerified = ? WHERE id = ?', [status, isVerified, id]);
-      } else {
-        await this.db.query('UPDATE hospital SET status = ? WHERE id = ?', [status, id]);
-      }
       return { success: true };
     } catch (e) {
       return { success: false };
@@ -299,7 +360,6 @@ export class SuperAdminService {
     try {
       await this.db.query('DELETE FROM patient WHERE id = ?', [id]);
       await this.db.query('DELETE FROM doctor WHERE id = ?', [id]);
-      await this.db.query('DELETE FROM hospital WHERE id = ?', [id]);
       return { success: true };
     } catch (e) {
       return { success: false };

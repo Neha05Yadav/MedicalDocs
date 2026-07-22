@@ -48,6 +48,7 @@ export default function PatientSearchVerificationPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Patient[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   // Current Hospital Patients (Treatment queue)
   const [hospitalPatients, setHospitalPatients] = useState<any[]>([]);
@@ -185,11 +186,13 @@ export default function PatientSearchVerificationPage() {
     if (!searchTerm.trim()) {
       setSearchResults([]);
       setSelectedPatient(null);
+      setHasSearched(false);
       return;
     }
 
     setIsSearching(true);
     setSelectedPatient(null);
+    setHasSearched(true);
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(`/api/hospital/search-patients?q=${encodeURIComponent(searchTerm)}`, {
@@ -317,6 +320,7 @@ export default function PatientSearchVerificationPage() {
       setTimeout(() => {
         const fetchAutoSearch = async () => {
           setIsSearching(true);
+          setHasSearched(true);
           try {
             const token = localStorage.getItem("token");
             const res = await fetch(`/api/hospital/search-patients?q=${encodeURIComponent(patientId)}`, {
@@ -345,6 +349,7 @@ export default function PatientSearchVerificationPage() {
     setSearchTerm("");
     setSearchResults([]);
     setSelectedPatient(null);
+    setHasSearched(false);
   };
 
   const handleReportTypeChange = (type: string) => {
@@ -453,26 +458,103 @@ export default function PatientSearchVerificationPage() {
     <div className="p-8 max-w-[1400px] mx-auto w-full min-h-screen font-sans text-slate-800">
       {/* Current Hospital Patients Box */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6 relative animate-in fade-in slide-in-from-bottom-2 duration-500">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-          <h2 className="text-[#0891b2] font-semibold text-base">Hospital Treatment Patients</h2>
-          <div className="flex gap-3">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-5">
+          <h2 className="text-[#0891b2] font-semibold text-base whitespace-nowrap">Hospital Patient Search</h2>
+          
+          {/* Inline Compact Search */}
+          <div className="flex items-center gap-2 bg-slate-50 rounded-lg border border-slate-200 p-1 flex-1 max-w-2xl mx-0 xl:mx-4">
+            <div className="relative flex-1 flex items-center">
+              <Search className="absolute left-3 size-4 text-slate-400" />
+              <input 
+                type="text" 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder="Search Global Registry by ID, Name or Mobile..."
+                className="w-full pl-9 pr-4 py-1.5 bg-transparent text-sm focus:outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              {searchTerm && (
+                <button 
+                  onClick={handleReset}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors rounded-md"
+                  title="Clear Search"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
+              <button 
+                onClick={handleSearch}
+                disabled={isSearching || !searchTerm.trim()}
+                className="px-4 py-1.5 bg-[#0891b2] hover:bg-cyan-700 text-white rounded-md text-sm font-medium transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                {isSearching ? "Searching..." : "Search"}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex gap-3 shrink-0">
             <button 
               onClick={() => setIsLabModalOpen(true)}
               className="px-4 py-2 bg-white border border-[#0891b2] text-[#0891b2] hover:bg-cyan-50 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-2"
             >
-              <FlaskConical className="size-4 text-[#0891b2]" /> Request Lab Test
+              <FlaskConical className="size-4 text-[#0891b2]" /> Lab Request
             </button>
             <button 
               onClick={() => setIsAddPatientModalOpen(true)}
               className="px-4 py-2 bg-[#0891b2] hover:bg-cyan-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-2"
             >
-              <Plus className="size-4" /> Add New Patient
+              <Plus className="size-4" /> Add Patient
             </button>
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-[13px] text-slate-800 font-semibold border-b border-slate-200 bg-slate-50/50">
+          {hasSearched ? (
+            <table className="w-full text-sm text-left">
+              <thead className="text-[13px] text-slate-800 font-semibold border-b border-slate-200 bg-slate-50/50">
+                <tr>
+                  <th className="py-3 px-4 rounded-tl-lg">Patient ID</th>
+                  <th className="py-3 px-4">Patient Name</th>
+                  <th className="py-3 px-4 text-center">Available Records</th>
+                  <th className="py-3 px-4 text-center">Status</th>
+                  <th className="py-3 px-4 text-center rounded-tr-lg">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {searchResults.length > 0 ? searchResults.map((patient) => (
+                  <tr key={patient.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-4 px-4 text-slate-600 font-mono text-xs">{patient.id}</td>
+                    <td className="py-4 px-4 font-medium text-slate-800">{patient.name}</td>
+                    <td className="py-4 px-4 text-center text-slate-600 font-semibold">{patient.availableRecords} Reports</td>
+                    <td className="py-4 px-4 text-center">
+                      <span className={`inline-flex px-3 py-1 rounded-md text-xs font-semibold bg-white text-emerald-600 border border-emerald-100`}>
+                        {patient.status}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <button 
+                        onClick={() => handleSelectPatient(patient)}
+                        className={`px-3 py-1.5 border rounded-md transition-colors inline-flex items-center justify-center text-xs font-semibold gap-1.5 ${
+                          selectedPatient?.id === patient.id 
+                            ? "bg-cyan-50 text-[#0891b2] border-[#0891b2]" 
+                            : "text-[#0891b2] border-[#0891b2]/20 hover:bg-cyan-50"
+                        }`}
+                      >
+                        <Eye className="size-3.5" /> View
+                      </button>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-slate-500">No patients found matching your search.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full text-sm text-left">
+              <thead className="text-[13px] text-slate-800 font-semibold border-b border-slate-200 bg-slate-50/50">
               <tr>
                 <th className="py-3 px-4 rounded-tl-lg">Patient</th>
                 <th className="py-3 px-4">Patient ID</th>
@@ -528,89 +610,9 @@ export default function PatientSearchVerificationPage() {
               )}
             </tbody>
           </table>
+          )}
         </div>
       </div>
-
-      {/* Search Patient Box */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
-        <h2 className="text-[#0891b2] font-semibold text-base mb-5">Search Global Patient Registry</h2>
-        <div className="flex flex-wrap items-end gap-6">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-slate-700 mb-2">Search Value</label>
-            <input 
-              type="text" 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Enter Patient ID / Name / Mobile"
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2]"
-            />
-          </div>
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <button 
-              onClick={handleSearch}
-              disabled={isSearching || !searchTerm.trim()}
-              className="flex-1 md:flex-none px-6 py-2.5 bg-[#0891b2] hover:bg-cyan-700 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-            >
-              <Search className="size-4" />
-              {isSearching ? "Searching..." : "Search"}
-            </button>
-            <button 
-              onClick={handleReset}
-              className="flex-1 md:flex-none px-6 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors"
-            >
-              <RefreshCw className="size-4 text-[#0891b2]" />
-              Clear
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Search Results Box */}
-      {searchResults.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
-          <h2 className="text-[#0891b2] font-semibold text-base mb-5">Search Results</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-[13px] text-slate-800 font-semibold border-b border-slate-200">
-                <tr>
-                  <th className="pb-3 px-4">Patient ID</th>
-                  <th className="pb-3 px-4">Patient Name</th>
-                  <th className="pb-3 px-4 text-center">Available Records</th>
-                  <th className="pb-3 px-4 text-center">Status</th>
-                  <th className="pb-3 px-4 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {searchResults.map((patient) => (
-                  <tr key={patient.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-4 px-4 text-slate-600 font-mono text-xs">{patient.id}</td>
-                    <td className="py-4 px-4 font-medium text-slate-800">{patient.name}</td>
-                    <td className="py-4 px-4 text-center text-slate-600 font-semibold">{patient.availableRecords} Reports</td>
-                    <td className="py-4 px-4 text-center">
-                      <span className={`inline-flex px-3 py-1 rounded-md text-xs font-semibold bg-white text-emerald-600 border border-emerald-100`}>
-                        {patient.status}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <button 
-                        onClick={() => handleSelectPatient(patient)}
-                        className={`px-3 py-1.5 border rounded-md transition-colors inline-flex items-center justify-center text-xs font-semibold gap-1.5 ${
-                          selectedPatient?.id === patient.id 
-                            ? "bg-cyan-50 text-[#0891b2] border-[#0891b2]" 
-                            : "text-[#0891b2] border-[#0891b2]/20 hover:bg-cyan-50"
-                        }`}
-                      >
-                        <Eye className="size-3.5" /> View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {/* Patient Details Box */}
       {selectedPatient && (
@@ -925,7 +927,7 @@ export default function PatientSearchVerificationPage() {
       {/* Lab Request Modal */}
       {isLabModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
                 <FlaskConical className="size-5 text-[#0891b2]" />
@@ -1054,7 +1056,7 @@ export default function PatientSearchVerificationPage() {
       {/* Add New Patient Modal */}
       {isAddPatientModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
                 <User className="size-5 text-[#0891b2]" /> Add New Patient
@@ -1147,7 +1149,7 @@ export default function PatientSearchVerificationPage() {
       {/* Edit Patient Modal */}
       {isEditPatientModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
                 <Edit2 className="size-5 text-[#0891b2]" /> Edit Patient

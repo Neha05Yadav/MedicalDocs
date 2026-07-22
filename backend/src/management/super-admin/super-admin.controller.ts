@@ -25,7 +25,7 @@ export class SuperAdminController {
     return this.superAdminService.updateFacility(body.id, { status: body.status, isVerified: body.isVerified });
   }
 
-  @Get('audit-logs')
+  @Get('audit')
   async getAuditLogs() {
     return this.superAdminService.getAuditLogs();
   }
@@ -68,7 +68,7 @@ export class SuperAdminController {
 
   @Get('team/logs')
   async getAdminLogs(@Query('id') id: string) {
-    return { logs: [] };
+    return { logs: await this.superAdminService.getAdminLogs(id) };
   }
 
   @Get('users')

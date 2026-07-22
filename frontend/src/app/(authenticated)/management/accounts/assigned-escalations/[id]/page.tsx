@@ -1,5 +1,6 @@
 import EscalationDetailsClient from "../../../components/EscalationDetailsClient";
 
-export default function AccountsAssignedEscalationDetails({ params }: { params: { id: string } }) {
-  return <EscalationDetailsClient role="accounts" id={params.id} />;
+export default async function AccountsAssignedEscalationDetails({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <EscalationDetailsClient role="accounts" id={id} />;
 }

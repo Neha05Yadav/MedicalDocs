@@ -24,7 +24,6 @@ export const hospitalNav = [
   { title: "Patient Search", subtitle: "Search and verify patients to access their medical records.", url: "/hospital/patients", iconName: "Search" },
   { title: "Reports", subtitle: "Manage and upload hospital medical reports.", url: "/hospital/reports", iconName: "ClipboardList" },
   { title: "Billing & Payments", subtitle: "Manage patient invoices, payments, and billing history.", url: "/hospital/billing", iconName: "CreditCard" },
-  { title: "Departments", subtitle: "Hospital departments and their statistics.", url: "/hospital/departments", iconName: "Hospital" },
   { title: "Notifications", subtitle: "Hospital alerts, staff updates, and system notifications.", url: "/hospital/notifications", iconName: "Bell" },
   { title: "Analytics", subtitle: "Hospital performance and patient statistics.", url: "/hospital/analytics", iconName: "BarChart3" },
   { title: "Help & Support", subtitle: "Raise complaints and track support tickets.", url: "/hospital/support", iconName: "HelpCircle" },

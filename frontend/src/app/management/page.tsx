@@ -42,9 +42,9 @@ export default function ManagementLoginPage() {
         throw new Error("This account is inactive. Contact the super administrator.");
       }
 
-      const role = String(data.user?.role || "").toUpperCase();
+      const role = String(data.user?.role || "").trim().toUpperCase();
       const destination = role.includes("SUPER") ? "/management/super-admin/overview"
-        : role.includes("ADMIN") ? "/management/admin/overview"
+        : role.includes("ADMIN") || role === "STAFF" || role === "MANAGEMENT" ? "/management/admin/overview"
         : role.includes("ACCOUNT") ? "/management/accounts/overview"
         : role.includes("SALE") ? "/management/sales/overview"
         : role.includes("SUPPORT") ? "/management/support/overview"

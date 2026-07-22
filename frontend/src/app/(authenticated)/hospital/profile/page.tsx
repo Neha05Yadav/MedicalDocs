@@ -14,6 +14,8 @@ const Upload = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg
 const Trash2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>;
 const ShieldCheck = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>;
 const Clock = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>;
+const ArrowLeft = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>;
+const ChevronRight = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>;
 
 export default function HospitalProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -215,7 +217,18 @@ export default function HospitalProfilePage() {
                   <span className="text-xs font-black uppercase tracking-[.2em] text-cyan-700">Facility directory</span>
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700"><ShieldCheck className="size-3.5" /> Registered profile</span>
                 </div>
-                <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{profile.name || "Hospital Name"}</h1>
+                {isEditing ? (
+                  <input
+                    name="name"
+                    value={profile.name}
+                    onChange={handleChange}
+                    className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl bg-white border-b-2 border-[#0891b2] focus:outline-none w-full min-w-[300px] py-1 placeholder:text-slate-300 transition-colors"
+                    placeholder="Enter Hospital Name"
+                    autoFocus
+                  />
+                ) : (
+                  <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{profile.name || "Hospital Name"}</h1>
+                )}
                 <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-semibold text-slate-500">
                   <span className="rounded-lg bg-slate-100 px-3 py-1.5 font-mono text-slate-700">ID: {profile.hospitalId || "Pending"}</span>
                   <span className="inline-flex items-center gap-2"><MapPin className="size-4 text-cyan-600" /> {[profile.city, profile.state, profile.country].filter(Boolean).join(", ") || "Location not provided"}</span>
@@ -225,211 +238,167 @@ export default function HospitalProfilePage() {
 
             <div className="flex flex-wrap gap-3">
               {!isEditing ? (
-                <>
-                  <button onClick={() => setIsEditing(true)} className="rounded-xl bg-[#12224d] px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-cyan-900">
-                    Edit Profile
-                  </button>
-                  <button onClick={() => setIsPasswordModalOpen(true)} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50">
-                    <Lock className="size-4" /> Security
-                  </button>
-                </>
+                <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 rounded-xl bg-[#12224d] px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-cyan-900">
+                  Edit Profile
+                </button>
               ) : (
                 <>
-                  <button onClick={handleSave} className="flex items-center gap-2 rounded-xl bg-[#0891b2] px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-cyan-700">
-                    <Save className="size-4" /> Save changes
-                  </button>
                   <button onClick={() => { setIsEditing(false); fetchProfile(); }} className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50">
                     Cancel
                   </button>
+                  <button onClick={handleSave} className="flex items-center gap-2 rounded-xl bg-[#0891b2] px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-cyan-700">
+                    <Save className="size-4" /> Save changes
+                  </button>
                 </>
               )}
+              <button onClick={() => setIsPasswordModalOpen(true)} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 shadow-sm">
+                <Lock className="size-4" /> Security Settings
+              </button>
             </div>
           </div>
 
-          <div className="mt-8 grid grid-cols-2 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 lg:grid-cols-4">
-            <div className="border-b border-r border-slate-200 p-5 lg:border-b-0"><p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Facility type</p><p className="mt-2 text-lg font-black text-slate-900">{profile.type || "Not set"}</p></div>
-            <div className="border-b border-slate-200 p-5 lg:border-b-0 lg:border-r"><p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Established</p><p className="mt-2 text-lg font-black text-slate-900">{profile.establishedYear || "Not set"}</p></div>
-            <div className="border-r border-slate-200 p-5"><p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Working hours</p><p className="mt-2 flex items-center gap-2 text-lg font-black text-slate-900"><Clock className="size-5 text-cyan-600" /> {profile.openingTime && profile.closingTime ? `${profile.openingTime}–${profile.closingTime}` : "Not set"}</p></div>
-            <div className="p-5"><p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Emergency services</p><p className={`mt-2 text-lg font-black ${profile.emergencyServices ? "text-emerald-700" : "text-slate-500"}`}>{profile.emergencyServices ? "Available 24/7" : "Not available"}</p></div>
-          </div>
+          {!isEditing && (
+            <div className="mt-8 grid grid-cols-2 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 lg:grid-cols-4">
+              <div className="border-b border-r border-slate-200 p-5 lg:border-b-0"><p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Facility type</p><p className="mt-2 text-lg font-black text-slate-900">{profile.type || "Not set"}</p></div>
+              <div className="border-b border-slate-200 p-5 lg:border-b-0 lg:border-r"><p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Established</p><p className="mt-2 text-lg font-black text-slate-900">{profile.establishedYear || "Not set"}</p></div>
+              <div className="border-r border-slate-200 p-5"><p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Working hours</p><p className="mt-2 flex items-center gap-2 text-lg font-black text-slate-900"><Clock className="size-5 text-cyan-600" /> {profile.openingTime && profile.closingTime ? `${profile.openingTime}–${profile.closingTime}` : "Not set"}</p></div>
+              <div className="p-5"><p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Emergency services</p><p className={`mt-2 text-lg font-black ${profile.emergencyServices ? "text-emerald-700" : "text-slate-500"}`}>{profile.emergencyServices ? "Available 24/7" : "Not available"}</p></div>
+            </div>
+          )}
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 px-6 py-6 sm:px-8"><p className="text-xs font-black uppercase tracking-[.18em] text-cyan-700">Institutional record</p><h2 className="mt-1 text-2xl font-black text-slate-950">Facility information</h2><p className="mt-1 text-sm font-medium text-slate-500">Registration, contacts, administration and operating information.</p></div>
-        <div className="bg-slate-50/70 p-5 sm:p-7">
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            
-            {/* Hospital Info */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-              <div className="mb-6 flex items-center gap-3 border-b border-slate-100 pb-5 text-lg font-black text-slate-900">
-                <span className="rounded-xl bg-cyan-50 p-3 text-cyan-700"><Hospital className="size-6" /></span> Hospital Information
-              </div>
-              <div className="grid gap-4">
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Hospital Name *</label>
-                  <input name="name" value={profile.name} onChange={handleChange} disabled={!isEditing} className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 focus:ring-[#0891b2] outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Hospital ID</label>
-                  <input name="hospitalId" value={profile.hospitalId} disabled className="w-full p-2 text-sm rounded-lg bg-slate-100 border-transparent text-slate-600 font-mono" />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Registration Number</label>
-                  <input name="registrationNumber" value={profile.registrationNumber} onChange={handleChange} disabled={!isEditing} className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">License Number</label>
-                    <input name="licenseNumber" value={profile.licenseNumber} onChange={handleChange} disabled={!isEditing} className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Est. Year</label>
-                    <input name="establishedYear" value={profile.establishedYear} onChange={handleChange} disabled={!isEditing} placeholder="YYYY" className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Hospital Type</label>
-                  {isEditing ? (
-                    <select name="type" value={profile.type} onChange={handleChange} className="w-full p-2 text-sm rounded-lg border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none">
-                      <option value="HOSPITAL">General Hospital</option>
-                      <option value="Government">Government</option>
-                      <option value="Private">Private</option>
-                      <option value="Multispeciality">Multispeciality</option>
-                      <option value="Clinic">Clinic</option>
-                    </select>
-                  ) : (
-                    <div className="p-2 text-sm rounded-lg bg-slate-50/50 text-slate-900 font-medium">{profile.type}</div>
-                  )}
-                </div>
-              </div>
-            </div>
+      <section className="animate-in fade-in slide-in-from-bottom-2 duration-300 rounded-3xl border border-slate-200 bg-white shadow-sm p-6 sm:p-8">
+         
+         <h3 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-100 pb-4">Hospital Information</h3>
+         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-12">
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Hospital Name *</label>
+             <input name="name" value={profile.name} onChange={handleChange} disabled={!isEditing} className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+           </div>
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Hospital ID</label>
+             <input name="hospitalId" value={profile.hospitalId} disabled className="w-full p-3 text-sm rounded-xl bg-slate-100 border-transparent text-slate-600 font-mono" />
+           </div>
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Registration Number</label>
+             <input name="registrationNumber" value={profile.registrationNumber} onChange={handleChange} disabled={!isEditing} className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+           </div>
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">License Number</label>
+             <input name="licenseNumber" value={profile.licenseNumber} onChange={handleChange} disabled={!isEditing} className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+           </div>
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Est. Year</label>
+             <input name="establishedYear" value={profile.establishedYear} onChange={handleChange} disabled={!isEditing} placeholder="YYYY" className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+           </div>
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Hospital Type</label>
+             {isEditing ? (
+               <select name="type" value={profile.type} onChange={handleChange} className="w-full p-3 text-sm rounded-xl border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none">
+                 <option value="HOSPITAL">General Hospital</option>
+                 <option value="Government">Government</option>
+                 <option value="Private">Private</option>
+                 <option value="Multispeciality">Multispeciality</option>
+                 <option value="Clinic">Clinic</option>
+               </select>
+             ) : (
+               <div className="p-3 text-sm rounded-xl bg-slate-50/70 text-slate-900 font-medium h-12 flex items-center">{profile.type}</div>
+             )}
+           </div>
+         </div>
 
-            {/* Contact & Address */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-              <div className="mb-6 flex items-center gap-3 border-b border-slate-100 pb-5 text-lg font-black text-slate-900">
-                <span className="rounded-xl bg-emerald-50 p-3 text-emerald-700"><Phone className="size-6" /></span> Contact Information
-              </div>
-              <div className="grid gap-4">
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Official Email *</label>
-                  <input name="email" value={profile.email} onChange={handleChange} disabled={!isEditing} className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Contact Number *</label>
-                    <input name="phone" value={profile.phone} onChange={handleChange} disabled={!isEditing} className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Emergency Contact</label>
-                    <input name="emergencyContact" value={profile.emergencyContact} onChange={handleChange} disabled={!isEditing} className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Website</label>
-                  <input name="website" value={profile.website} onChange={handleChange} disabled={!isEditing} placeholder="https://" className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-blue-600 font-medium'}`} />
-                </div>
-              </div>
+         <h3 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-100 pb-4">Contact & Address</h3>
+         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-12">
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Official Email *</label>
+             <input name="email" value={profile.email} onChange={handleChange} disabled={!isEditing} className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+           </div>
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Contact Number *</label>
+             <input name="phone" value={profile.phone} onChange={handleChange} disabled={!isEditing} className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+           </div>
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Emergency Contact</label>
+             <input name="emergencyContact" value={profile.emergencyContact} onChange={handleChange} disabled={!isEditing} className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+           </div>
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Website</label>
+             <input name="website" value={profile.website} onChange={handleChange} disabled={!isEditing} placeholder="https://" className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-blue-600 font-medium'}`} />
+           </div>
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">City</label>
+             <input name="city" value={profile.city} onChange={handleChange} disabled={!isEditing} className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+           </div>
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">State</label>
+             <input name="state" value={profile.state} onChange={handleChange} disabled={!isEditing} className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+           </div>
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Country</label>
+             <input name="country" value={profile.country} onChange={handleChange} disabled={!isEditing} className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+           </div>
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Postal Code</label>
+             <input name="postalCode" value={profile.postalCode} onChange={handleChange} disabled={!isEditing} className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+           </div>
+         </div>
 
-              <div className="mb-5 mt-8 flex items-center gap-3 border-t border-slate-100 pt-6 text-base font-black text-slate-900">
-                <MapPin className="size-5 text-cyan-700" /> Registered Address
-              </div>
-              <div className="grid gap-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">City</label>
-                    <input name="city" value={profile.city} onChange={handleChange} disabled={!isEditing} className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">State</label>
-                    <input name="state" value={profile.state} onChange={handleChange} disabled={!isEditing} className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Country</label>
-                    <input name="country" value={profile.country} onChange={handleChange} disabled={!isEditing} className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Postal Code</label>
-                    <input name="postalCode" value={profile.postalCode} onChange={handleChange} disabled={!isEditing} className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Administrator Info */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-              <div className="mb-6 flex items-center gap-3 border-b border-slate-100 pb-5 text-lg font-black text-slate-900">
-                <span className="rounded-xl bg-violet-50 p-3 text-violet-700"><Mail className="size-6" /></span> Administrator Information
-              </div>
-              <div className="grid gap-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Admin Name</label>
-                    <input name="adminName" value={profile.adminName} onChange={handleChange} disabled={!isEditing} className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Designation</label>
-                    <input name="adminDesignation" value={profile.adminDesignation} onChange={handleChange} disabled={!isEditing} className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Admin Email</label>
-                  <input name="adminEmail" value={profile.adminEmail} onChange={handleChange} disabled={!isEditing} className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Admin Contact</label>
-                  <input name="adminContact" value={profile.adminContact} onChange={handleChange} disabled={!isEditing} className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                </div>
-              </div>
-            </div>
+         <h3 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-100 pb-4">Administrator Info</h3>
+         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-12">
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Admin Name</label>
+             <input name="adminName" value={profile.adminName} onChange={handleChange} disabled={!isEditing} className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+           </div>
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Designation</label>
+             <input name="adminDesignation" value={profile.adminDesignation} onChange={handleChange} disabled={!isEditing} className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+           </div>
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Admin Email</label>
+             <input name="adminEmail" value={profile.adminEmail} onChange={handleChange} disabled={!isEditing} className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+           </div>
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Admin Contact</label>
+             <input name="adminContact" value={profile.adminContact} onChange={handleChange} disabled={!isEditing} className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+           </div>
+         </div>
 
-            {/* Hospital Details */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-              <div className="mb-6 flex items-center gap-3 border-b border-slate-100 pb-5 text-lg font-black text-slate-900">
-                <span className="rounded-xl bg-amber-50 p-3 text-amber-700"><Clock className="size-6" /></span> Operations & Services
-              </div>
-              <div className="grid gap-4">
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Departments</label>
-                  <input name="departments" value={profile.departments} onChange={handleChange} disabled={!isEditing} placeholder="e.g. Cardiology, Neurology, Pediatrics" className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Working Days</label>
-                    <input name="workingDays" value={profile.workingDays} onChange={handleChange} disabled={!isEditing} placeholder="e.g. Mon-Sat" className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Timings</label>
-                    <div className="flex items-center gap-2">
-                      <input name="openingTime" type={isEditing ? "time" : "text"} value={profile.openingTime} onChange={handleChange} disabled={!isEditing} className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                      <span className="text-slate-400">-</span>
-                      <input name="closingTime" type={isEditing ? "time" : "text"} value={profile.closingTime} onChange={handleChange} disabled={!isEditing} className={`w-full p-2 text-sm rounded-lg ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-900 font-medium'}`} />
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <label className="flex items-center gap-3 cursor-pointer p-3 bg-slate-50 rounded-xl border border-slate-100 mt-2">
-                    <input type="checkbox" name="emergencyServices" checked={profile.emergencyServices} onChange={handleChange} disabled={!isEditing} className="w-4 h-4 text-[#0891b2] rounded border-slate-300 focus:ring-[#0891b2]" />
-                    <span className="text-sm font-semibold text-slate-700">24/7 Emergency Services Available</span>
-                  </label>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Description / About</label>
-                  <textarea name="description" value={profile.description} onChange={handleChange} disabled={!isEditing} rows={4} className={`w-full p-3 text-sm rounded-lg resize-none ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-1 outline-none' : 'bg-slate-50/50 border-transparent text-slate-700 leading-relaxed'}`}></textarea>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
+         <h3 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-100 pb-4">Operations & Services</h3>
+         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+           <div className="col-span-1 md:col-span-2 xl:col-span-3">
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Departments</label>
+             <input name="departments" value={profile.departments} onChange={handleChange} disabled={!isEditing} placeholder="e.g. Cardiology, Neurology, Pediatrics" className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+           </div>
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Working Days</label>
+             <input name="workingDays" value={profile.workingDays} onChange={handleChange} disabled={!isEditing} placeholder="e.g. Mon-Sat" className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+           </div>
+           <div>
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Timings</label>
+             <div className="flex items-center gap-2">
+               <input name="openingTime" type={isEditing ? "time" : "text"} value={profile.openingTime} onChange={handleChange} disabled={!isEditing} className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+               <span className="text-slate-400">-</span>
+               <input name="closingTime" type={isEditing ? "time" : "text"} value={profile.closingTime} onChange={handleChange} disabled={!isEditing} className={`w-full p-3 text-sm rounded-xl ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-900 font-medium'}`} />
+             </div>
+           </div>
+           <div className="flex items-end">
+             <label className="flex items-center gap-3 cursor-pointer p-4 bg-slate-50 rounded-xl border border-slate-100 h-[3.25rem] w-full">
+               <input type="checkbox" name="emergencyServices" checked={profile.emergencyServices} onChange={handleChange} disabled={!isEditing} className="w-5 h-5 text-[#0891b2] rounded border-slate-300 focus:ring-[#0891b2]" />
+               <span className="text-sm font-semibold text-slate-700">24/7 Emergency Services</span>
+             </label>
+           </div>
+           <div className="col-span-1 md:col-span-2 xl:col-span-3">
+             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Description / About</label>
+             <textarea name="description" value={profile.description} onChange={handleChange} disabled={!isEditing} rows={4} className={`w-full p-4 text-sm rounded-xl resize-none ${isEditing ? 'border border-slate-300 focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20 outline-none' : 'bg-slate-50/70 border-transparent text-slate-700 leading-relaxed'}`}></textarea>
+           </div>
+         </div>
       </section>
 
       {/* Password Modal */}
       {isPasswordModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm border border-slate-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm border border-slate-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
                 <Lock className="w-5 h-5 text-[#0891b2]" /> Change Password

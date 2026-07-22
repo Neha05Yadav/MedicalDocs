@@ -12,7 +12,7 @@ const ArrowDownRight = (props: any) => <svg {...props} xmlns="http://www.w3.org/
 const Download = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg>;
 
 export default function SalesRevenuePage() {
-  const [activeRange, setActiveRange] = useState("This Year");
+  const [activeRange, setActiveRange] = useState<'thisYear' | 'lastSixMonths' | 'lastYear'>('thisYear');
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -48,6 +48,9 @@ export default function SalesRevenuePage() {
 
   const kpi = data?.kpi || {};
   const revenueData = Array.isArray(data?.revenueData) ? data.revenueData : [];
+  const selectedRevenueData = Array.isArray(data?.revenueRanges?.[activeRange])
+    ? data.revenueRanges[activeRange]
+    : revenueData;
   const sourceData = Array.isArray(data?.sourceData) ? data.sourceData : [];
   const changeText = (value: unknown) => String(value ?? "0%");
   const isNegative = (value: unknown) => changeText(value).trim().startsWith("-");
@@ -124,17 +127,17 @@ export default function SalesRevenuePage() {
             </div>
             <select 
               value={activeRange}
-              onChange={(e) => setActiveRange(e.target.value)}
+              onChange={(e) => setActiveRange(e.target.value as 'thisYear' | 'lastSixMonths' | 'lastYear')}
               className="bg-slate-50 border border-slate-200 text-slate-700 text-sm font-bold rounded-xl px-4 py-2.5 outline-none cursor-pointer focus:ring-2 focus:ring-indigo-500/20"
             >
-              <option>This Year</option>
-              <option>Last 6 Months</option>
-              <option>Last Year</option>
+              <option value="thisYear">This Year</option>
+              <option value="lastSixMonths">Last 6 Months</option>
+              <option value="lastYear">Last Year</option>
             </select>
           </div>
           <div className="h-[350px] w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={selectedRevenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.4}/>

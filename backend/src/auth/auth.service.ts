@@ -59,8 +59,31 @@ export class AuthService {
           [userId, name, email, '', now],
         );
       } else if (['HOSPITAL', 'LAB', 'CLINIC', 'DOCTOR'].includes(normalizedRole)) {
-        const facilityId = uuidv4();
         const facilityType = normalizedRole === 'LAB' ? 'LAB' : normalizedRole === 'HOSPITAL' ? 'HOSPITAL' : 'CLINIC';
+        let facilityId = uuidv4();
+        
+        if (facilityType === 'LAB') {
+          let prefix = (name || 'LA').replace(/[^a-zA-Z]/g, '').substring(0, 2).toUpperCase();
+          if (prefix.length < 2) prefix = (prefix + 'LA').substring(0, 2);
+          
+          const [rows] = await connection.execute(
+            `SELECT id FROM hospital WHERE type = 'LAB' AND id LIKE ? AND LENGTH(id) = 6 ORDER BY id DESC LIMIT 1`,
+            [`${prefix}%`]
+          );
+          
+          let nextNum = 1;
+          const dbRows = rows as any[];
+          if (dbRows && dbRows.length > 0) {
+            const lastId = dbRows[0].id;
+            const lastNumStr = lastId.substring(2);
+            const lastNum = parseInt(lastNumStr, 10);
+            if (!isNaN(lastNum)) {
+              nextNum = lastNum + 1;
+            }
+          }
+          facilityId = `${prefix}${String(nextNum).padStart(4, '0')}`;
+        }
+
         await connection.execute(
           'INSERT INTO hospital (id, name, email, phone, type, status, isVerified, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
           [facilityId, name, email, '', facilityType, 'Pending', false, now],
@@ -164,6 +187,14 @@ export class AuthService {
       throw new UnauthorizedException('Aapka account inactive hai. Admin se contact karo');
     }
 
+    // Agar hospital se linked hai, toh check karo ki hospital suspended toh nahi hai
+    if (user.hospitalId) {
+      const hospital = await this.db.queryOne('SELECT status FROM hospital WHERE id = ? LIMIT 1', [user.hospitalId]);
+      if (hospital && hospital.status === 'Suspended') {
+        throw new UnauthorizedException('Aapka hospital suspended hai. Kripya system admin se sampark karein.');
+      }
+    }
+
     // Password verify karo
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
@@ -192,7 +223,7 @@ export class AuthService {
 
   private isManagementRole(role: string | null | undefined): boolean {
     const normalizedRole = (role || '').toUpperCase();
-    return ['SUPER', 'ADMIN', 'STAFF', 'ACCOUNT', 'SALE', 'SUPPORT'].some(
+    return ['SUPER', 'ADMIN', 'STAFF', 'MANAGEMENT', 'ACCOUNT', 'SALE', 'SUPPORT'].some(
       (managementRole) => normalizedRole.includes(managementRole),
     );
   }

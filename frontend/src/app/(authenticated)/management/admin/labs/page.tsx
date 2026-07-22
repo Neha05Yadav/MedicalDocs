@@ -386,8 +386,9 @@ export default function LabManagementPage() {
       )}
       {/* Details Modal */}
       {selectedLab && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl max-w-4xl w-full shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-4xl w-full shadow-xl overflow-hidden flex flex-col relative max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
@@ -568,11 +569,13 @@ export default function LabManagementPage() {
             </div>
           </div>
         </div>
+        </div>
       )}
       {/* Add Laboratory Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-2xl w-full shadow-xl overflow-hidden flex flex-col relative max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
@@ -627,6 +630,7 @@ export default function LabManagementPage() {
                 </div>
               </form>
             </div>
+          </div>
           </div>
         </div>
       )}

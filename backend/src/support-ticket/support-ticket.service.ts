@@ -6,6 +6,15 @@ import { v4 as uuidv4 } from 'uuid';
 export class SupportTicketService {
   constructor(private db: MysqlService) {}
 
+  private async resolveTicket(identifier: string) {
+    const ticket = await this.db.queryOne(
+      'SELECT * FROM support_ticket WHERE id = ? OR ticketId = ? LIMIT 1',
+      [identifier, identifier],
+    );
+    if (!ticket) throw new NotFoundException('Ticket not found');
+    return ticket;
+  }
+
   private async getUserDetails(userEmail: string) {
     // Try to find the user in different tables based on email to determine role
     let user = await this.db.queryOne('SELECT id, name FROM patient WHERE email = ?', [userEmail]);
@@ -66,15 +75,20 @@ export class SupportTicketService {
   }
 
   async getAllTickets() {
-    return this.db.query('SELECT * FROM support_ticket ORDER BY createdAt DESC');
+    return this.db.query(`
+      SELECT st.*, std.assignedTo, std.internalNotes, std.updatedAt AS escalatedAt
+      FROM support_ticket st
+      LEFT JOIN support_ticket_details std ON std.ticketId = st.id
+      ORDER BY st.updatedAt DESC
+    `);
   }
 
   async getTicketDetails(id: string) {
-    const ticket = await this.db.queryOne('SELECT * FROM support_ticket WHERE id = ?', [id]);
-    if (!ticket) throw new NotFoundException('Ticket not found');
+    const ticket = await this.resolveTicket(id);
+    const ticketRecordId = ticket.id;
 
-    const details = await this.db.queryOne('SELECT * FROM support_ticket_details WHERE ticketId = ?', [id]);
-    const replies = await this.db.query('SELECT * FROM support_ticket_reply WHERE ticketId = ? ORDER BY createdAt ASC', [id]);
+    const details = await this.db.queryOne('SELECT * FROM support_ticket_details WHERE ticketId = ?', [ticketRecordId]);
+    const replies = await this.db.query('SELECT * FROM support_ticket_reply WHERE ticketId = ? ORDER BY createdAt ASC', [ticketRecordId]);
     
     return { 
       ticket, 
@@ -84,10 +98,12 @@ export class SupportTicketService {
   }
 
   async updateTicketStatus(id: string, status: string) {
-    await this.db.query('UPDATE support_ticket SET status = ?, updatedAt = ? WHERE id = ?', [status, new Date(), id]);
+    const resolvedTicket = await this.resolveTicket(id);
+    const ticketRecordId = resolvedTicket.id;
+    await this.db.query('UPDATE support_ticket SET status = ?, updatedAt = ? WHERE id = ?', [status, new Date(), ticketRecordId]);
     
     // Notify the user about status change
-    const ticket = await this.db.queryOne('SELECT * FROM support_ticket WHERE id = ?', [id]);
+    const ticket = await this.db.queryOne('SELECT * FROM support_ticket WHERE id = ?', [ticketRecordId]);
     if (ticket) {
       const isPatient = ticket.userRole === 'Patient';
       await this.db.query(
@@ -101,11 +117,13 @@ export class SupportTicketService {
   }
 
   async updateTicketDetails(id: string, assignedTo: string, internalNotes: string) {
-    const existing = await this.db.queryOne('SELECT ticketId FROM support_ticket_details WHERE ticketId = ?', [id]);
+    const ticket = await this.resolveTicket(id);
+    const ticketRecordId = ticket.id;
+    const existing = await this.db.queryOne('SELECT ticketId FROM support_ticket_details WHERE ticketId = ?', [ticketRecordId]);
     if (existing) {
-      await this.db.query('UPDATE support_ticket_details SET assignedTo = ?, internalNotes = ?, updatedAt = ? WHERE ticketId = ?', [assignedTo, internalNotes, new Date(), id]);
+      await this.db.query('UPDATE support_ticket_details SET assignedTo = ?, internalNotes = ?, updatedAt = ? WHERE ticketId = ?', [assignedTo, internalNotes, new Date(), ticketRecordId]);
     } else {
-      await this.db.query('INSERT INTO support_ticket_details (ticketId, assignedTo, internalNotes, updatedAt) VALUES (?, ?, ?, ?)', [id, assignedTo, internalNotes, new Date()]);
+      await this.db.query('INSERT INTO support_ticket_details (ticketId, assignedTo, internalNotes, updatedAt) VALUES (?, ?, ?, ?)', [ticketRecordId, assignedTo, internalNotes, new Date()]);
     }
     return { success: true };
   }

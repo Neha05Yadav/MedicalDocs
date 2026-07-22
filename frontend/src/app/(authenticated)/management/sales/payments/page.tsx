@@ -17,19 +17,25 @@ export default function SalesPaymentsPage() {
   
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
-  const fetchPayments = () => {
-    fetch('/api/management/sales/payments')
-      .then(res => res.json())
-      .then(data => {
-        setPayments(data.payments || []);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Failed to load payments", err);
-        setLoading(false);
-      });
+  const fetchPayments = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch('/api/management/sales/payments', { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Payment request failed (${response.status})`);
+      const result = await response.json();
+      if (!Array.isArray(result?.payments)) throw new Error('Invalid payment response received');
+      setPayments(result.payments);
+    } catch (err) {
+      console.error("Failed to load payments", err);
+      setPayments([]);
+      setError(err instanceof Error ? err.message : "Payments could not be loaded");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -63,7 +69,7 @@ export default function SalesPaymentsPage() {
       : activeTab === "Refunds" 
         ? pay.status === "Refunded" 
         : pay.status === activeTab;
-    const matchesSearch = pay.hospital.toLowerCase().includes(searchTerm.toLowerCase()) || pay.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = String(pay.hospital || '').toLowerCase().includes(searchTerm.toLowerCase()) || String(pay.id || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchesTab && matchesSearch;
   });
 
@@ -102,6 +108,17 @@ export default function SalesPaymentsPage() {
       {loading ? (
         <div className="flex justify-center items-center py-20">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        </div>
+      ) : error ? (
+        <div className="grid min-h-[320px] place-items-center rounded-2xl border border-rose-200 bg-white p-8 text-center shadow-sm">
+          <div>
+            <XCircle className="mx-auto size-10 text-rose-500" />
+            <h2 className="mt-4 text-xl font-bold text-slate-900">Payments could not be loaded</h2>
+            <p className="mt-2 text-sm font-medium text-slate-500">{error}</p>
+            <button onClick={fetchPayments} className="mt-5 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700">
+              Try again
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">

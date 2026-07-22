@@ -23,6 +23,7 @@ export default function ReportsManagementPage() {
   const [labReports, setLabReports] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingLabReports, setIsLoadingLabReports] = useState(true);
+  const [activeTab, setActiveTab] = useState<"hospital" | "lab">("hospital");
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [patientDetails, setPatientDetails] = useState<any>(null);
@@ -214,9 +215,24 @@ export default function ReportsManagementPage() {
         </button>
       </div>
 
-      {/* All Reports Table */}
+      {/* Tabbed Reports Container */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-8">
-        <h2 className="text-[#0891b2] font-semibold text-base mb-5">Hospital Patient Records</h2>
+        <div className="flex flex-wrap items-center gap-6 border-b border-slate-100 mb-5">
+          <button 
+            onClick={() => setActiveTab('hospital')}
+            className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'hospital' ? 'border-[#0891b2] text-[#0891b2]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          >
+            Hospital Patient Records
+          </button>
+          <button 
+            onClick={() => setActiveTab('lab')}
+            className={`pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'lab' ? 'border-purple-600 text-purple-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          >
+            <FlaskConical className="size-4" /> Received Lab Reports
+          </button>
+        </div>
+
+        {activeTab === 'hospital' && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="text-[13px] text-slate-800 font-semibold border-b border-slate-200 bg-slate-50/50">
@@ -271,14 +287,9 @@ export default function ReportsManagementPage() {
             </tbody>
           </table>
         </div>
-      </div>
+        )}
 
-      {/* Received Lab Reports Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-8">
-        <div className="flex items-center gap-2 mb-5">
-          <FlaskConical className="size-5 text-purple-600" />
-          <h2 className="text-purple-700 font-semibold text-base">Received Lab Reports</h2>
-        </div>
+        {activeTab === 'lab' && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="text-[13px] text-slate-800 font-semibold border-b border-slate-200 bg-slate-50/50">
@@ -328,6 +339,7 @@ export default function ReportsManagementPage() {
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       {/* Patient Details & Reports Section */}
@@ -458,7 +470,7 @@ export default function ReportsManagementPage() {
       {/* New Patient Upload Modal */}
       {isNewUploadModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <h2 className="text-lg font-semibold text-slate-800">Upload New Report & Register Patient</h2>
               <button onClick={() => setIsNewUploadModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">
@@ -542,7 +554,7 @@ export default function ReportsManagementPage() {
       {/* Existing Patient Upload Modal */}
       {isExistingUploadModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <h2 className="text-lg font-semibold text-slate-800">Upload Report for Patient</h2>
               <button onClick={() => setIsExistingUploadModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">

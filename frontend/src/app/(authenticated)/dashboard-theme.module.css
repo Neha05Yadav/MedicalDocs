@@ -38,7 +38,6 @@
 
 .content {
   position: relative;
-  z-index: 1;
   flex: 1;
   overflow-y: auto;
   scrollbar-color: rgb(var(--dash-accent-rgb) / .3) transparent;
@@ -91,11 +90,11 @@
 
 .brandRow {
   display: flex;
-  height: 4.5rem;
+  min-height: 5.5rem;
   flex-shrink: 0;
   align-items: center;
   gap: .6rem;
-  padding-inline: .75rem;
+  padding: 1rem .75rem;
   border-bottom: 1px solid rgb(255 255 255 / .08);
 }
 

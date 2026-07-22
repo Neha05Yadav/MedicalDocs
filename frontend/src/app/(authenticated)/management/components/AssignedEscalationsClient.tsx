@@ -1,25 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { 
   Search, 
   Filter, 
   ChevronRight, 
-  FileText, 
   CheckCircle,
-  Play,
-  UploadCloud,
-  FileImage,
-  DollarSign,
-  RefreshCw
+  Play
 } from "lucide-react";
+import EscalationDetailsClient from "./EscalationDetailsClient";
 
 export default function AssignedEscalationsClient({ role, initialData }: { role: "admin" | "accounts", initialData: any[] }) {
   const [escalations, setEscalations] = useState(initialData);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedEscalationId, setSelectedEscalationId] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token") || "";
@@ -27,9 +23,11 @@ export default function AssignedEscalationsClient({ role, initialData }: { role:
       .then(response => { if (!response.ok) throw new Error("Escalations could not be loaded."); return response.json(); })
       .then(data => {
         const tickets = (Array.isArray(data) ? data : []).filter((ticket: any) => {
-          const isEscalated = ["HIGH", "CRITICAL"].includes(String(ticket.priority).toUpperCase());
-          const isAccounts = /bill|payment|refund|subscription|invoice/i.test(`${ticket.category} ${ticket.subject}`);
-          return isEscalated && (role === "accounts" ? isAccounts : !isAccounts);
+          const assignment = String(ticket.assignedTo || "").toLowerCase();
+          const isEscalated = ["HIGH", "CRITICAL"].includes(String(ticket.priority).toUpperCase()) && Boolean(assignment);
+          const isAccounts = assignment.includes("account");
+          const isAdminHandoff = assignment.includes("admin") || assignment.includes("development") || assignment.includes("engineering") || assignment.includes("security");
+          return isEscalated && (role === "accounts" ? isAccounts : isAdminHandoff);
         }).map((ticket: any) => ({ id: ticket.id, ticketId: ticket.ticketId, user: ticket.userName || "Unknown user", userRole: ticket.userRole || "User", issue: ticket.subject, status: ticket.status, priority: ticket.priority, assignedBy: "Support workflow", assignedDate: ticket.updatedAt || ticket.createdAt }));
         setEscalations(tickets);
       })
@@ -147,11 +145,9 @@ export default function AssignedEscalationsClient({ role, initialData }: { role:
                     <CheckCircle className="w-4 h-4" />
                   </button>
                 )}
-                <Link href={`/management/${role}/assigned-escalations/${esc.id}`}>
-                  <button className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="View Details">
+                <button onClick={() => setSelectedEscalationId(esc.id)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="View Details">
                     <ChevronRight className="w-4 h-4" />
-                  </button>
-                </Link>
+                </button>
               </div>
             </div>
           ))}
@@ -162,6 +158,7 @@ export default function AssignedEscalationsClient({ role, initialData }: { role:
           )}
         </div>
       </div>
+      {selectedEscalationId && <EscalationDetailsClient role={role} id={selectedEscalationId} onClose={() => setSelectedEscalationId(null)} />}
     </div>
   );
 }

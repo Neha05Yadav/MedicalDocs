@@ -9,6 +9,7 @@ import {
 import { authHeaders } from "@/lib/auth-fetch";
 
 export default function DoctorPatientsPage() {
+  const [activeTab, setActiveTab] = useState("my_patients"); // "my_patients" | "search_patient"
   const [activeFilter, setActiveFilter] = useState("All Patients");
   const [searchTerm, setSearchTerm] = useState("");
   const [patients, setPatients] = useState<any[]>([]);
@@ -229,8 +230,27 @@ export default function DoctorPatientsPage() {
 
   return (
     <div className="p-8 max-w-[1400px] mx-auto w-full min-h-screen">
+      {/* Header Tabs */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl w-fit">
+          <button 
+            onClick={() => setActiveTab("my_patients")}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "my_patients" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200"}`}
+          >
+            My Patients
+          </button>
+          <button 
+            onClick={() => setActiveTab("search_patient")}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "search_patient" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200"}`}
+          >
+            Patient Directory
+          </button>
+        </div>
+      </div>
+
       {/* Doctor's Active Patients Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-8">
+      {activeTab === "my_patients" && (
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
         <div className="p-6 border-b border-slate-200 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-slate-900">My Patients</h2>
@@ -308,9 +328,12 @@ export default function DoctorPatientsPage() {
           </table>
         </div>
       </div>
+      )}
 
       {/* Search and Action Bar */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      {activeTab === "search_patient" && (
+      <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-slate-400" />
           <input 
@@ -476,6 +499,8 @@ export default function DoctorPatientsPage() {
             </div>
           ))}
         </div>
+      )}
+      </div>
       )}
 
       {/* View Records Modal */}

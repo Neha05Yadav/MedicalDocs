@@ -37,6 +37,11 @@ export default function AdminManagementPage() {
     fullName: '', email: '', phone: '', role: '', password: '', confirmPassword: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const formatDateTime = (value: unknown, fallback = 'Not recorded') => {
+    if (!value) return fallback;
+    const date = new Date(String(value));
+    return Number.isNaN(date.getTime()) ? fallback : date.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+  };
 
   useEffect(() => {
     fetchAdmins();
@@ -44,7 +49,8 @@ export default function AdminManagementPage() {
 
   const fetchAdmins = async () => {
     try {
-      const res = await fetch('/api/management/super-admin/team');
+      const res = await fetch('/api/management/super-admin/team', { cache: 'no-store' });
+      if (!res.ok) throw new Error(`Team request failed (${res.status})`);
       const data = await res.json();
       if (Array.isArray(data)) {
         setAdmins(data);
@@ -263,6 +269,7 @@ export default function AdminManagementPage() {
             >
               <option value="">All Roles</option>
               <option value="Admin">Admin</option>
+              <option value="Super Admin">Super Admin</option>
               <option value="Sales Manager">Sales Manager</option>
               <option value="Accounts Manager">Accounts Manager</option>
               <option value="Support Team">Support Team</option>
@@ -326,7 +333,7 @@ export default function AdminManagementPage() {
                     )}
                   </td>
                   <td className="px-6 py-4 font-medium text-slate-500 text-xs">
-                    {admin.lastLogin}
+                    {formatDateTime(admin.lastLogin, 'Never')}
                   </td>
                   <td className="px-6 py-4 text-right flex justify-end gap-1.5">
                     {admin.status === 'Pending' ? (
@@ -381,7 +388,7 @@ export default function AdminManagementPage() {
       {/* Activity Logs Modal */}
       {isLogsModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
@@ -398,6 +405,27 @@ export default function AdminManagementPage() {
             </div>
             
             <div className="p-6 overflow-y-auto bg-slate-50/50">
+              <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="border-b border-slate-100 bg-slate-50 px-5 py-3">
+                  <h4 className="text-sm font-extrabold text-slate-900">Team member information</h4>
+                </div>
+                <dl className="grid grid-cols-1 gap-x-8 gap-y-4 p-5 sm:grid-cols-2">
+                  {[
+                    ['Full Name', selectedAdminForLogs?.name || 'Not recorded'],
+                    ['Email', selectedAdminForLogs?.email || 'Not recorded'],
+                    ['Role', selectedAdminForLogs?.role || 'Not recorded'],
+                    ['Status', selectedAdminForLogs?.status || 'Not recorded'],
+                    ['Last Login', formatDateTime(selectedAdminForLogs?.lastLogin, 'Never')],
+                    ['Created By', selectedAdminForLogs?.createdBy || 'Not recorded'],
+                    ['Created Date', formatDateTime(selectedAdminForLogs?.createdAt)],
+                  ].map(([label, value]) => (
+                    <div key={label} className={label === 'Email' ? 'sm:col-span-2' : ''}>
+                      <dt className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">{label}</dt>
+                      <dd className="mt-1 break-words text-sm font-bold text-slate-800">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
               {logsLoading ? (
                 <div className="flex flex-col items-center justify-center py-10 opacity-50">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
@@ -424,6 +452,11 @@ export default function AdminManagementPage() {
                 </div>
               )}
             </div>
+            <div className="flex justify-end border-t border-slate-100 bg-white px-6 py-4">
+              <button onClick={() => setIsLogsModalOpen(false)} className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800">
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -431,7 +464,7 @@ export default function AdminManagementPage() {
       {/* Add Admin Modal (Existing logic) */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">

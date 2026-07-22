@@ -23,11 +23,13 @@ const Bell = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" 
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "@/components/RechartsWrapper";
+import { Bar, ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "@/components/RechartsWrapper";
 
 export default function AccountsOverviewPage() {
   const [kpiData, setKpiData] = useState<any[]>([]);
   const [revenueData, setRevenueData] = useState<any[]>([]);
+  const [revenueRanges, setRevenueRanges] = useState<Record<string, any[]>>({});
+  const [activeRange, setActiveRange] = useState<'thisYear' | 'lastYear' | 'lastSixMonths'>('thisYear');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,6 +48,7 @@ export default function AccountsOverviewPage() {
         if (data.revenueData) {
           setRevenueData(data.revenueData);
         }
+        if (data.revenueRanges) setRevenueRanges(data.revenueRanges);
         setLoading(false);
       })
       .catch(err => {
@@ -61,6 +64,12 @@ export default function AccountsOverviewPage() {
       </div>
     );
   }
+
+  const chartData = Array.isArray(revenueRanges[activeRange]) ? revenueRanges[activeRange] : revenueData;
+  const billedTotal = chartData.reduce((total, row) => total + Number(row.income || 0), 0);
+  const collectedTotal = chartData.reduce((total, row) => total + Number(row.collected || 0), 0);
+  const collectionRate = billedTotal ? Math.round((collectedTotal / billedTotal) * 100) : 0;
+  const currency = (value: unknown) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto w-full min-h-screen bg-slate-50/50 font-sans">
@@ -86,43 +95,49 @@ export default function AccountsOverviewPage() {
       </div>
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
         {/* Main Chart Area */}
-        <div className="xl:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-          <div className="flex justify-between items-center mb-6">
+        <div className="xl:col-span-2 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-5 border-b border-slate-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Income vs Collection</h3>
+              <h3 className="text-xl font-black text-slate-900">Income vs Collection</h3>
               <p className="text-sm text-slate-500 mt-1">Comparison of billed income versus actual collected amounts.</p>
             </div>
-            <select className="bg-slate-50 border border-slate-200 text-slate-700 text-sm font-bold rounded-lg px-3 py-2 outline-none cursor-pointer">
-              <option>This Year</option>
-              <option>Last Year</option>
-              <option>Last 6 Months</option>
+            <select value={activeRange} onChange={(event) => setActiveRange(event.target.value as typeof activeRange)} className="min-w-40 cursor-pointer rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+              <option value="thisYear">This Year</option>
+              <option value="lastYear">Last Year</option>
+              <option value="lastSixMonths">Last 6 Months</option>
             </select>
           </div>
-          <div className="h-[350px] w-full">
+          <div className="grid grid-cols-3 gap-3 px-6 pt-5">
+            <div className="rounded-xl bg-indigo-50 px-4 py-3"><p className="text-[11px] font-bold uppercase tracking-wider text-indigo-500">Billed</p><p className="mt-1 text-lg font-black text-slate-900">{currency(billedTotal)}</p></div>
+            <div className="rounded-xl bg-emerald-50 px-4 py-3"><p className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Collected</p><p className="mt-1 text-lg font-black text-slate-900">{currency(collectedTotal)}</p></div>
+            <div className="rounded-xl bg-slate-50 px-4 py-3"><p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Collection rate</p><p className="mt-1 text-lg font-black text-slate-900">{collectionRate}%</p></div>
+          </div>
+          <div className="h-[315px] w-full px-4 pb-5 pt-6">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <ComposedChart data={chartData} margin={{ top: 10, right: 12, left: 8, bottom: 0 }} barCategoryGap="38%">
                 <defs>
-                  <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                  <linearGradient id="incomeBar" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#818cf8" />
+                    <stop offset="100%" stopColor="#4f46e5" />
                   </linearGradient>
                   <linearGradient id="colorCollected" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }} tickFormatter={(val) => `₹${val/100000}L`} dx={-10} />
+                <CartesianGrid strokeDasharray="4 5" vertical={false} stroke="#e8eef6" />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12, fontWeight: 700 }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} width={72} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 600 }} tickFormatter={currency} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  cursor={{ fill: '#f8fafc' }}
+                  contentStyle={{ backgroundColor: '#fff', borderRadius: '14px', border: '1px solid #e2e8f0', boxShadow: '0 12px 30px rgba(15,23,42,.10)' }}
                   itemStyle={{ fontWeight: 700 }}
                   labelStyle={{ fontWeight: 700, color: '#64748b', marginBottom: '8px' }}
-                  formatter={(value: any) => [`₹${(value/100000).toFixed(2)} Lacs`]}
+                  formatter={(value, name) => [currency(value), name === 'income' ? 'Billed income' : 'Collected']}
                 />
-                <Area type="monotone" dataKey="income" name="Total Income" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
-                <Area type="monotone" dataKey="collected" name="Collected" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorCollected)" />
-              </AreaChart>
+                <Bar dataKey="income" name="Billed income" fill="url(#incomeBar)" radius={[8, 8, 3, 3]} minPointSize={2} />
+                <Line type="monotone" dataKey="collected" name="Collected" stroke="#10b981" strokeWidth={3.5} dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7, strokeWidth: 3, stroke: '#fff' }} />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>

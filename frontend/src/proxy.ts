@@ -5,12 +5,17 @@ export function proxy(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
   const { pathname } = request.nextUrl;
 
+  // `/management` is always the dedicated management sign-in gateway.
+  // Visiting it starts a fresh management session; dashboards remain protected
+  // and are opened only after the login form creates a new authenticated token.
+  if (pathname === '/management') {
+    const response = NextResponse.next();
+    response.cookies.delete('token');
+    return response;
+  }
+
   // If there's no token and they are trying to access protected routes, redirect to login
   if (!token) {
-    if (pathname === '/management') {
-      // Allow access to the management login page
-      return NextResponse.next();
-    }
     if (pathname.startsWith('/management/')) {
       // Redirect unauthenticated management routes to management login
       return NextResponse.redirect(new URL('/management', request.url));
@@ -31,7 +36,18 @@ export function proxy(request: NextRequest) {
     }).join(''));
     
     const payload = JSON.parse(jsonPayload);
-    const rawRole = payload.role?.toUpperCase() || "";
+    const rawRole = String(payload.role || "").trim().toUpperCase();
+
+    // Do not trap users behind an expired token. Let the management login page
+    // open again so a fresh authenticated session can be created.
+    if (payload.exp && Number(payload.exp) * 1000 <= Date.now()) {
+      const destination = pathname.startsWith('/management') ? '/management' : '/auth';
+      const response = pathname === destination
+        ? NextResponse.next()
+        : NextResponse.redirect(new URL(destination, request.url));
+      response.cookies.delete('token');
+      return response;
+    }
 
     let allowedPath = "";
     let isManagementRole = false;
@@ -39,7 +55,7 @@ export function proxy(request: NextRequest) {
     if (rawRole.includes("SUPER")) {
       allowedPath = '/management/super-admin';
       isManagementRole = true;
-    } else if (rawRole.includes("ADMIN")) {
+    } else if (rawRole.includes("ADMIN") || rawRole === "STAFF" || rawRole === "MANAGEMENT") {
       allowedPath = '/management/admin';
       isManagementRole = true;
     } else if (rawRole.includes("ACCOUNT")) {
@@ -68,17 +84,6 @@ export function proxy(request: NextRequest) {
       return response;
     }
 
-    // Special case: If user is on the /management login page
-    if (pathname === '/management') {
-      if (isManagementRole) {
-        // Redirect to their management dashboard
-        return NextResponse.redirect(new URL(`${allowedPath}/overview`, request.url));
-      } else {
-        // The dedicated management login remains accessible from any portal.
-        return NextResponse.next();
-      }
-    }
-
     // Check if the user is trying to access a path that doesn't start with their allowed path
     if (pathname !== allowedPath && !pathname.startsWith(allowedPath + '/')) {
       // User is accessing another role's dashboard (or login page), redirect them to their own
@@ -95,11 +100,6 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   } catch {
     // Token is invalid or malformed
-    if (pathname === '/management') {
-      const response = NextResponse.next();
-      response.cookies.delete('token');
-      return response;
-    }
     const response = NextResponse.redirect(new URL('/auth', request.url));
     response.cookies.delete('token');
     return response;

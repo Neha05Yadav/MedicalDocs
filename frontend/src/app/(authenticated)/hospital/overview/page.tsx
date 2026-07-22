@@ -13,6 +13,28 @@ const Building2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/
 const Activity = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"></path></svg>;
 const TrendingUp = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 7h6v6"></path><path d="m22 7-8.5 8.5-5-5L2 17"></path></svg>;
 const Clock = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>;
+const X = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>;
+const Heart = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"></path></svg>;
+const Brain = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 18V5"></path><path d="M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4"></path><path d="M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"></path><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"></path><path d="M18 18a4 4 0 0 0 2-7.464"></path><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"></path><path d="M6 18a4 4 0 0 1-2-7.464"></path><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"></path></svg>;
+const Bone = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M17 10c.7-.7 1.69 0 2.5 0a2.5 2.5 0 1 0 0-5 .5.5 0 0 1-.5-.5 2.5 2.5 0 1 0-5 0c0 .81.7 1.8 0 2.5l-7 7c-.7.7-1.69 0-2.5 0a2.5 2.5 0 0 0 0 5c.28 0 .5.22.5.5a2.5 2.5 0 1 0 5 0c0-.81-.7-1.8 0-2.5Z"></path></svg>;
+const Baby = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5"></path><path d="M15 12h.01"></path><path d="M19.38 6.813A9 9 0 0 1 20.8 10.2a2 2 0 0 1 0 3.6 9 9 0 0 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c2 0 3.5 1.1 3.5 2.5s-.9 2.5-2 2.5c-.8 0-1.5-.4-1.5-1"></path><path d="M9 12h.01"></path></svg>;
+const Sparkles = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path><path d="M20 2v4"></path><path d="M22 4h-4"></path><circle cx="4" cy="20" r="2"></circle></svg>;
+const Ear = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 8.5a6.5 6.5 0 1 1 13 0c0 6-6 6-6 10a3.5 3.5 0 1 1-7 0"></path><path d="M15 8.5a2.5 2.5 0 0 0-5 0v1a2 2 0 1 1 0 4"></path></svg>;
+const Eye = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path><circle cx="12" cy="12" r="3"></circle></svg>;
+const User = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
+
+const getIconForDepartment = (name: string) => {
+  const normalized = name?.toLowerCase() || "";
+  if (normalized.includes('cardio')) return { icon: Heart, iconColor: "text-red-500", iconBg: "bg-red-50" };
+  if (normalized.includes('neuro')) return { icon: Brain, iconColor: "text-purple-500", iconBg: "bg-purple-50" };
+  if (normalized.includes('ortho')) return { icon: Bone, iconColor: "text-amber-500", iconBg: "bg-amber-50" };
+  if (normalized.includes('pedia')) return { icon: Baby, iconColor: "text-pink-500", iconBg: "bg-pink-50" };
+  if (normalized.includes('derma')) return { icon: Sparkles, iconColor: "text-emerald-500", iconBg: "bg-emerald-50" };
+  if (normalized.includes('ent')) return { icon: Ear, iconColor: "text-pink-500", iconBg: "bg-pink-50" };
+  if (normalized.includes('ophtha')) return { icon: Eye, iconColor: "text-purple-500", iconBg: "bg-purple-50" };
+  
+  return { icon: Stethoscope, iconColor: "text-cyan-500", iconBg: "bg-cyan-50" };
+};
 
 function KPICardsSkeleton() {
   return (
@@ -34,6 +56,7 @@ export default function HospitalDashboard() {
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
 
   useEffect(() => {
     fetchOverview();
@@ -167,7 +190,15 @@ export default function HospitalDashboard() {
       </div>
       {/* Department Stats */}
       <div className="bg-card ring-1 ring-black/5 rounded-xl p-6">
-        <h2 className="text-sm font-semibold mb-6">Department Overview</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-sm font-semibold">Department Overview</h2>
+          <button 
+            onClick={() => setIsDeptModalOpen(true)}
+            className="text-xs font-semibold text-brand hover:underline"
+          >
+            View All Departments
+          </button>
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {(data?.departments || []).slice(0, 4).map((d: any) => {
             const Icon = d.icon || Building2;
@@ -188,6 +219,65 @@ export default function HospitalDashboard() {
           )}
         </div>
       </div>
+
+      {isDeptModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                <Building2 className="size-5 text-[#0891b2]" />
+                All Departments
+              </h2>
+              <button 
+                onClick={() => setIsDeptModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-md transition-colors"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <div className="p-8 max-h-[75vh] overflow-y-auto bg-slate-50/30">
+              {(!data?.departments || data.departments.length === 0) ? (
+                <div className="text-center text-slate-500 py-12">No departments found. Please add doctors with specializations.</div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {data.departments.map((d: any) => {
+                    const ui = getIconForDepartment(d.name || d.dept);
+                    const DeptIcon = ui.icon;
+                    return (
+                    <div key={d.name} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 hover:shadow-md transition-shadow flex flex-col items-center">
+                      <div className={`size-16 rounded-full ${ui.iconBg} ${ui.iconColor} flex items-center justify-center mb-4`}>
+                        <DeptIcon className="size-8" strokeWidth={1.5} />
+                      </div>
+                      <h3 className="text-base font-bold text-slate-900 mb-6 text-center">{d.name || d.dept}</h3>
+                      <div className="w-full flex justify-between px-2 mb-4">
+                        <div className="flex flex-col items-center">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <User className="size-4 text-cyan-500" strokeWidth={2.5} />
+                            <span className="text-sm font-bold text-slate-900">{d.doctors || 0}</span>
+                          </div>
+                          <span className="text-[9px] text-slate-400 uppercase tracking-wider font-bold">Doctors</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <Users className="size-4 text-emerald-500" strokeWidth={2.5} />
+                            <span className="text-sm font-bold text-slate-900">{d.patients || 0}</span>
+                          </div>
+                          <span className="text-[9px] text-slate-400 uppercase tracking-wider font-bold">Patients</span>
+                        </div>
+                      </div>
+                      <div className="w-full border-t border-dashed border-slate-200 pt-5 flex justify-center">
+                        <span className="px-6 py-1 bg-white text-emerald-600 font-bold text-xs rounded-full border border-emerald-100">
+                          Active
+                        </span>
+                      </div>
+                    </div>
+                  )})}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -53,23 +53,36 @@ export class ManagementService {
 
   async getSalesPayments() {
     const rows = await this.db.query(`SELECT i.id, h.name AS hospital, i.totalAmount, i.date, i.status FROM invoice i LEFT JOIN hospital h ON h.id = i.hospitalId ORDER BY i.date DESC`);
-    return { payments: rows.map(row => ({ id: row.id, hospital: row.hospital || 'Unknown facility', amount: this.money(Number(row.totalAmount || 0)), date: new Date(row.date).toLocaleDateString('en-IN'), status: ['PAID','SUCCESSFUL'].includes(String(row.status).toUpperCase()) ? 'Successful' : row.status })) };
+    return { payments: rows.map(row => ({ id: row.id, hospital: row.hospital || 'Unknown facility', amount: this.money(Number(row.totalAmount || 0)), date: new Date(row.date).toLocaleDateString('en-IN'), method: 'Invoice payment', status: ['PAID','SUCCESSFUL'].includes(String(row.status).toUpperCase()) ? 'Successful' : row.status })) };
   }
 
   async getSalesRevenue() {
-    const overview = await this.getSalesOverview();
-    const [total, currentMonth, previousMonth, currentYear, previousYear] = await Promise.all([
+    const [total, currentMonth, previousMonth, currentYear, previousYear, monthlyRows] = await Promise.all([
       this.db.queryOne(`SELECT COALESCE(SUM(totalAmount), 0) AS value FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL')`),
       this.db.queryOne(`SELECT COALESCE(SUM(totalAmount), 0) AS value FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL') AND date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')`),
       this.db.queryOne(`SELECT COALESCE(SUM(totalAmount), 0) AS value FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL') AND date >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m-01') AND date < DATE_FORMAT(CURDATE(), '%Y-%m-01')`),
       this.db.queryOne(`SELECT COALESCE(SUM(totalAmount), 0) AS value FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL') AND YEAR(date) = YEAR(CURDATE())`),
       this.db.queryOne(`SELECT COALESCE(SUM(totalAmount), 0) AS value FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL') AND YEAR(date) = YEAR(CURDATE()) - 1`),
+      this.db.query(`SELECT DATE_FORMAT(date, '%Y-%m') AS monthKey, COALESCE(SUM(totalAmount), 0) AS value FROM invoice WHERE UPPER(status) IN ('PAID','SUCCESSFUL') AND date >= MAKEDATE(YEAR(CURDATE()) - 1, 1) GROUP BY DATE_FORMAT(date, '%Y-%m') ORDER BY monthKey`),
     ]);
     const totalValue = Number(total?.value || 0);
     const monthlyValue = Number(currentMonth?.value || 0);
     const annualValue = Number(currentYear?.value || 0);
     const monthlyChange = this.change(monthlyValue, Number(previousMonth?.value || 0)).change;
     const annualChange = this.change(annualValue, Number(previousYear?.value || 0)).change;
+    const monthlyMap = new Map(monthlyRows.map(row => [String(row.monthKey), Number(row.value || 0)]));
+    const toChartPoint = (date: Date) => {
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      return {
+        month: date.toLocaleDateString('en-US', { month: 'short' }),
+        revenue: monthlyMap.get(monthKey) || 0,
+        target: 0,
+      };
+    };
+    const now = new Date();
+    const thisYearData = Array.from({ length: 12 }, (_, month) => toChartPoint(new Date(now.getFullYear(), month, 1)));
+    const lastYearData = Array.from({ length: 12 }, (_, month) => toChartPoint(new Date(now.getFullYear() - 1, month, 1)));
+    const lastSixMonthsData = Array.from({ length: 6 }, (_, index) => toChartPoint(new Date(now.getFullYear(), now.getMonth() - (5 - index), 1)));
     return {
       kpi: {
         totalRevenue: this.money(totalValue),
@@ -81,7 +94,12 @@ export class ManagementService {
         renewalRevenue: this.money(0),
         renewalRevenueChange: '0%',
       },
-      revenueData: overview.revenueData.map(row => ({ month: row.name, revenue: row.value, target: 0 })),
+      revenueData: thisYearData,
+      revenueRanges: {
+        thisYear: thisYearData,
+        lastSixMonths: lastSixMonthsData,
+        lastYear: lastYearData,
+      },
       sourceData: [{ name: 'Hospital billing', amount: this.money(totalValue), value: totalValue > 0 ? 100 : 0, color: '#4f46e5' }],
     };
   }
@@ -99,10 +117,28 @@ export class ManagementService {
     const paid = rows.filter(row => row.status === 'Paid');
     const pending = rows.filter(row => String(row.status).toUpperCase() === 'PENDING');
     const sum = (items: any[]) => items.reduce((total, row) => total + Number(row.amount || 0), 0);
-    const monthly = new Map<string, number>();
-    paid.forEach(row => { const date = new Date(row.date); const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; monthly.set(key, (monthly.get(key) || 0) + Number(row.amount)); });
-    const revenueData = Array.from({ length: 6 }, (_, index) => { const date = new Date(); date.setDate(1); date.setMonth(date.getMonth() - (5 - index)); const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; return { month: date.toLocaleDateString('en-US', { month: 'short' }), revenue: monthly.get(key) || 0 }; });
-    return { kpi: { totalIncome: this.money(sum(rows)), totalCollected: this.money(sum(paid)), pendingReceivable: this.money(sum(pending)), overdueAmount: this.money(0), refundIssued: this.money(0) }, revenueData };
+    const billedByMonth = new Map<string, number>();
+    const collectedByMonth = new Map<string, number>();
+    const addToMonth = (map: Map<string, number>, row: any) => {
+      const date = new Date(row.date);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      map.set(key, (map.get(key) || 0) + Number(row.amount || 0));
+    };
+    rows.forEach(row => addToMonth(billedByMonth, row));
+    paid.forEach(row => addToMonth(collectedByMonth, row));
+    const point = (date: Date) => {
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      return { month: date.toLocaleDateString('en-US', { month: 'short' }), income: billedByMonth.get(key) || 0, collected: collectedByMonth.get(key) || 0 };
+    };
+    const now = new Date();
+    const thisYear = Array.from({ length: 12 }, (_, month) => point(new Date(now.getFullYear(), month, 1)));
+    const lastYear = Array.from({ length: 12 }, (_, month) => point(new Date(now.getFullYear() - 1, month, 1)));
+    const lastSixMonths = Array.from({ length: 6 }, (_, index) => point(new Date(now.getFullYear(), now.getMonth() - (5 - index), 1)));
+    return {
+      kpi: { totalIncome: this.money(sum(rows)), totalCollected: this.money(sum(paid)), pendingReceivable: this.money(sum(pending)), overdueAmount: this.money(0), refundIssued: this.money(0) },
+      revenueData: lastSixMonths,
+      revenueRanges: { thisYear, lastYear, lastSixMonths },
+    };
   }
 
   async getAccountsBilling() {
