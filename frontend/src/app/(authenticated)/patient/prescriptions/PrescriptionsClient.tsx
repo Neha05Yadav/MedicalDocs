@@ -22,6 +22,8 @@ export default function PrescriptionsClient() {
   const [showUpload, setShowUpload] = useState(false);
   const [uploadDoctor, setUploadDoctor] = useState("");
   const [uploadDate, setUploadDate] = useState("");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadPreview, setUploadPreview] = useState("");
   const [isPending, setIsPending] = useState(false);
   const [selectedPrescriptionDetails, setSelectedPrescriptionDetails] = useState<any | null>(null);
   const [activeSource, setActiveSource] = useState("All Providers");
@@ -56,33 +58,55 @@ export default function PrescriptionsClient() {
 
   const handleAddPrescription = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!uploadFile) {
+      toast.error("Please select a prescription image.");
+      return;
+    }
     setIsPending(true);
     try {
       const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("doctor", uploadDoctor.trim());
+      formData.append("date", uploadDate);
+      formData.append("file", uploadFile);
       const res = await fetch("/api/patient/prescriptions", {
         method: "POST",
-        headers: { 
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          doctor: uploadDoctor,
-          date: uploadDate
-        })
+        headers: { "Authorization": `Bearer ${token}` },
+        body: formData,
       });
 
-      if (!res.ok) throw new Error("Failed to add prescription");
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(Array.isArray(payload.message) ? payload.message[0] : payload.message || "Failed to add prescription");
       
       toast.success("Prescription added successfully!");
       setShowUpload(false);
       setUploadDoctor("");
       setUploadDate("");
-      fetchPrescriptions();
+      setUploadFile(null);
+      setUploadPreview("");
+      await fetchPrescriptions();
     } catch (e) {
-      toast.error("Failed to save prescription");
+      toast.error(e instanceof Error ? e.message : "Failed to save prescription");
     } finally {
       setIsPending(false);
     }
+  };
+
+  const handlePrescriptionImage = (file?: File) => {
+    if (!file) return;
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      toast.error("Only JPG, PNG or WebP images are allowed.");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Prescription image must be smaller than 8 MB.");
+      return;
+    }
+    setUploadFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setUploadPreview(String(reader.result || ""));
+    reader.readAsDataURL(file);
   };
 
   if (loading) {
@@ -165,26 +189,41 @@ export default function PrescriptionsClient() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700 mb-1.5 block">Upload Document</label>
+                <label className="text-sm font-medium text-slate-700 mb-1.5 block">Prescription Image *</label>
                 <div className="relative">
                   <input
                     type="file"
                     id="file-upload"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(event) => handlePrescriptionImage(event.target.files?.[0])}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    required
                   />
                   <label
                     htmlFor="file-upload"
                     className="flex items-center justify-center px-4 py-2 bg-slate-100 border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-200 cursor-pointer transition-colors"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line></svg>
-                    Upload Prescription
+                    {uploadFile ? "Change Prescription Image" : "Upload Prescription Image"}
                   </label>
                 </div>
+                {uploadFile && (
+                  <div className="mt-3 flex items-center gap-3 rounded-xl border border-cyan-100 bg-cyan-50/60 p-3">
+                    {uploadPreview && <img src={uploadPreview} alt="Selected prescription" className="size-14 rounded-lg border border-cyan-100 bg-white object-cover" />}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-slate-800">{uploadFile.name}</p>
+                      <p className="mt-0.5 text-xs font-medium text-slate-500">{(uploadFile.size / 1024 / 1024).toFixed(2)} MB · Ready to upload</p>
+                    </div>
+                    <button type="button" onClick={() => { setUploadFile(null); setUploadPreview(""); }} className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-red-500" aria-label="Remove selected image">
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="pt-4 mt-6 border-t border-slate-100 flex justify-end">
                 <button
                   type="submit"
-                  disabled={isPending}
+                  disabled={isPending || !uploadFile}
                   className="px-6 py-2.5 bg-[#0891b2] text-white rounded-xl text-sm font-semibold hover:bg-cyan-700 transition-colors disabled:opacity-50"
                 >
                   {isPending ? "Saving..." : "Save Prescription"}
@@ -344,6 +383,15 @@ export default function PrescriptionsClient() {
                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Doctor Name</p>
                 <p className="text-base font-semibold text-slate-900">{selectedPrescriptionDetails.doctor}</p>
               </div>
+              {selectedPrescriptionDetails.fileUrl && (
+                <div>
+                  <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">Prescription Image</p>
+                  <a href={String(selectedPrescriptionDetails.fileUrl).startsWith('/') ? selectedPrescriptionDetails.fileUrl : `/uploads/${selectedPrescriptionDetails.fileUrl}`} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                    <img src={String(selectedPrescriptionDetails.fileUrl).startsWith('/') ? selectedPrescriptionDetails.fileUrl : `/uploads/${selectedPrescriptionDetails.fileUrl}`} alt={`Prescription ${selectedPrescriptionDetails.id}`} className="max-h-64 w-full object-contain" />
+                  </a>
+                  <p className="mt-2 text-xs font-medium text-cyan-700">Click the image to open full size.</p>
+                </div>
+              )}
               <div>
                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Status</p>
                 <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold ${

@@ -33,6 +33,7 @@ interface Patient {
   verifiedOn: string;
   verifiedBy: string;
   availableRecords: number;
+  accessExpiresAt?: string | null;
 }
 
 interface Doctor {
@@ -75,9 +76,10 @@ export default function PatientSearchVerificationPage() {
 
   const [selectedDoctorId, setSelectedDoctorId] = useState("");
   const [accessReportTypes, setAccessReportTypes] = useState<string[]>([]);
+  const [customReportType, setCustomReportType] = useState("");
   const [accessReason, setAccessReason] = useState("");
   const [accessPriority, setAccessPriority] = useState("Normal");
-  const [accessDuration, setAccessDuration] = useState("24 Hours");
+  const [accessClock, setAccessClock] = useState(() => Date.now());
   const [isRequesting, setIsRequesting] = useState(false);
 
   // Lab Request Modal
@@ -136,6 +138,20 @@ export default function PatientSearchVerificationPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setAccessClock(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const hasActiveAccess = (patient: Patient | null) => {
+    if (!patient || patient.status !== "Access Approved") return false;
+    if (!patient.accessExpiresAt) return false;
+    return new Date(patient.accessExpiresAt).getTime() > accessClock;
+  };
+
+  const displayedAccessStatus = (patient: Patient) =>
+    patient.status === "Access Approved" && !hasActiveAccess(patient) ? "Expired" : patient.status;
+
   const handleOpenRecordsModal = async (patient: any) => {
     setSelectedPatient(patient);
     setModalType("records");
@@ -166,6 +182,8 @@ export default function PatientSearchVerificationPage() {
       } else {
         const err = await res.json();
         toast.error(err.message || "Failed to load patient records");
+        setSelectedPatient(current => current && current.id === patient.id ? { ...current, status: "Expired", accessExpiresAt: null } : current);
+        setSearchResults(current => current.map(item => item.id === patient.id ? { ...item, status: "Expired", accessExpiresAt: null } : item));
         setIsModalOpen(false);
       }
     } catch (e) {
@@ -373,6 +391,14 @@ export default function PatientSearchVerificationPage() {
       toast.error("Please select at least one report type");
       return;
     }
+    if (accessReportTypes.includes("Other") && !customReportType.trim()) {
+      toast.error("Please enter the report name for Other.");
+      return;
+    }
+    if (customReportType.includes(",")) {
+      toast.error("Enter one report name without commas.");
+      return;
+    }
     if (!accessReason.trim()) {
       toast.error("Please provide a reason for access");
       return;
@@ -390,10 +416,12 @@ export default function PatientSearchVerificationPage() {
         body: JSON.stringify({
           patientId: selectedPatient.id,
           doctorId: selectedDoctorId,
-          reportTypes: accessReportTypes.join(", "),
+          reportTypes: accessReportTypes
+            .map(type => type === "Other" ? customReportType.trim() : type)
+            .join(", "),
           reason: accessReason,
           priority: accessPriority,
-          duration: accessDuration
+          duration: "24 Hours"
         })
       });
 
@@ -403,9 +431,11 @@ export default function PatientSearchVerificationPage() {
       toast.success("Access request sent to patient");
       setIsModalOpen(false);
       setAccessReportTypes([]);
+      setCustomReportType("");
       setAccessReason("");
       setAccessPriority("Normal");
-      setAccessDuration("24 Hours");
+      setSelectedPatient(current => current ? { ...current, status: "Pending", accessExpiresAt: null } : current);
+      setSearchResults(current => current.map(patient => patient.id === selectedPatient.id ? { ...patient, status: "Pending", accessExpiresAt: null } : patient));
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Failed to request access");
@@ -529,7 +559,7 @@ export default function PatientSearchVerificationPage() {
                     <td className="py-4 px-4 text-center text-slate-600 font-semibold">{patient.availableRecords} Reports</td>
                     <td className="py-4 px-4 text-center">
                       <span className={`inline-flex px-3 py-1 rounded-md text-xs font-semibold bg-white text-emerald-600 border border-emerald-100`}>
-                        {patient.status}
+                        {displayedAccessStatus(patient)}
                       </span>
                     </td>
                     <td className="py-4 px-4 text-center">
@@ -620,7 +650,7 @@ export default function PatientSearchVerificationPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <h2 className="text-[#0891b2] font-semibold text-base">Patient Details</h2>
             <div className="flex items-center gap-3">
-              {selectedPatient.status === "Access Approved" ? (
+              {hasActiveAccess(selectedPatient) ? (
                 <button 
                   onClick={() => handleOpenRecordsModal(selectedPatient)}
                   className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center justify-center gap-2"
@@ -757,7 +787,10 @@ export default function PatientSearchVerificationPage() {
                         type="checkbox" 
                         checked={accessReportTypes.includes("All Reports")}
                         onChange={(e) => {
-                          if (e.target.checked) setAccessReportTypes(["All Reports"]);
+                          if (e.target.checked) {
+                            setAccessReportTypes(["All Reports"]);
+                            setCustomReportType("");
+                          }
                           else setAccessReportTypes([]);
                         }}
                         className="w-4 h-4 rounded border-slate-300 text-[#0891b2] focus:ring-[#0891b2]" 
@@ -777,6 +810,7 @@ export default function PatientSearchVerificationPage() {
                                 setAccessReportTypes(prev => prev.filter(t => t !== "All Reports").concat(type));
                               } else {
                                 setAccessReportTypes(prev => prev.filter(t => t !== type));
+                                if (type === "Other") setCustomReportType("");
                               }
                             }}
                             className="w-3.5 h-3.5 rounded border-slate-300 text-[#0891b2] focus:ring-[#0891b2] disabled:opacity-50" 
@@ -785,6 +819,22 @@ export default function PatientSearchVerificationPage() {
                         </label>
                       ))}
                     </div>
+                    {accessReportTypes.includes("Other") && (
+                      <div className="mt-4 border-t border-slate-200 pt-4">
+                        <label htmlFor="custom-report-type" className="mb-1.5 block text-xs font-semibold text-slate-700">Specify report name *</label>
+                        <input
+                          id="custom-report-type"
+                          type="text"
+                          value={customReportType}
+                          onChange={(event) => setCustomReportType(event.target.value)}
+                          placeholder="e.g. Allergy Test Report"
+                          maxLength={80}
+                          autoFocus
+                          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 focus:border-[#0891b2] focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20"
+                        />
+                        <p className="mt-1.5 text-xs text-slate-500">Enter the exact report name the patient should authorize.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -812,13 +862,8 @@ export default function PatientSearchVerificationPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1.5">Access Duration</label>
-                    <div className="relative">
-                      <select value={accessDuration} onChange={e => setAccessDuration(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 appearance-none focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2]">
-                        <option>24 Hours</option>
-                        <option>7 Days</option>
-                        <option>Until Patient Revokes</option>
-                      </select>
-                      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
+                    <div className="flex min-h-[42px] items-center gap-2 rounded-xl border border-cyan-100 bg-cyan-50 px-4 py-2.5 text-sm font-semibold text-cyan-800">
+                      <Clock className="size-4" /> 24 hours maximum
                     </div>
                   </div>
                 </div>

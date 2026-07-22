@@ -8,15 +8,25 @@ import styles from "./dashboard-theme.module.css";
 import { useEffect } from "react";
 
 if (typeof window !== "undefined") {
-  const originalFetch = window.fetch;
-  window.fetch = async (...args) => {
-    const res = await originalFetch(...args);
-    if (res.status === 401 && !window.location.pathname.includes("/login") && !window.location.pathname.includes("/auth")) {
-      localStorage.removeItem("token");
-      window.location.href = `/auth?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`;
-    }
-    return res;
-  };
+  const guardedWindow = window as typeof window & { __medicalDocsFetchWrapped?: boolean };
+  if (!guardedWindow.__medicalDocsFetchWrapped) {
+    guardedWindow.__medicalDocsFetchWrapped = true;
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = async (...args) => {
+      const res = await originalFetch(...args);
+      if (res.status === 401 && !window.location.pathname.includes("/login") && !window.location.pathname.includes("/auth")) {
+        const payload = await res.clone().json().catch(() => ({}));
+        const message = String(payload?.message || '');
+        const token = localStorage.getItem("token");
+        const isSessionFailure = !token || message === 'Unauthorized' || message === 'Management login required.';
+        if (isSessionFailure) {
+          localStorage.removeItem("token");
+          window.location.href = `/auth?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+        }
+      }
+      return res;
+    };
+  }
 }
 
 const themes = {

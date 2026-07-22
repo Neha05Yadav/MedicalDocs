@@ -27,6 +27,7 @@ export default function ReportsManagementPage() {
   
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [patientDetails, setPatientDetails] = useState<any>(null);
+  const [isLoadingPatientDetails, setIsLoadingPatientDetails] = useState(false);
   
   // Modals
   const [isNewUploadModalOpen, setIsNewUploadModalOpen] = useState(false);
@@ -80,21 +81,24 @@ export default function ReportsManagementPage() {
 
   const handleSelectPatient = async (patientId: string) => {
     setSelectedPatientId(patientId);
+    setPatientDetails(null);
+    setIsLoadingPatientDetails(true);
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(`/api/hospital/reports/patient/${patientId}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
-      if (res.ok) {
-        const data = await res.json();
-        setPatientDetails(data);
-        setTimeout(() => {
-          document.getElementById("patient-details-reports")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 100);
-      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || "Failed to load patient details and reports.");
+      setPatientDetails(data);
+      setTimeout(() => {
+        document.getElementById("patient-details-reports")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
     } catch (e) {
       console.error(e);
-      toast.error("Failed to load patient details");
+      toast.error(e instanceof Error ? e.message : "Failed to load patient details and reports.");
+    } finally {
+      setIsLoadingPatientDetails(false);
     }
   };
 
@@ -343,6 +347,14 @@ export default function ReportsManagementPage() {
       </div>
 
       {/* Patient Details & Reports Section */}
+      {selectedPatientId && isLoadingPatientDetails && (
+        <div id="patient-details-reports" className="mb-8 flex min-h-40 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center gap-3 text-sm font-semibold text-slate-500">
+            <span className="size-5 animate-spin rounded-full border-2 border-cyan-100 border-t-[#0891b2]" />
+            Loading patient details and reports...
+          </div>
+        </div>
+      )}
       {selectedPatientId && patientDetails && (
         <div id="patient-details-reports" className="scroll-mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <h2 className="text-xl font-bold text-slate-800 mb-4">Patient Profile & Records</h2>

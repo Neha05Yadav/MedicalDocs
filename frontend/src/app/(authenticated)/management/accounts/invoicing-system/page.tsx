@@ -20,30 +20,82 @@ const X = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" wid
 
 
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+
+const emptyForm = () => ({
+  invoiceNo: '',
+  date: new Date().toISOString().slice(0, 10),
+  hospitalId: '',
+  patientId: '',
+  baseAmount: '',
+  taxRate: '18',
+  status: 'Unpaid',
+});
 
 export default function InvoicingSystemPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [options, setOptions] = useState<{ hospitals: any[]; patients: any[] }>({ hospitals: [], patients: [] });
+  const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    fetch('/api/management/accounts/invoices')
-      .then(res => res.json())
-      .then(data => {
-        setInvoices(data.invoices || []);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Failed to load invoices", err);
-        setLoading(false);
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [invoiceResponse, optionResponse] = await Promise.all([
+        fetch('/api/management/accounts/invoices'),
+        fetch('/api/management/accounts/invoice-options'),
+      ]);
+      if (!invoiceResponse.ok || !optionResponse.ok) throw new Error('Could not load invoicing data.');
+      const [invoiceData, optionData] = await Promise.all([invoiceResponse.json(), optionResponse.json()]);
+      setInvoices(Array.isArray(invoiceData.invoices) ? invoiceData.invoices : []);
+      setOptions({
+        hospitals: Array.isArray(optionData.hospitals) ? optionData.hospitals : [],
+        patients: Array.isArray(optionData.patients) ? optionData.patients : [],
       });
-  }, []);
+    } catch (error) {
+      console.error('Failed to load invoices', error);
+      toast.error('Could not load live invoicing data.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void loadData(); }, []);
+
+  const updateForm = (key: string, value: string) => setForm(current => ({ ...current, [key]: value }));
+
+  const saveInvoice = async () => {
+    if (!form.hospitalId || !form.patientId || form.baseAmount === '') {
+      toast.error('Select a facility and patient, then enter the amount.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const response = await fetch('/api/management/accounts/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || 'Could not create invoice.');
+      toast.success(`Invoice ${payload.invoiceId} created.`);
+      setForm(emptyForm());
+      setIsModalOpen(false);
+      await loadData();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not create invoice.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const filteredInvoices = invoices.filter(inv => {
-    const matchesSearch = inv.client.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          inv.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = String(inv.client || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          String(inv.id || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "All" || inv.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -178,26 +230,38 @@ export default function InvoicingSystemPage() {
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Invoice Number</label>
-                  <input type="text" placeholder="e.g., INV-2026-100" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
+                  <label className="text-sm font-bold text-slate-700">Invoice Number <span className="font-medium text-slate-400">(optional)</span></label>
+                  <input type="text" value={form.invoiceNo} onChange={(event) => updateForm('invoiceNo', event.target.value)} placeholder="Auto-generated if empty" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">Date</label>
-                  <input type="date" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
+                  <input type="date" value={form.date} onChange={(event) => updateForm('date', event.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700">Client Name</label>
-                <input type="text" placeholder="Enter client name" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Facility</label>
+                  <select value={form.hospitalId} onChange={(event) => updateForm('hospitalId', event.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white">
+                    <option value="">Select hospital or clinic</option>
+                    {options.hospitals.map(hospital => <option key={hospital.id} value={hospital.id}>{hospital.name}{hospital.type ? ` · ${hospital.type}` : ''}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Patient</label>
+                  <select value={form.patientId} onChange={(event) => updateForm('patientId', event.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white">
+                    <option value="">Select patient</option>
+                    {options.patients.map(patient => <option key={patient.id} value={patient.id}>{patient.name}{patient.email ? ` · ${patient.email}` : ''}</option>)}
+                  </select>
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">Base Amount (₹)</label>
-                  <input type="number" placeholder="0.00" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
+                  <input type="number" min="0" step="0.01" value={form.baseAmount} onChange={(event) => updateForm('baseAmount', event.target.value)} placeholder="0.00" className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">Tax (GST %)</label>
-                  <select className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white">
+                  <select value={form.taxRate} onChange={(event) => updateForm('taxRate', event.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white">
                     <option value="18">18%</option>
                     <option value="12">12%</option>
                     <option value="5">5%</option>
@@ -207,7 +271,7 @@ export default function InvoicingSystemPage() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">Status</label>
-                <select className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white">
+                <select value={form.status} onChange={(event) => updateForm('status', event.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white">
                   <option value="Unpaid">Unpaid</option>
                   <option value="Partial">Partial</option>
                   <option value="Paid">Paid</option>
@@ -222,10 +286,11 @@ export default function InvoicingSystemPage() {
                 Cancel
               </button>
               <button 
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => void saveInvoice()}
+                disabled={saving}
                 className="px-5 py-2.5 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
               >
-                Save Invoice
+                {saving ? 'Saving…' : 'Save Invoice'}
               </button>
             </div>
           </div>
