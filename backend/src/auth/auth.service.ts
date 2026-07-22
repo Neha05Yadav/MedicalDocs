@@ -11,6 +11,7 @@ import { PUBLIC_SIGNUP_ROLES, SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { RedisService } from '../redis/redis.service';
+import { allocatePatientId } from '../patient-id';
 
 @Injectable()
 export class AuthService {
@@ -54,9 +55,10 @@ export class AuthService {
 
       const normalizedRole = userRole.toUpperCase();
       if (normalizedRole === 'PATIENT') {
+        const patientId = await allocatePatientId(connection, name, now);
         await connection.execute(
           'INSERT INTO patient (id, name, email, phone, updatedAt) VALUES (?, ?, ?, ?, ?)',
-          [userId, name, email, '', now],
+          [patientId, name, email, '', now],
         );
       } else if (['HOSPITAL', 'LAB', 'CLINIC', 'DOCTOR'].includes(normalizedRole)) {
         const facilityType = normalizedRole === 'LAB' ? 'LAB' : normalizedRole === 'HOSPITAL' ? 'HOSPITAL' : 'CLINIC';
@@ -109,7 +111,7 @@ export class AuthService {
     const payload = { email: email, sub: userId, role: userRole };
 
     return {
-      message: 'Account successfully create ho gaya!',
+      message: 'Your account has been created successfully.',
       access_token: this.jwtService.sign(payload),
       user: {
         id: userId,
@@ -184,14 +186,14 @@ export class AuthService {
 
     // Account active hai?
     if (user.status && user.status !== 'Active') {
-      throw new UnauthorizedException('Aapka account inactive hai. Admin se contact karo');
+      throw new UnauthorizedException('Your account is inactive. Please contact an administrator for assistance.');
     }
 
     // Agar hospital se linked hai, toh check karo ki hospital suspended toh nahi hai
     if (user.hospitalId) {
       const hospital = await this.db.queryOne('SELECT status FROM hospital WHERE id = ? LIMIT 1', [user.hospitalId]);
       if (hospital && hospital.status === 'Suspended') {
-        throw new UnauthorizedException('Aapka hospital suspended hai. Kripya system admin se sampark karein.');
+        throw new UnauthorizedException("Your hospital's access has been suspended. Please contact the system administrator for assistance.");
       }
     }
 
@@ -234,10 +236,7 @@ export class AuthService {
       ...PUBLIC_SIGNUP_ROLES, 
       'LAB_MANAGER', 
       'TECHNICIAN', 
-      'LABORATORY',
-      'ACCOUNTS MANAGER',
-      'SALES MANAGER',
-      'SUPPORT TEAM'
+      'LABORATORY'
     ];
     return allowedLoginRoles.includes(normalizedRole as any) || !this.isManagementRole(role);
   }

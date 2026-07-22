@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, UseGuards, Request, UploadedFile, UseInterceptors, Param } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Post, Put, Body, UseGuards, Request, UploadedFile, UseInterceptors, Param } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PatientService } from './patient.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -70,8 +70,16 @@ export class PatientController {
   }
 
   @Post('prescriptions')
-  async createPrescription(@Request() req: any, @Body() data: any) {
-    return this.patientService.createPrescription(req.user.email, data);
+  @UseInterceptors(FileInterceptor('file', {
+    limits: { fileSize: 8 * 1024 * 1024 },
+    fileFilter: (_request, file, callback) => {
+      const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+      const accepted = allowed.includes(file.mimetype);
+      callback(accepted ? null : new BadRequestException('Only JPG, PNG or WebP prescription images are allowed.'), accepted);
+    },
+  }))
+  async createPrescription(@Request() req: any, @UploadedFile() file: Express.Multer.File | undefined, @Body() data: any) {
+    return this.patientService.createPrescription(req.user.email, data, file);
   }
 
   @Get('access-requests')

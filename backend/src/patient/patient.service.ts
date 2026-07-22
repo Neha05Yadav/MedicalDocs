@@ -3,6 +3,7 @@ import { MysqlService } from '../mysql.service';
 import { v4 as uuidv4 } from 'uuid';
 import { RedisService } from '../redis/redis.service';
 import { formatPrescriptionId } from '../prescription-id';
+import { allocatePatientId, isFormattedPatientId } from '../patient-id';
 
 @Injectable()
 export class PatientService {
@@ -11,31 +12,59 @@ export class PatientService {
     private redisService: RedisService,
   ) {}
 
-  private generatePatientId(name: string, phone: string, year: string) {
-    const initials = name.split(' ').map(n => n[0] || '').join('').toUpperCase().substring(0, 2);
-    const safePhone = phone || '000';
-    const last3Phone = safePhone.length >= 3 ? safePhone.slice(-3) : safePhone.padStart(3, '0');
-    const last2Year = year.slice(-2);
-    return `${initials}${last3Phone}${last2Year}`;
+  private async ensureFormattedPatientId(patient: any) {
+    if (!patient || isFormattedPatientId(patient.id)) return patient;
+    const connection = await this.db.getPool().getConnection();
+    try {
+      await connection.beginTransaction();
+      const registeredAt = new Date(patient.createdAt || patient.updatedAt || Date.now());
+      const newId = await allocatePatientId(connection, patient.name, registeredAt);
+      const referenceTables = ['accessrequest', 'appointment', 'invoice', 'medicalrecord', 'prescription', 'sample', 'testrequest'];
+      for (const table of referenceTables) {
+        await connection.execute(`UPDATE \`${table}\` SET patientId = ? WHERE patientId = ?`, [newId, patient.id]);
+      }
+      await connection.execute('UPDATE patient SET id = ? WHERE id = ?', [newId, patient.id]);
+      await connection.execute('UPDATE setting SET `key` = REPLACE(`key`, ?, ?) WHERE `key` = ?', [patient.id, newId, `profile.logo.patient.${patient.id}`]);
+      await connection.execute('UPDATE notification SET type = REPLACE(type, ?, ?) WHERE type LIKE ?', [patient.id, newId, `%${patient.id}%`]);
+      await connection.commit();
+      await this.redisService.delPattern('patient:*');
+      await this.redisService.delPattern('hospital:*');
+      await this.redisService.delPattern('laboratory:*');
+      return { ...patient, id: newId };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 
   async getOverview(userEmail: string) {
     const cacheKey = `patient:overview:${userEmail}`;
-    const cached = await this.redisService.get(cacheKey);
-    if (cached) return cached;
-
     let patient = await this.db.queryOne('SELECT * FROM patient WHERE email = ?', [userEmail]);
 
     if (!patient) {
       const user = await this.db.queryOne('SELECT * FROM user WHERE email = ?', [userEmail]);
-      const year = new Date().getFullYear().toString();
-      const newId = this.generatePatientId(user ? user.name : 'Unknown', '', year);
-      await this.db.query(
-        'INSERT INTO patient (id, email, name, phone, bloodGroup, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
-        [newId, userEmail, user ? user.name : 'Unknown', '', 'Unknown', new Date()]
-      );
+      const connection = await this.db.getPool().getConnection();
+      const now = new Date();
+      let newId = '';
+      try {
+        await connection.beginTransaction();
+        newId = await allocatePatientId(connection, user ? user.name : 'Unknown', now);
+        await connection.execute(
+          'INSERT INTO patient (id, email, name, phone, bloodGroup, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
+          [newId, userEmail, user ? user.name : 'Unknown', '', 'Unknown', now],
+        );
+        await connection.commit();
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
       patient = await this.db.queryOne('SELECT * FROM patient WHERE id = ?', [newId]);
     }
+    patient = await this.ensureFormattedPatientId(patient);
 
     const appointments = await this.db.query(`
       SELECT a.*, d.name as doctorName, d.specialization as doctorSpecialization, h.name as hospitalName 
@@ -292,15 +321,13 @@ export class PatientService {
 
   async getProfile(userEmail: string) {
     const cacheKey = `patient:profile:${userEmail}`;
-    const cached = await this.redisService.get(cacheKey);
-    if (cached) return cached;
-
-    const patient = await this.db.queryOne('SELECT * FROM patient WHERE email = ?', [userEmail]);
+    let patient = await this.db.queryOne('SELECT * FROM patient WHERE email = ?', [userEmail]);
     if (!patient) {
       return {
         name: '', email: userEmail, phone: '', dateOfBirth: '', bloodGroup: '', gender: ''
       };
     }
+    patient = await this.ensureFormattedPatientId(patient);
     
     const result = {
       id: patient.id,
@@ -317,22 +344,34 @@ export class PatientService {
   }
 
   async updateProfile(userEmail: string, data: any) {
-    let patient = await this.db.queryOne('SELECT id FROM patient WHERE email = ?', [userEmail]);
+    let patient = await this.db.queryOne('SELECT * FROM patient WHERE email = ?', [userEmail]);
     const dob = data.dateOfBirth ? new Date(data.dateOfBirth) : null;
     
     if (patient) {
+      patient = await this.ensureFormattedPatientId(patient);
       await this.db.query(
         'UPDATE patient SET name = ?, phone = ?, bloodGroup = ?, gender = ?, dateOfBirth = ? WHERE id = ?',
         [data.name, data.phone, data.bloodGroup, data.gender, dob, patient.id]
       );
       await this.db.query('UPDATE user SET name = ? WHERE email = ?', [data.name, userEmail]);
     } else {
-      const year = new Date().getFullYear().toString();
-      const newId = this.generatePatientId(data.name, data.phone, year);
-      await this.db.query(
-        'INSERT INTO patient (id, email, name, phone, bloodGroup, gender, dateOfBirth, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [newId, userEmail, data.name, data.phone, data.bloodGroup, data.gender, dob, new Date()]
-      );
+      const connection = await this.db.getPool().getConnection();
+      const now = new Date();
+      let newId = '';
+      try {
+        await connection.beginTransaction();
+        newId = await allocatePatientId(connection, data.name, now);
+        await connection.execute(
+          'INSERT INTO patient (id, email, name, phone, bloodGroup, gender, dateOfBirth, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [newId, userEmail, data.name, data.phone, data.bloodGroup, data.gender, dob, now],
+        );
+        await connection.commit();
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
       patient = { id: newId };
     }
     
@@ -403,16 +442,20 @@ export class PatientService {
     return allPrescriptions;
   }
 
-  async createPrescription(userEmail: string, data: any) {
+  async createPrescription(userEmail: string, data: any, file?: Express.Multer.File) {
+    if (!file) throw new BadRequestException('Prescription image is required.');
+    if (!String(data.doctor || '').trim()) throw new BadRequestException('Doctor name is required.');
+    if (!data.date) throw new BadRequestException('Prescription date is required.');
     const patient = await this.db.queryOne('SELECT id FROM patient WHERE email = ?', [userEmail]);
     if (!patient) throw new Error("Patient not found");
 
     const newId = uuidv4();
     const prescriptionId = await this.allocatePrescriptionId();
     const d = data.date ? new Date(data.date) : new Date();
+    const fileUrl = `/uploads/${file.filename}`;
     await this.db.query(
-      "INSERT INTO medicalrecord (id, patientId, type, title, description, date, updatedAt) VALUES (?, ?, 'PRESCRIPTION', ?, ?, ?, ?)",
-      [newId, patient.id, prescriptionId, data.doctor, d, new Date()]
+      "INSERT INTO medicalrecord (id, patientId, type, title, description, fileUrl, date, updatedAt) VALUES (?, ?, 'PRESCRIPTION', ?, ?, ?, ?, ?)",
+      [newId, patient.id, prescriptionId, data.doctor, fileUrl, d, new Date()]
     );
 
     return {
@@ -420,6 +463,7 @@ export class PatientService {
       doctor: data.doctor,
       date: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       status: 'Active',
+      fileUrl,
     };
   }
 
@@ -455,6 +499,14 @@ export class PatientService {
     const patient = await this.db.queryOne('SELECT id, name FROM patient WHERE email = ?', [userEmail]);
     if (!patient) return [];
 
+    await this.db.query(
+      `UPDATE accessrequest
+       SET status = 'EXPIRED'
+       WHERE patientId = ? AND status = 'APPROVED'
+         AND (updatedAt IS NULL OR updatedAt <= DATE_SUB(NOW(), INTERVAL 24 HOUR))`,
+      [patient.id],
+    );
+
     const requests = await this.db.query(`
       SELECT r.*, h.name as hospitalName, d.name as doctorName
       FROM accessrequest r
@@ -471,7 +523,7 @@ export class PatientService {
       purpose: req.reason || "Routine Checkup",
       reportTypes: req.reportTypes || "All Reports",
       priority: req.priority || "Normal",
-      duration: req.duration || "24 Hours",
+      duration: "24 Hours",
       date: new Date(req.requestDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       status: req.status,
     }));
@@ -484,15 +536,17 @@ export class PatientService {
     const req = await this.db.queryOne('SELECT * FROM accessrequest WHERE id = ?', [id]);
     if (!req || req.patientId !== patient.id) throw new NotFoundException("Request not found");
 
-    await this.db.query('UPDATE accessrequest SET status = ?, updatedAt = ? WHERE id = ?', [status, new Date(), id]);
+    const normalizedStatus = String(status || '').toUpperCase();
+    await this.db.query('UPDATE accessrequest SET status = ?, duration = ?, updatedAt = ? WHERE id = ?', [normalizedStatus, '24 Hours', new Date(), id]);
 
-    if (status === 'APPROVED') {
+    if (normalizedStatus === 'APPROVED') {
       const notifId = uuidv4();
       await this.db.query(
         'INSERT INTO notification (id, hospitalId, type, title, message, isRead, actionRequired, severity, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, false, false, "Low", ?, ?)',
         [notifId, req.hospitalId, `PATIENT_APPROVED|${patient.id}`, "Access Request Approved", `${patient.name} has approved your request to access their medical records.`, new Date(), new Date()]
       );
     }
+    await this.redisService.delPattern('hospital:searchPatients:*');
     return { success: true };
   }
 

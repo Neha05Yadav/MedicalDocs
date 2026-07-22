@@ -6,7 +6,7 @@ import { PassportModule } from '@nestjs/passport';
 
 import { JwtStrategy } from './jwt.strategy';
 
-export const jwtSecret = 'medidoc-super-secret-key'; // In production, this should be in .env
+export const jwtSecret = process.env.JWT_SECRET || 'medidoc-super-secret-key';
 
 @Module({
   imports: [

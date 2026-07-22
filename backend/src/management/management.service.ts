@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { MysqlService } from '../mysql.service';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class ManagementService {
@@ -51,9 +52,52 @@ export class ManagementService {
     return { subscriptions: rows.map(row => ({ ...row, amount: this.money(Number(row.price || 0)), startDate: new Date(row.startDate).toLocaleDateString('en-IN'), endDate: row.endDate ? new Date(row.endDate).toLocaleDateString('en-IN') : 'No fixed expiry' })) };
   }
 
+  async updateSalesSubscription(id: string, body: { action: string; status?: string; plan_name?: string }) {
+    const subscription = await this.db.queryOne('SELECT id FROM hospitalsubscription WHERE id = ?', [id]);
+    if (!subscription) throw new NotFoundException('Subscription was not found.');
+
+    let message = '';
+    if (body.action === 'update_status') {
+      const allowed = ['Active', 'Expired', 'Suspended', 'Renewal Due'];
+      if (!body.status || !allowed.includes(body.status)) throw new BadRequestException('Invalid subscription status.');
+      await this.db.query('UPDATE hospitalsubscription SET status = ?, updatedAt = ? WHERE id = ?', [body.status, new Date(), id]);
+      message = `Your subscription status was updated to ${body.status}.`;
+    } else if (body.action === 'change_plan') {
+      if (!body.plan_name) throw new BadRequestException('Plan name is required.');
+      const plan = await this.db.queryOne('SELECT id FROM subscriptionplan WHERE name = ?', [body.plan_name]);
+      if (!plan) throw new NotFoundException('Subscription plan was not found.');
+      await this.db.query('UPDATE hospitalsubscription SET planId = ?, updatedAt = ? WHERE id = ?', [plan.id, new Date(), id]);
+      message = `Your subscription plan was changed to ${body.plan_name}.`;
+    } else {
+      throw new BadRequestException('Unsupported subscription action.');
+    }
+    const owner = await this.db.queryOne('SELECT hospitalId FROM hospitalsubscription WHERE id = ?', [id]);
+    if (owner?.hospitalId) {
+      const now = new Date();
+      await this.db.query(`INSERT INTO notification (id, hospitalId, type, title, message, isRead, actionRequired, severity, createdAt, updatedAt) VALUES (?, ?, 'SUBSCRIPTION_UPDATED', 'Subscription updated', ?, 0, 0, 'Low', ?, ?)`, [uuidv4(), owner.hospitalId, message, now, now]);
+    }
+    return { success: true };
+  }
+
   async getSalesPayments() {
     const rows = await this.db.query(`SELECT i.id, h.name AS hospital, i.totalAmount, i.date, i.status FROM invoice i LEFT JOIN hospital h ON h.id = i.hospitalId ORDER BY i.date DESC`);
     return { payments: rows.map(row => ({ id: row.id, hospital: row.hospital || 'Unknown facility', amount: this.money(Number(row.totalAmount || 0)), date: new Date(row.date).toLocaleDateString('en-IN'), method: 'Invoice payment', status: ['PAID','SUCCESSFUL'].includes(String(row.status).toUpperCase()) ? 'Successful' : row.status })) };
+  }
+
+  async updateSalesPayment(id: string, action: string) {
+    const invoice = await this.db.queryOne('SELECT id, hospitalId, status FROM invoice WHERE id = ?', [id]);
+    if (!invoice) throw new NotFoundException('Payment invoice was not found.');
+    const nextStatus = action === 'mark_paid' ? 'Paid' : action === 'refund' ? 'Refunded' : null;
+    if (!nextStatus) throw new BadRequestException('Unsupported payment action.');
+    if (action === 'refund' && !['PAID', 'SUCCESSFUL'].includes(String(invoice.status).toUpperCase())) {
+      throw new BadRequestException('Only successful payments can be refunded.');
+    }
+    await this.db.query('UPDATE invoice SET status = ?, updatedAt = ? WHERE id = ?', [nextStatus, new Date(), id]);
+    if (invoice.hospitalId) {
+      const now = new Date();
+      await this.db.query(`INSERT INTO notification (id, hospitalId, type, title, message, isRead, actionRequired, severity, createdAt, updatedAt) VALUES (?, ?, 'PAYMENT_UPDATED', 'Payment updated', ?, 0, 0, 'Low', ?, ?)`, [uuidv4(), invoice.hospitalId, `Invoice ${id} is now ${nextStatus}.`, now, now]);
+    }
+    return { success: true, updatedStatus: nextStatus === 'Paid' ? 'Successful' : nextStatus };
   }
 
   async getSalesRevenue() {
@@ -109,13 +153,86 @@ export class ManagementService {
     let where = '';
     if (status) { where = 'WHERE UPPER(i.status) = ?'; params.push(status.toUpperCase() === 'SUCCESSFUL' ? 'PAID' : status.toUpperCase()); }
     const rows = await this.db.query(`SELECT i.*, h.name AS client FROM invoice i LEFT JOIN hospital h ON h.id = i.hospitalId ${where} ORDER BY i.date DESC`, params);
-    return rows.map(row => ({ id: row.id, invoiceNo: row.id, hospitalId: row.hospitalId, client: row.client || 'Unknown facility', hospital: row.client || 'Unknown facility', type: 'Facility', amount: Number(row.totalAmount || 0), baseAmount: this.money(Number(row.totalAmount || 0)), tax: this.money(0), totalAmount: this.money(Number(row.totalAmount || 0)), date: new Date(row.date).toISOString(), status: ['PAID','SUCCESSFUL'].includes(String(row.status).toUpperCase()) ? 'Paid' : row.status, method: 'Not recorded', transactionId: row.id }));
+    return rows.map(row => ({ id: row.id, invoiceNo: row.id, hospitalId: row.hospitalId, patientId: row.patientId, client: row.client || 'Unknown facility', hospital: row.client || 'Unknown facility', type: 'Facility', amount: Number(row.totalAmount || 0), baseAmount: this.money(Number(row.consultationFee || 0)), tax: this.money(Number(row.testFee || 0)), totalAmount: this.money(Number(row.totalAmount || 0)), date: new Date(row.date).toISOString(), status: ['PAID','SUCCESSFUL'].includes(String(row.status).toUpperCase()) ? 'Paid' : String(row.status).toUpperCase() === 'PENDING' ? 'Unpaid' : row.status, method: 'Invoice', transactionId: row.id }));
+  }
+
+  async getInvoiceOptions() {
+    const [hospitals, patients] = await Promise.all([
+      this.db.query(`SELECT id, name, type FROM hospital ORDER BY name ASC`),
+      this.db.query(`SELECT id, name, email FROM patient ORDER BY name ASC`),
+    ]);
+    return { hospitals, patients };
+  }
+
+  async createAccountInvoice(body: {
+    invoiceNo?: string;
+    hospitalId?: string;
+    patientId?: string;
+    baseAmount?: number | string;
+    taxRate?: number | string;
+    status?: string;
+    date?: string;
+  }) {
+    if (!body.hospitalId || !body.patientId) throw new BadRequestException('Facility and patient are required.');
+    const baseAmount = Number(body.baseAmount);
+    const taxRate = Number(body.taxRate ?? 0);
+    if (!Number.isFinite(baseAmount) || baseAmount < 0) throw new BadRequestException('Enter a valid base amount.');
+    if (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 100) throw new BadRequestException('Enter a valid GST rate.');
+
+    const [hospital, patient] = await Promise.all([
+      this.db.queryOne(`SELECT id, name FROM hospital WHERE id = ?`, [body.hospitalId]),
+      this.db.queryOne(`SELECT id, name FROM patient WHERE id = ?`, [body.patientId]),
+    ]);
+    if (!hospital) throw new NotFoundException('Selected facility was not found.');
+    if (!patient) throw new NotFoundException('Selected patient was not found.');
+
+    const suppliedId = String(body.invoiceNo || '').trim().toUpperCase();
+    const invoiceId = suppliedId || `INV-${new Date().getFullYear()}-${uuidv4().slice(0, 8).toUpperCase()}`;
+    if (!/^[A-Z0-9-]{5,40}$/.test(invoiceId)) throw new BadRequestException('Invoice number may contain only letters, numbers, and hyphens.');
+    if (await this.db.queryOne(`SELECT id FROM invoice WHERE id = ?`, [invoiceId])) throw new BadRequestException('This invoice number already exists.');
+
+    const allowedStatus: Record<string, string> = { UNPAID: 'Pending', PENDING: 'Pending', PARTIAL: 'Partial', PAID: 'Paid' };
+    const status = allowedStatus[String(body.status || 'Unpaid').toUpperCase()];
+    if (!status) throw new BadRequestException('Invalid invoice status.');
+    const invoiceDate = body.date ? new Date(`${body.date}T00:00:00`) : new Date();
+    if (Number.isNaN(invoiceDate.getTime())) throw new BadRequestException('Invalid invoice date.');
+    const taxAmount = Math.round((baseAmount * taxRate / 100) * 100) / 100;
+    const totalAmount = Math.round((baseAmount + taxAmount) * 100) / 100;
+    const now = new Date();
+
+    const connection = await this.db.getPool().getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.execute(
+        `INSERT INTO invoice (id, patientId, hospitalId, consultationFee, testFee, totalAmount, status, date, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [invoiceId, body.patientId, body.hospitalId, baseAmount, taxAmount, totalAmount, status, invoiceDate, now],
+      );
+      await connection.execute(
+        `INSERT INTO notification (id, hospitalId, type, title, message, isRead, actionRequired, severity, createdAt, updatedAt) VALUES (?, ?, 'INVOICE_CREATED', 'New invoice created', ?, 0, 1, 'Medium', ?, ?)`,
+        [uuidv4(), body.hospitalId, `${invoiceId} was created for ${patient.name}. Total amount: ${this.money(totalAmount)}.`, now, now],
+      );
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+    return { success: true, invoiceId };
+  }
+
+  async getAccountRefunds() {
+    const rows = await this.db.query(`SELECT i.id, i.totalAmount, i.date, h.name AS client FROM invoice i LEFT JOIN hospital h ON h.id = i.hospitalId WHERE UPPER(i.status) = 'REFUNDED' ORDER BY i.updatedAt DESC`);
+    return {
+      refunds: rows.map(row => ({ id: row.id, invoiceNo: row.id, client: row.client || 'Unknown facility', amount: this.money(Number(row.totalAmount || 0)), date: new Date(row.date).toISOString(), status: 'Refunded' })),
+    };
   }
 
   async getAccountsOverview() {
     const rows = await this.getAccountsInvoices();
     const paid = rows.filter(row => row.status === 'Paid');
-    const pending = rows.filter(row => String(row.status).toUpperCase() === 'PENDING');
+    const pending = rows.filter(row => ['PENDING', 'UNPAID', 'PARTIAL'].includes(String(row.status).toUpperCase()));
+    const refunded = rows.filter(row => String(row.status).toUpperCase() === 'REFUNDED');
     const sum = (items: any[]) => items.reduce((total, row) => total + Number(row.amount || 0), 0);
     const billedByMonth = new Map<string, number>();
     const collectedByMonth = new Map<string, number>();
@@ -135,7 +252,7 @@ export class ManagementService {
     const lastYear = Array.from({ length: 12 }, (_, month) => point(new Date(now.getFullYear() - 1, month, 1)));
     const lastSixMonths = Array.from({ length: 6 }, (_, index) => point(new Date(now.getFullYear(), now.getMonth() - (5 - index), 1)));
     return {
-      kpi: { totalIncome: this.money(sum(rows)), totalCollected: this.money(sum(paid)), pendingReceivable: this.money(sum(pending)), overdueAmount: this.money(0), refundIssued: this.money(0) },
+      kpi: { totalIncome: this.money(sum(rows)), totalCollected: this.money(sum(paid)), pendingReceivable: this.money(sum(pending)), overdueAmount: this.money(0), refundIssued: this.money(sum(refunded)) },
       revenueData: lastSixMonths,
       revenueRanges: { thisYear, lastYear, lastSixMonths },
     };
