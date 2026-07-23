@@ -1,5 +1,5 @@
 import { BillingWorkspace } from "@/components/BillingWorkspace";
 
-export default function HospitalBillingPage() {
+export default function LaboratoryBillingPage() {
   return <BillingWorkspace />;
 }

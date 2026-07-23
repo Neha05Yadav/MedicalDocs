@@ -11,19 +11,22 @@ import { ClinicModule } from './clinic/clinic.module';
 import { LaboratoryModule } from './laboratory/laboratory.module';
 import { ManagementModule } from './management/management.module';
 import { SupportTicketModule } from './support-ticket/support-ticket.module';
+import { BillingModule } from './billing/billing.module';
 
 import { RedisModule } from './redis/redis.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 100, // global rate limit
-    }]),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100, // global rate limit
+      },
+    ]),
     RedisModule,
     MysqlModule,
-    AuthModule, 
+    AuthModule,
     PatientModule,
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
@@ -33,7 +36,8 @@ import { ThrottlerModule } from '@nestjs/throttler';
     ClinicModule,
     LaboratoryModule,
     ManagementModule,
-    SupportTicketModule
+    SupportTicketModule,
+    BillingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
