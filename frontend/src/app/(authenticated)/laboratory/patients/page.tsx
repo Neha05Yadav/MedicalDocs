@@ -37,12 +37,9 @@ export default function LabPatientsPage() {
   const router = useRouter();
   const [labPatients, setLabPatients] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterTab, setFilterTab] = useState<"All" | "Authorized" | "Unauthorized" | "Pending">("All");
   const [loading, setLoading] = useState(true);
 
   // Modal state
-  const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
-  const [selectedPatientForAccess, setSelectedPatientForAccess] = useState<any>(null);
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
   const [selectedPatientForReports, setSelectedPatientForReports] = useState<any>(null);
   const [patientRecords, setPatientRecords] = useState<any[]>([]);
@@ -96,37 +93,8 @@ export default function LabPatientsPage() {
     }
   };
 
-  const filteredPatients = labPatients.filter(patient => {
-    const matchesTab = filterTab === "All" || patient.status === filterTab;
-    return matchesTab;
-  });
+  const filteredPatients = labPatients;
 
-  const handleRequestAccess = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedPatientForAccess) return;
-    
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch("/api/laboratory/patients/request-access", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ patientId: selectedPatientForAccess.id })
-      });
-      if (res.ok) {
-        toast.success(`Access request sent to ${selectedPatientForAccess.name}`);
-        setIsAccessModalOpen(false);
-        fetchPatients();
-      } else {
-        toast.error("Failed to send request");
-      }
-    } catch (e) {
-      toast.error("Error sending request");
-    }
-  };
-  const openAccessModal = (patient: any) => {
-    setSelectedPatientForAccess(patient);
-    setIsAccessModalOpen(true);
-  };
   const openReportsModal = async (patient: any) => {
     setSelectedPatientForReports(patient);
     setIsReportsModalOpen(true);
@@ -152,21 +120,7 @@ export default function LabPatientsPage() {
   };
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen">
-      {/* Filters & Search */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-8 flex flex-col md:flex-row gap-4 justify-between items-center">
-        <div className="flex bg-slate-100 p-1 rounded-lg w-full md:w-auto">
-          {(["All", "Authorized", "Unauthorized"] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setFilterTab(tab)}
-              className={`flex-1 md:px-6 py-2 rounded-md text-sm font-semibold transition-all ${
-                filterTab === tab ? "bg-white text-[#0891b2] shadow-sm" : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-8 flex flex-col md:flex-row gap-4 justify-end items-center">
         <div className="relative w-full md:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
           <input 
@@ -183,19 +137,8 @@ export default function LabPatientsPage() {
         {filteredPatients.map(patient => (
           <div key={patient.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md hover:border-cyan-200 transition-all group flex flex-col">
             <div className="p-6 pb-4 border-b border-slate-50 relative flex-1">
-              <div className="absolute top-4 right-4">
-                <span className={`inline-flex px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${
-                  patient.status === "Authorized" 
-                    ? "bg-white text-emerald-600 border-emerald-200" 
-                    : "bg-slate-100 text-slate-500 border-slate-200"
-                }`}>
-                  {patient.status}
-                </span>
-              </div>
               <div className="flex items-center gap-4 mb-4">
-                <div className={`size-14 rounded-2xl flex items-center justify-center font-bold text-xl shadow-sm border ${
-                  patient.status === "Authorized" ? "bg-cyan-50 text-cyan-600 border-cyan-100" : "bg-slate-50 text-slate-500 border-slate-200"
-                }`}>
+                <div className="size-14 rounded-2xl flex items-center justify-center font-bold text-xl shadow-sm border bg-cyan-50 text-cyan-600 border-cyan-100">
                   {patient.name.charAt(0)}
                 </div>
                 <div>
@@ -219,21 +162,12 @@ export default function LabPatientsPage() {
               </div>
             </div>
             <div className="p-4 bg-slate-50/50 mt-auto border-t border-slate-100 flex gap-3">
-              {patient.status === "Authorized" ? (
-                <button 
-                  onClick={() => openReportsModal(patient)}
-                  className="flex-1 py-2 bg-white border border-slate-200 hover:border-[#0891b2] text-slate-700 hover:text-[#0891b2] rounded-lg text-sm font-semibold transition-all shadow-sm"
-                >
-                  View Past Reports
-                </button>
-              ) : (
-                <button 
-                  onClick={() => openAccessModal(patient)}
-                  className="flex-1 py-2 bg-[#0891b2] hover:bg-cyan-700 text-white rounded-lg text-sm font-semibold transition-all shadow-sm flex items-center justify-center gap-2"
-                >
-                  <ShieldCheck className="size-4" /> Request Access
-                </button>
-              )}
+              <button 
+                onClick={() => openReportsModal(patient)}
+                className="flex-1 py-2 bg-white border border-slate-200 hover:border-[#0891b2] text-slate-700 hover:text-[#0891b2] rounded-lg text-sm font-semibold transition-all shadow-sm"
+              >
+                View Records
+              </button>
             </div>
           </div>
         ))}
@@ -245,69 +179,7 @@ export default function LabPatientsPage() {
           <p className="text-slate-500 text-sm">Try adjusting your search or filters.</p>
         </div>
       )}
-      {/* Request Access Modal */}
-      {isAccessModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-6 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-cyan-50 text-cyan-600 rounded-lg">
-                  <ShieldCheck className="size-5" />
-                </div>
-                <h3 className="font-bold text-slate-900 text-lg">Request Data Access</h3>
-              </div>
-              <button 
-                onClick={() => setIsAccessModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 transition-colors p-1"
-              >
-                <X className="size-5" />
-              </button>
-            </div>
-            <form onSubmit={handleRequestAccess} className="p-6">
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6">
-                <p className="text-sm text-slate-600 mb-1">Patient</p>
-                <p className="font-bold text-slate-900">{selectedPatientForAccess?.name}</p>
-                <p className="text-xs text-slate-500 font-mono mt-0.5">{selectedPatientForAccess?.id}</p>
-              </div>
-              <div className="space-y-4 mb-8">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Purpose of Request *</label>
-                  <select required className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2]">
-                    <option value="">Select a reason</option>
-                    <option value="baseline">Comparing Baseline Results</option>
-                    <option value="history">Reviewing Past Medical History</option>
-                    <option value="verification">Test Verification</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Message to Patient (Optional)</label>
-                  <textarea 
-                    rows={3}
-                    placeholder="Briefly explain why you need access to their past reports..."
-                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] resize-none"
-                  ></textarea>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <button 
-                  type="button"
-                  onClick={() => setIsAccessModalOpen(false)}
-                  className="flex-1 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-sm font-bold transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  className="flex-1 px-4 py-2.5 bg-[#0891b2] hover:bg-cyan-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm"
-                >
-                  Send Request
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+
       {/* View Reports Modal */}
       {isReportsModalOpen && selectedPatientForReports && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
@@ -334,7 +206,10 @@ export default function LabPatientsPage() {
                 {loadingRecords ? (
                   <div className="flex justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0891b2]"></div></div>
                 ) : patientRecords.length === 0 ? (
-                  <div className="text-center py-8 text-slate-500">No past reports found for this patient.</div>
+                  <div className="text-center py-8 px-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                    <p className="text-slate-600 font-medium mb-1">No reports uploaded yet.</p>
+                    <p className="text-sm text-slate-500">This patient's records will appear here once you upload their test reports. Complete pending test requests to generate reports.</p>
+                  </div>
                 ) : (
                   patientRecords.map(report => (
                     <div key={report.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-xl hover:border-slate-200 hover:shadow-sm transition-all">

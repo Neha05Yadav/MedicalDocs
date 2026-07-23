@@ -997,7 +997,7 @@ export default function PatientSearchVerificationPage() {
                     <option value="">-- Select Patient --</option>
                     {hospitalPatients.map((p, idx) => (
                       <option key={idx} value={p.patientId || p.id}>
-                        {p.name} ({p.department})
+                        {p.name}
                       </option>
                     ))}
                   </select>
@@ -1041,7 +1041,7 @@ export default function PatientSearchVerificationPage() {
                       <option value="">-- Select Laboratory --</option>
                       {labs.map(lab => (
                         <option key={lab.id} value={lab.id}>
-                          {lab.name}
+                          {lab.name} (ID: {lab.id})
                         </option>
                       ))}
                     </select>

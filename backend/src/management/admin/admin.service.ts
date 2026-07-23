@@ -65,7 +65,7 @@ export class AdminService {
         id: `doctor-${d.id}`,
         type: 'New Doctor',
         title: 'New Doctor Registered',
-        description: `Dr. ${d.name} joined the network`,
+        description: `Dr. ${d.name.replace(/^(Dr\.?\s*)+/i, '')} joined the network`,
         time: new Date(d.createdAt).toLocaleTimeString(),
         status: 'completed'
       }))

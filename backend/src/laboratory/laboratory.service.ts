@@ -104,7 +104,7 @@ export class LaboratoryService {
       const hospital = await this.getHospitalContext(userEmail);
       const cacheKey = `lab:testrequests:${hospital.id}`;
       const cached = await this.redisService.get(cacheKey);
-      if (cached) return cached;
+      // if (cached) return cached; // Temporarily bypass cache to clear old data
 
       const reqs = await this.db.query(`
         SELECT t.*, p.name as patientName, p.phone as patientPhone, p.dateOfBirth as patientDob, p.gender as patientGender, 
@@ -129,7 +129,7 @@ export class LaboratoryService {
         priority: r.priority,
         status: r.status,
         date: new Date(r.createdAt).toLocaleDateString(),
-        doctorName: r.doctorName ? `Dr. ${r.doctorName}` : 'Unknown Doctor',
+        doctorName: r.doctorName ? `Dr. ${r.doctorName.replace(/^(Dr\.?\s*)+/i, '')}` : 'Unknown Doctor',
         doctorDepartment: r.doctorDepartment || 'General',
         clinicName: r.refHospitalName || 'Direct Request',
         clinicType: r.refHospitalType || 'HOSPITAL',
@@ -268,12 +268,11 @@ export class LaboratoryService {
     const hospital = await this.getHospitalContext(userEmail);
     
     const patients = await this.db.query(
-      `SELECT * FROM patient WHERE name LIKE ? OR id LIKE ? OR phone LIKE ? LIMIT 10`,
-      [`%${query}%`, `%${query}%`, `%${query}%`]
+      `SELECT DISTINCT p.* FROM patient p JOIN medicalrecord m ON p.id = m.patientId WHERE m.hospitalId = ? AND m.type = 'LAB_REPORT' AND (p.name LIKE ? OR p.id LIKE ? OR p.phone LIKE ?) LIMIT 10`,
+      [hospital.id, `%${query}%`, `%${query}%`, `%${query}%`]
     );
     
-    return Promise.all(patients.map(async p => {
-      const access = await this.db.queryOne('SELECT status FROM accessrequest WHERE patientId = ? AND hospitalId = ? ORDER BY requestDate DESC LIMIT 1', [p.id, hospital.id]);
+    return patients.map(p => {
       return {
         id: p.id,
         name: p.name,
@@ -281,19 +280,18 @@ export class LaboratoryService {
         gender: p.gender || 'Unknown',
         phone: p.phone || 'N/A',
         email: p.email || 'N/A',
-        status: access?.status === 'APPROVED' ? 'Authorized' : access?.status === 'REJECTED' ? 'Unauthorized' : access?.status === 'PENDING' ? 'Pending' : 'Unauthorized'
       };
-    }));
+    });
   }
 
   async getPatients(userEmail?: string) {
     const hospital = await this.getHospitalContext(userEmail);
     const patients = await this.db.query(
-      `SELECT * FROM patient ORDER BY createdAt DESC LIMIT 50`
+      `SELECT DISTINCT p.* FROM patient p JOIN medicalrecord m ON p.id = m.patientId WHERE m.hospitalId = ? AND m.type = 'LAB_REPORT' ORDER BY p.createdAt DESC LIMIT 50`,
+      [hospital.id]
     );
 
-    return Promise.all(patients.map(async p => {
-      const access = await this.db.queryOne('SELECT status, requestDate FROM accessrequest WHERE patientId = ? AND hospitalId = ? ORDER BY requestDate DESC LIMIT 1', [p.id, hospital.id]);
+    return patients.map(p => {
       return {
         id: p.id,
         name: p.name,
@@ -301,10 +299,9 @@ export class LaboratoryService {
         gender: p.gender || 'Unknown',
         phone: p.phone || 'N/A',
         email: p.email || 'N/A',
-        lastTest: access?.requestDate ? new Date(access.requestDate).toLocaleDateString() : 'N/A',
-        status: access?.status === 'APPROVED' ? 'Authorized' : access?.status === 'REJECTED' ? 'Unauthorized' : access?.status === 'PENDING' ? 'Pending' : 'Unauthorized'
+        lastTest: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'N/A',
       };
-    }));
+    });
   }
 
   async requestAccess(userEmail: string | undefined, patientId: string) {
@@ -318,16 +315,15 @@ export class LaboratoryService {
 
   async getPatientRecords(userEmail: string | undefined, patientId: string) {
     const hospital = await this.getHospitalContext(userEmail);
-    const auth = await this.db.queryOne('SELECT id FROM accessrequest WHERE patientId = ? AND hospitalId = ? AND status = "APPROVED"', [patientId, hospital.id]);
-    if (!auth) throw new Error("Unauthorized to view records for this patient");
+    // Directly fetch records without checking accessrequest
 
     const records = await this.db.query(`
       SELECT m.*, h.name as hospitalName 
       FROM medicalrecord m
       LEFT JOIN hospital h ON m.hospitalId = h.id
-      WHERE m.patientId = ?
+      WHERE m.patientId = ? AND m.hospitalId = ?
       ORDER BY m.date DESC
-    `, [patientId]);
+    `, [patientId, hospital.id]);
 
     return records.map(r => ({
       id: r.id,

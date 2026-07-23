@@ -38,6 +38,7 @@ export default function TestRequestsPage() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -89,6 +90,49 @@ export default function TestRequestsPage() {
       }
     } catch (e) {
       toast.error("Error updating status");
+    }
+  };
+
+  const handleUploadReport = async (e: React.ChangeEvent<HTMLInputElement>, req: any) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size must be less than 10MB");
+      e.target.value = '';
+      return;
+    }
+
+    setUploadingId(req.id);
+    toast.loading("Uploading report...", { id: "upload-toast" });
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("patientId", req.patientId);
+      formData.append("title", `${req.testType} Report`);
+      formData.append("category", req.testType);
+      formData.append("linkedRequestId", req.id);
+
+      const res = await fetch("/api/laboratory/reports", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
+        body: formData,
+      });
+
+      if (res.ok) {
+        toast.success("Report uploaded and request completed!", { id: "upload-toast" });
+        fetchTestRequests();
+      } else {
+        const payload = await res.json().catch(() => null);
+        toast.error(payload?.message || "Failed to upload report", { id: "upload-toast" });
+      }
+    } catch (err) {
+      toast.error("Error uploading report", { id: "upload-toast" });
+    } finally {
+      setUploadingId(null);
     }
   };
 
@@ -191,6 +235,7 @@ export default function TestRequestsPage() {
                 <th className="px-6 py-4">Origin</th>
                 <th className="px-6 py-4">Test Details</th>
                 <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Upload</th>
                 <th className="px-6 py-4 text-center">Action</th>
               </tr>
             </thead>
@@ -228,6 +273,31 @@ export default function TestRequestsPage() {
                         {req.status}
                       </span>
                     </td>
+                    <td className="px-6 py-4 min-w-[180px]">
+                      {req.status !== "Completed" && req.status !== "Cancelled" ? (
+                        <div className="relative">
+                          {uploadingId === req.id ? (
+                            <span className="text-[10px] font-bold text-[#0891b2] animate-pulse">UPLOADING...</span>
+                          ) : (
+                            <input 
+                              type="file" 
+                              accept=".pdf,.jpg,.jpeg,.png,.webp"
+                              onChange={(e) => handleUploadReport(e, req)}
+                              className="block w-full text-xs text-slate-500
+                                file:mr-2 file:py-1.5 file:px-3
+                                file:rounded-full file:border-0
+                                file:text-[10px] file:font-semibold
+                                file:bg-cyan-50 file:text-[#0891b2]
+                                hover:file:bg-cyan-100 cursor-pointer"
+                            />
+                          )}
+                        </div>
+                      ) : req.status === "Completed" ? (
+                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">UPLOADED</span>
+                      ) : (
+                        <span className="text-slate-300">-</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-center">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -263,13 +333,6 @@ export default function TestRequestsPage() {
                             <DropdownMenuItem onClick={() => updateStatus(req.id, "Tested")} className="cursor-pointer gap-2 text-[#0891b2] focus:text-[#0891b2]">
                               <PlayCircle className="size-4" />
                               <span>Mark as Tested</span>
-                            </DropdownMenuItem>
-                          )}
-                          
-                          {req.status === "Tested" && (
-                            <DropdownMenuItem onClick={() => updateStatus(req.id, "Completed")} className="cursor-pointer gap-2 text-emerald-600 focus:text-emerald-600">
-                              <Upload className="size-4" />
-                              <span>Upload Report (Complete)</span>
                             </DropdownMenuItem>
                           )}
                           
@@ -375,7 +438,7 @@ export default function TestRequestsPage() {
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <h4 className="font-bold text-xl text-slate-900">{selectedRequest.testType}</h4>
-                    <p className="text-[11px] text-slate-500 mt-1 font-mono bg-white/60 inline-block px-2 py-0.5 rounded">Request ID: {selectedRequest.id}</p>
+                    <p className="text-[11px] text-slate-500 mt-1 font-mono bg-white/60 inline-block px-2 py-0.5 rounded">Request ID: REQ-{selectedRequest.id.substring(0, 8).toUpperCase()}</p>
                   </div>
                   <span className={`inline-flex px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider border ${getStatusColor(selectedRequest.status)}`}>
                     {selectedRequest.status}

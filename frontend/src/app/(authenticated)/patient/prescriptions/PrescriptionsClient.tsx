@@ -383,6 +383,31 @@ export default function PrescriptionsClient() {
                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Doctor Name</p>
                 <p className="text-base font-semibold text-slate-900">{selectedPrescriptionDetails.doctor}</p>
               </div>
+
+              {(selectedPrescriptionDetails.medicine || selectedPrescriptionDetails.dosage || selectedPrescriptionDetails.duration) && (
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-3">
+                  {selectedPrescriptionDetails.medicine && (
+                    <div>
+                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Medicine / Diagnosis</p>
+                      <p className="text-sm font-semibold text-slate-900">{selectedPrescriptionDetails.medicine}</p>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-4">
+                    {selectedPrescriptionDetails.dosage && (
+                      <div>
+                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Dosage</p>
+                        <p className="text-sm font-medium text-slate-800">{selectedPrescriptionDetails.dosage}</p>
+                      </div>
+                    )}
+                    {selectedPrescriptionDetails.duration && (
+                      <div>
+                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Duration</p>
+                        <p className="text-sm font-medium text-slate-800">{selectedPrescriptionDetails.duration}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               {selectedPrescriptionDetails.fileUrl && (
                 <div>
                   <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">Prescription Image</p>

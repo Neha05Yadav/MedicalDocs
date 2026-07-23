@@ -125,9 +125,11 @@ export default function AccessRequestsPage() {
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold tracking-tight border ${
                       request.status === "APPROVED" 
                         ? "bg-white text-emerald-700 border-emerald-200" 
-                        : request.status === "REJECTED" ? "bg-red-50 text-red-700 border-red-200" : "bg-amber-50 text-amber-700 border-amber-200"
+                        : (request.status === "REJECTED" || request.status === "REVOKED" || request.status === "EXPIRED") 
+                          ? "bg-red-50 text-red-700 border-red-200" 
+                          : "bg-amber-50 text-amber-700 border-amber-200"
                     }`}>
-                      {request.status === "APPROVED" ? <ShieldCheck className="size-3" /> : request.status === "REJECTED" ? <XCircle className="size-3" /> : <Clock className="size-3" />}
+                      {request.status === "APPROVED" ? <ShieldCheck className="size-3" /> : (request.status === "REJECTED" || request.status === "REVOKED" || request.status === "EXPIRED") ? <XCircle className="size-3" /> : <Clock className="size-3" />}
                       {request.status}
                     </span>
                   </td>
@@ -149,15 +151,25 @@ export default function AccessRequestsPage() {
                           </button>
                         </>
                       ) : (
-                        <button 
-                          onClick={() => {
-                            setSelectedRequest(request);
-                            setIsViewModalOpen(true);
-                          }}
-                          className="px-4 py-1.5 bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm"
-                        >
-                          <Eye className="size-3.5" /> View
-                        </button>
+                        <>
+                          <button 
+                            onClick={() => {
+                              setSelectedRequest(request);
+                              setIsViewModalOpen(true);
+                            }}
+                            className="px-4 py-1.5 bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm"
+                          >
+                            <Eye className="size-3.5" /> View
+                          </button>
+                          {request.status === "APPROVED" && (
+                            <button
+                              onClick={() => handleStatusChange(request.id, "REVOKED")}
+                              className="px-4 py-1.5 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:border-red-300 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm ml-2"
+                            >
+                              <XCircle className="size-3.5" /> Revoke
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   </td>
@@ -199,10 +211,12 @@ export default function AccessRequestsPage() {
                 <div>
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold tracking-tight border ${
                     selectedRequest.status === "APPROVED" 
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
-                      : selectedRequest.status === "REJECTED" ? "bg-red-50 text-red-700 border-red-200" : "bg-amber-50 text-amber-700 border-amber-200"
+                      ? "bg-white text-emerald-700 border-emerald-200" 
+                      : (selectedRequest.status === "REJECTED" || selectedRequest.status === "REVOKED" || selectedRequest.status === "EXPIRED") 
+                        ? "bg-red-50 text-red-700 border-red-200" 
+                        : "bg-amber-50 text-amber-700 border-amber-200"
                   }`}>
-                    {selectedRequest.status === "APPROVED" ? <ShieldCheck className="size-3" /> : selectedRequest.status === "REJECTED" ? <XCircle className="size-3" /> : <Clock className="size-3" />}
+                    {selectedRequest.status === "APPROVED" ? <ShieldCheck className="size-3" /> : (selectedRequest.status === "REJECTED" || selectedRequest.status === "REVOKED" || selectedRequest.status === "EXPIRED") ? <XCircle className="size-3" /> : <Clock className="size-3" />}
                     {selectedRequest.status}
                   </span>
                 </div>

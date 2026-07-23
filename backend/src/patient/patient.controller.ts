@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Get, Post, Put, Body, UseGuards, Request, UploadedFile, UseInterceptors, Param } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, UseGuards, Request, UploadedFile, UseInterceptors, Param, BadRequestException, StreamableFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PatientService } from './patient.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -67,6 +67,17 @@ export class PatientController {
   @Get('prescriptions')
   async getPrescriptions(@Request() req: any) {
     return this.patientService.getPrescriptions(req.user.email);
+  }
+
+  @Get('prescriptions/:id/image')
+  async getPrescriptionImage(@Request() req: any, @Param('id') id: string) {
+    const image = await this.patientService.getPrescriptionImage(req.user.email, id);
+    const safeName = String(image.fileName || 'prescription-image').replace(/["\r\n]/g, '_');
+    return new StreamableFile(image.content, {
+      type: image.mimeType,
+      disposition: `inline; filename="${safeName}"`,
+      length: Number(image.sizeBytes),
+    });
   }
 
   @Post('prescriptions')

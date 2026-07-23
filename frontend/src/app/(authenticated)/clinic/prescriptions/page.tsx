@@ -28,14 +28,11 @@ export default function DoctorPrescriptionsPage() {
 
   // Upload/Create state
   const [patientId, setPatientId] = useState("");
-  const [medicine, setMedicine] = useState("");
-  const [dosage, setDosage] = useState("");
-  const [duration, setDuration] = useState("");
+  const [medicines, setMedicines] = useState([
+    { name: "", duration: "", days: "", instruction: "" }
+  ]);
   const [status, setStatus] = useState("Active");
-  const [prescriptionImage, setPrescriptionImage] = useState<File | null>(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const imageInputRef = useRef<HTMLInputElement>(null);
   
   // Lab Test Request State
   const [labs, setLabs] = useState<{id: string, name: string}[]>([]);
@@ -51,31 +48,6 @@ export default function DoctorPrescriptionsPage() {
     fetchPrescriptions();
     fetchLabs();
   }, []);
-
-  useEffect(() => () => {
-    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
-  }, [imagePreviewUrl]);
-
-  const handleImageSelection = (file?: File) => {
-    if (!file) return;
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-    if (!allowedTypes.includes(file.type)) {
-      toast.error("Only JPG, PNG or WebP images are allowed.");
-      return;
-    }
-    if (file.size > 8 * 1024 * 1024) {
-      toast.error("Prescription image must be smaller than 8 MB.");
-      return;
-    }
-    setPrescriptionImage(file);
-    setImagePreviewUrl(URL.createObjectURL(file));
-  };
-
-  const removeSelectedImage = () => {
-    setPrescriptionImage(null);
-    setImagePreviewUrl("");
-    if (imageInputRef.current) imageInputRef.current.value = "";
-  };
 
   const fetchLabs = async () => {
     try {
@@ -114,36 +86,86 @@ export default function DoctorPrescriptionsPage() {
     }
     setSubmitting(true);
     try {
+      const isSingle = medicines.length === 1;
+      const finalMedicine = medicines.map((m, i) => isSingle ? m.name : `${i+1}. ${m.name}`).join("\n");
+      const finalDosage = medicines.map((m, i) => {
+        const str = `${m.duration}${m.instruction ? ` (${m.instruction})` : ""}`;
+        return isSingle ? str : `${i+1}. ${str}`;
+      }).join("\n");
+      const finalDuration = medicines.map((m, i) => isSingle ? `${m.days} Days` : `${i+1}. ${m.days} Days`).join("\n");
+
       const formData = new FormData();
       formData.append("patientId", patientId);
-      formData.append("medicine", medicine);
-      formData.append("dosage", dosage);
-      formData.append("duration", duration);
+      formData.append("medicine", finalMedicine);
+      formData.append("dosage", finalDosage);
+      formData.append("duration", finalDuration);
       formData.append("status", status);
-      formData.append("labTestName", labTestName);
-      formData.append("labTestPriority", labTestPriority);
-      formData.append("labId", selectedLabId);
-      if (prescriptionImage) formData.append("image", prescriptionImage);
-
       const res = await fetch("/api/clinic/prescriptions", {
         method: "POST",
         headers: authHeaders(),
         body: formData,
       });
       if (res.ok) {
-        toast.success(prescriptionImage ? "Prescription and image uploaded!" : "Prescription Created!");
-        if (labTestName) toast.success("Lab Test Requested successfully.");
+        toast.success("Prescription Created!");
         setActiveTab("view");
         fetchPrescriptions();
         // Reset form
-        setPatientId(""); setMedicine(""); setDosage(""); setDuration(""); setStatus("Active"); setLabTestName(""); setLabTestPriority("Normal");
-        removeSelectedImage();
+        setPatientId(""); 
+        setMedicines([{ name: "", duration: "", days: "", instruction: "" }]);
+        setStatus("Active");
       } else {
         const payload = await res.json().catch(() => null);
         toast.error(payload?.message || "Failed to create prescription");
       }
     } catch (err) {
       toast.error("Error creating prescription");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSuggestLabTest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedLabId) {
+      toast.error("Please select a Destination Laboratory.");
+      return;
+    }
+    if (!patientId) {
+      toast.error("Please enter Patient ID.");
+      return;
+    }
+    if (!labTestName) {
+      toast.error("Please enter a Lab Test Name.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/clinic/test-requests", {
+        method: "POST",
+        headers: {
+          ...authHeaders(),
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          patientId,
+          labTestName,
+          priority: labTestPriority,
+          labId: selectedLabId
+        }),
+      });
+
+      if (res.ok) {
+        toast.success("Lab Test Requested successfully.");
+        setPatientId("");
+        setLabTestName("");
+        setLabTestPriority("Normal");
+      } else {
+        const payload = await res.json().catch(() => null);
+        toast.error(payload?.message || "Failed to request lab test");
+      }
+    } catch (err) {
+      toast.error("Error requesting lab test");
     } finally {
       setSubmitting(false);
     }
@@ -237,7 +259,13 @@ export default function DoctorPrescriptionsPage() {
           onClick={() => setActiveTab("upload")}
           className={`px-6 py-2 rounded-lg font-bold text-sm transition-colors ${activeTab === "upload" ? "bg-[#0891b2] text-white shadow-md" : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"}`}
         >
-          Issue Prescription
+          Create Prescription
+        </button>
+        <button 
+          onClick={() => setActiveTab("lab_test")}
+          className={`px-6 py-2 rounded-lg font-bold text-sm transition-colors ${activeTab === "lab_test" ? "bg-[#0891b2] text-white shadow-md" : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"}`}
+        >
+          Suggest Lab Test
         </button>
       </div>
 
@@ -380,7 +408,7 @@ export default function DoctorPrescriptionsPage() {
       {activeTab === "upload" && (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-3xl mx-auto">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-            <h2 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-100 pb-4">Issue New Prescription</h2>
+            <h2 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-100 pb-4">Create Prescription</h2>
             <form className="space-y-6" onSubmit={handleCreatePrescription}>
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Patient ID (UUID)</label>
@@ -398,117 +426,169 @@ export default function DoctorPrescriptionsPage() {
                 <p className="text-xs text-slate-500 mt-1">Make sure to enter the exact Patient ID from the Patients module.</p>
               </div>
               
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Medicine Details</label>
-                  <input 
-                    required
-                    type="text" 
-                    value={medicine}
-                    onChange={(e) => setMedicine(e.target.value)}
-                    placeholder="e.g. Paracetamol 500mg" 
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Status</label>
-                  <select 
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all"
-                  >
-                    <option value="Active">Active / Running</option>
-                    <option value="Completed">Completed</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Dosage</label>
-                  <input 
-                    required
-                    type="text" 
-                    value={dosage}
-                    onChange={(e) => setDosage(e.target.value)}
-                    placeholder="e.g. 1-0-1 (Morning & Night)" 
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Duration</label>
-                  <input 
-                    required
-                    type="text" 
-                    value={duration}
-                    onChange={(e) => setDuration(e.target.value)}
-                    placeholder="e.g. 5 Days" 
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Prescription Image (Optional)</label>
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={(event) => handleImageSelection(event.target.files?.[0])}
-                />
-                {imagePreviewUrl ? (
-                  <div className="relative overflow-hidden rounded-2xl border border-cyan-200 bg-cyan-50/40 p-3">
-                    <img src={imagePreviewUrl} alt="Selected prescription preview" className="h-56 w-full rounded-xl bg-white object-contain" />
-                    <div className="mt-3 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-slate-800">{prescriptionImage?.name}</p>
-                        <p className="text-xs text-slate-500">{prescriptionImage ? `${(prescriptionImage.size / 1024 / 1024).toFixed(2)} MB` : ""}</p>
-                      </div>
-                      <button type="button" onClick={removeSelectedImage} className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50">
-                        <X className="size-4" /> Remove
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => imageInputRef.current?.click()}
-                    className="flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-left transition hover:border-cyan-500 hover:bg-cyan-50/40"
-                  >
-                    <span className="grid size-12 place-items-center rounded-xl bg-cyan-100 text-cyan-700"><ImageIcon className="size-6" /></span>
-                    <span><b className="block text-sm text-slate-800">Upload prescription image</b><small className="mt-1 block text-xs text-slate-500">JPG, PNG or WebP - maximum 8 MB</small></span>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <span className="p-1.5 bg-cyan-100 text-[#0891b2] rounded-md"><Pill className="size-4" /></span>
+                    Prescription Details
+                  </h3>
+                  <button type="button" onClick={() => setMedicines([...medicines, { name: "", duration: "", days: "", instruction: "" }])} className="text-xs font-bold text-[#0891b2] bg-cyan-50 px-3 py-1.5 rounded-lg border border-cyan-100 hover:bg-cyan-100 transition-colors">
+                    + Add Medicine
                   </button>
-                )}
+                </div>
+                
+                <div className="space-y-4">
+                  {medicines.map((med, index) => (
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-[1.5fr_1fr_1fr_1.5fr] gap-4 items-start bg-white p-4 rounded-xl border border-slate-200 relative">
+                      {medicines.length > 1 && (
+                        <div className="absolute -top-2 -right-2">
+                          <button type="button" onClick={() => {
+                            const m = [...medicines];
+                            m.splice(index, 1);
+                            setMedicines(m);
+                          }} className="bg-red-100 text-red-600 rounded-full p-1 hover:bg-red-200 transition-colors shadow-sm">
+                            <X className="size-3.5" />
+                          </button>
+                        </div>
+                      )}
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">Medicine Name</label>
+                        <input 
+                          required
+                          type="text" 
+                          value={med.name}
+                          onChange={(e) => {
+                            const m = [...medicines];
+                            m[index].name = e.target.value;
+                            setMedicines(m);
+                          }}
+                          placeholder="e.g. Paracetamol 500mg" 
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">Duration</label>
+                        <input 
+                          required
+                          type="text" 
+                          value={med.duration}
+                          onChange={(e) => {
+                            const m = [...medicines];
+                            m[index].duration = e.target.value;
+                            setMedicines(m);
+                          }}
+                          placeholder="e.g. 1-0-1" 
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">Days</label>
+                        <input 
+                          required
+                          type="text" 
+                          value={med.days}
+                          onChange={(e) => {
+                            const m = [...medicines];
+                            m[index].days = e.target.value;
+                            setMedicines(m);
+                          }}
+                          placeholder="e.g. 5" 
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">Instruction</label>
+                        <input 
+                          type="text" 
+                          value={med.instruction}
+                          onChange={(e) => {
+                            const m = [...medicines];
+                            m[index].instruction = e.target.value;
+                            setMedicines(m);
+                          }}
+                          placeholder="e.g. After Meals" 
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              {/* Lab Test Addition */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 mt-6">
+              {/* Submit Button */}
+              <div className="pt-4 flex justify-end">
+                <button 
+                  type="submit"
+                  disabled={submitting}
+                  className="px-8 py-3 bg-[#0891b2] hover:bg-cyan-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <UploadCloud className="size-4" /> {submitting ? "Uploading..." : "Create Prescription"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* SUGGEST LAB TEST SECTION */}
+      {activeTab === "lab_test" && (
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-3xl mx-auto">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+            <h2 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-100 pb-4">Suggest Lab Test</h2>
+            <form className="space-y-6" onSubmit={handleSuggestLabTest}>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Patient ID (UUID)</label>
+                <div className="relative">
+                  <input 
+                    required
+                    type="text" 
+                    value={patientId}
+                    onChange={(e) => setPatientId(e.target.value)}
+                    placeholder="e.g. 22365a7a-5715-4984-b2f1-c4bfee8a37e7" 
+                    className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all"
+                  />
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+                </div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-6">
                 <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
                   <span className="p-1.5 bg-cyan-100 text-[#0891b2] rounded-md"><Pill className="size-4" /></span>
-                  Suggest Lab Test (Optional)
+                  Lab Test Details
                 </h3>
                 
-                <div className="mb-4">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Destination Laboratory</label>
-                  {labs.length > 0 ? (
-                    <select 
+                <div className="grid md:grid-cols-2 gap-6 mb-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Destination Laboratory</label>
+                    {labs.length > 0 ? (
+                      <select 
+                        value={selectedLabId}
+                        onChange={(e) => setSelectedLabId(e.target.value)}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+                      >
+                        <option value="">-- Select Laboratory --</option>
+                        {labs.map(lab => (
+                          <option key={lab.id} value={lab.id}>
+                            {lab.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-100">
+                        No laboratories found in the network.
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Lab ID (UUID)</label>
+                    <input 
+                      type="text" 
                       value={selectedLabId}
                       onChange={(e) => setSelectedLabId(e.target.value)}
-                      className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
-                    >
-                      <option value="">-- Select Laboratory --</option>
-                      {labs.map(lab => (
-                        <option key={lab.id} value={lab.id}>
-                          {lab.name}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-100">
-                      No laboratories found in the network.
-                    </div>
-                  )}
+                      placeholder="e.g. 123e4567-e89b-12d3-a456-426614174000" 
+                      className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2] transition-all"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6">
@@ -545,13 +625,14 @@ export default function DoctorPrescriptionsPage() {
                   disabled={submitting}
                   className="px-8 py-3 bg-[#0891b2] hover:bg-cyan-700 text-white rounded-xl text-sm font-bold transition-colors shadow-sm flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <UploadCloud className="size-4" /> {submitting ? "Uploading..." : "Issue Prescription"}
+                  <UploadCloud className="size-4" /> {submitting ? "Sending..." : "Request Lab Test"}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
 
       {/* EDIT MODAL */}
       {isEditModalOpen && selectedPrescription && (

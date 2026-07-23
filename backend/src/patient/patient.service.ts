@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { MysqlService } from '../mysql.service';
 import { v4 as uuidv4 } from 'uuid';
 import { RedisService } from '../redis/redis.service';
@@ -416,24 +416,26 @@ export class PatientService {
     }));
 
     const doctorPrescriptions = await this.db.query(`
-      SELECT p.*, h.name as hospitalName, h.type as hospitalType, d.name as doctorName
+      SELECT p.*, h.name as hospitalName, h.type as hospitalType, d.name as doctorName, sfp.storedFileId as imageFileId
       FROM prescription p
       LEFT JOIN hospital h ON p.hospitalId = h.id
       LEFT JOIN doctor d ON p.doctorId = d.id
+      LEFT JOIN stored_file_prescription sfp ON p.id = sfp.prescriptionId
       WHERE p.patientId = ?
       ORDER BY p.createdAt DESC
     `, [patient.id]);
 
     const formattedDoctorPrescriptions = doctorPrescriptions.map(p => ({
       id: formatPrescriptionId(p.id),
-      doctor: p.doctorName ? 'Dr. ' + p.doctorName : 'Unknown Doctor',
+      doctor: p.doctorName ? `Dr. ${p.doctorName.replace(/^(Dr\.?\s*)+/i, '')}` : 'Unknown Doctor',
       date: new Date(p.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       status: p.status || 'Active',
       hospitalName: p.hospitalName || null,
       hospitalType: p.hospitalType || null,
       medicine: p.medicine,
       dosage: p.dosage,
-      duration: p.duration
+      duration: p.duration,
+      fileUrl: p.imageFileId ? `/api/patient/prescriptions/${encodeURIComponent(p.id)}/image` : (p.fileUrl || null)
     }));
 
     const allPrescriptions = [...formattedRecords, ...formattedDoctorPrescriptions];
@@ -495,6 +497,26 @@ export class PatientService {
     }
   }
 
+  async getPrescriptionImage(email: string, id: string) {
+    const patient = await this.db.queryOne('SELECT id FROM patient WHERE email = ?', [email]);
+    if (!patient) throw new UnauthorizedException('Patient not found');
+
+    const result = await this.db.queryOne(
+      `SELECT sf.content, sf.mimeType, sf.fileName, sf.sizeBytes
+       FROM stored_file_prescription sfp
+       JOIN stored_file sf ON sfp.storedFileId = sf.id
+       JOIN prescription p ON sfp.prescriptionId = p.id
+       WHERE p.id = ? AND p.patientId = ?`,
+      [id, patient.id]
+    );
+
+    if (!result || !result.content) {
+      throw new NotFoundException('Prescription image not found');
+    }
+
+    return result;
+  }
+
   async getAccessRequests(userEmail: string) {
     const patient = await this.db.queryOne('SELECT id, name FROM patient WHERE email = ?', [userEmail]);
     if (!patient) return [];
@@ -537,13 +559,19 @@ export class PatientService {
     if (!req || req.patientId !== patient.id) throw new NotFoundException("Request not found");
 
     const normalizedStatus = String(status || '').toUpperCase();
-    await this.db.query('UPDATE accessrequest SET status = ?, duration = ?, updatedAt = ? WHERE id = ?', [normalizedStatus, '24 Hours', new Date(), id]);
+    await this.db.query('UPDATE accessrequest SET status = ?, updatedAt = ? WHERE id = ?', [normalizedStatus, new Date(), id]);
 
     if (normalizedStatus === 'APPROVED') {
       const notifId = uuidv4();
       await this.db.query(
         'INSERT INTO notification (id, hospitalId, type, title, message, isRead, actionRequired, severity, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, false, false, "Low", ?, ?)',
         [notifId, req.hospitalId, `PATIENT_APPROVED|${patient.id}`, "Access Request Approved", `${patient.name} has approved your request to access their medical records.`, new Date(), new Date()]
+      );
+    } else if (normalizedStatus === 'REVOKED') {
+      const notifId = uuidv4();
+      await this.db.query(
+        'INSERT INTO notification (id, hospitalId, type, title, message, isRead, actionRequired, severity, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, false, false, "Low", ?, ?)',
+        [notifId, req.hospitalId, `PATIENT_REVOKED|${patient.id}`, "Access Revoked", `${patient.name} has revoked your access to their medical records.`, new Date(), new Date()]
       );
     }
     await this.redisService.delPattern('hospital:searchPatients:*');

@@ -301,18 +301,21 @@ export class ClinicService {
         
         let status = 'Not Requested';
         let validTill = '';
-        const accessReq = await this.db.queryOne('SELECT id, status, duration, updatedAt FROM accessrequest WHERE hospitalId = ? AND patientId = ? ORDER BY updatedAt DESC LIMIT 1', [doctor.hospitalId, p.id]);
+        const accessReq = await this.db.queryOne('SELECT id, status, updatedAt FROM accessrequest WHERE hospitalId = ? AND patientId = ? ORDER BY updatedAt DESC LIMIT 1', [doctor.hospitalId, p.id]);
         if (accessReq) {
+          if (accessReq.status === 'PENDING') status = 'Pending';
+          else if (accessReq.status === 'APPROVED') status = 'Access Approved';
+          else if (accessReq.status === 'REJECTED') status = 'Rejected';
+          
           if (accessReq.status === 'APPROVED') {
             let isExpired = false;
-            if (accessReq.duration !== 'Until Patient Revokes' && accessReq.updatedAt) {
+            if (accessReq.updatedAt) {
               const now = new Date().getTime();
               const approvedAt = new Date(accessReq.updatedAt).getTime();
               const hoursPassed = (now - approvedAt) / (1000 * 60 * 60);
-              let expiryHours = 0;
-              if (accessReq.duration === '24 Hours') expiryHours = 24;
-              else if (accessReq.duration === '7 Days') expiryHours = 24 * 7;
-              else if (accessReq.duration === '30 Days') expiryHours = 24 * 30;
+              
+              // Defaulting to 24 hours for all requests since duration isn't tracked in DB
+              let expiryHours = 24;
 
               if (expiryHours > 0 && hoursPassed > expiryHours) {
                 isExpired = true;
@@ -320,20 +323,14 @@ export class ClinicService {
                 const expiryDate = new Date(approvedAt + expiryHours * 60 * 60 * 1000);
                 validTill = expiryDate.toLocaleDateString() + ' ' + expiryDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
               }
-            } else if (accessReq.duration === 'Until Patient Revokes') {
-              validTill = 'Until Revoked';
             }
 
             if (isExpired) {
               await this.db.query('UPDATE accessrequest SET status = ? WHERE id = ?', ['EXPIRED', accessReq.id]);
               status = 'Expired';
-            } else {
-              status = 'Access Approved';
             }
           }
-          else if (accessReq.status === 'PENDING') status = 'Pending';
-          else if (accessReq.status === 'REJECTED') status = 'Rejected';
-          else if (accessReq.status === 'EXPIRED') status = 'Expired';
+          else if (accessReq.status === 'EXPIRED' || accessReq.status === 'REVOKED') status = 'Expired';
         }
 
         patients.push({
@@ -363,18 +360,21 @@ export class ClinicService {
     for (const p of patients) {
       let status = 'Not Requested';
       let validTill = '';
-      const accessReq = await this.db.queryOne('SELECT id, status, duration, updatedAt FROM accessrequest WHERE hospitalId = ? AND patientId = ? ORDER BY updatedAt DESC LIMIT 1', [doctor.hospitalId, p.id]);
+      const accessReq = await this.db.queryOne('SELECT id, status, updatedAt FROM accessrequest WHERE hospitalId = ? AND patientId = ? ORDER BY updatedAt DESC LIMIT 1', [doctor.hospitalId, p.id]);
       if (accessReq) {
+        if (accessReq.status === 'PENDING') status = 'Pending';
+        else if (accessReq.status === 'APPROVED') status = 'Access Approved';
+        else if (accessReq.status === 'REJECTED') status = 'Rejected';
+
         if (accessReq.status === 'APPROVED') {
           let isExpired = false;
-          if (accessReq.duration !== 'Until Patient Revokes' && accessReq.updatedAt) {
+          if (accessReq.updatedAt) {
             const now = new Date().getTime();
             const approvedAt = new Date(accessReq.updatedAt).getTime();
             const hoursPassed = (now - approvedAt) / (1000 * 60 * 60);
-            let expiryHours = 0;
-            if (accessReq.duration === '24 Hours') expiryHours = 24;
-            else if (accessReq.duration === '7 Days') expiryHours = 24 * 7;
-            else if (accessReq.duration === '30 Days') expiryHours = 24 * 30;
+            
+            // Defaulting to 24 hours for all requests
+            let expiryHours = 24;
 
             if (expiryHours > 0 && hoursPassed > expiryHours) {
               isExpired = true;
@@ -382,8 +382,6 @@ export class ClinicService {
               const expiryDate = new Date(approvedAt + expiryHours * 60 * 60 * 1000);
               validTill = expiryDate.toLocaleDateString() + ' ' + expiryDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             }
-          } else if (accessReq.duration === 'Until Patient Revokes') {
-            validTill = 'Until Revoked';
           }
 
           if (isExpired) {
@@ -395,7 +393,7 @@ export class ClinicService {
         }
         else if (accessReq.status === 'PENDING') status = 'Pending';
         else if (accessReq.status === 'REJECTED') status = 'Rejected';
-        else if (accessReq.status === 'EXPIRED') status = 'Expired';
+        else if (accessReq.status === 'EXPIRED' || accessReq.status === 'REVOKED') status = 'Expired';
       }
 
       result.push({
@@ -484,7 +482,7 @@ export class ClinicService {
         const dateStr = new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
         const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-        const message = `Dr. ${doctor.name} from ${hospitalName} has requested access to your medical records.\n\nRequested Reports:\n${requestedReportsString}\n\nReason:\n${reason}\n\nStatus: Pending\n\n${dateStr} • ${timeStr}`;
+        const message = `${hospitalName} has requested access to your medical records.\n\nRequested Reports:\n${requestedReportsString}\n\nReason:\n${reason}\n\nStatus: Pending\n\n${dateStr} • ${timeStr}`;
 
         await this.db.query(
           'INSERT INTO notification (id, userId, type, title, message, isRead, actionRequired, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -508,24 +506,21 @@ export class ClinicService {
     if (!access) throw new UnauthorizedException("You do not have an approved access request to view this patient's reports.");
 
     // Check Duration
-    if (access.duration !== 'Until Patient Revokes' && access.updatedAt) {
+    if (access.updatedAt) {
       const now = new Date().getTime();
       const approvedAt = new Date(access.updatedAt).getTime();
       const hoursPassed = (now - approvedAt) / (1000 * 60 * 60);
-      if (access.duration === '24 Hours' && hoursPassed > 24) {
+      if (hoursPassed > 24) {
         await this.db.query('UPDATE accessrequest SET status = ? WHERE id = ?', ['EXPIRED', access.id]);
         throw new UnauthorizedException("Your access request has expired (24 Hours). Please request access again.");
-      }
-      if (access.duration === '7 Days' && hoursPassed > (24 * 7)) {
-        await this.db.query('UPDATE accessrequest SET status = ? WHERE id = ?', ['EXPIRED', access.id]);
-        throw new UnauthorizedException("Your access request has expired (7 Days). Please request access again.");
       }
     }
 
     let reports = await this.db.query('SELECT * FROM medicalrecord WHERE patientId = ? ORDER BY date DESC', [patientId]);
     
     // Filter by Report Types
-    const approvedTypes: string[] = access.reportTypes ? access.reportTypes.split(',').map((t: string) => t.trim()) : [];
+    const rawTypes = access.reportTypes?.trim() ? access.reportTypes : 'All Reports';
+    const approvedTypes: string[] = rawTypes.split(',').map((t: string) => t.trim());
     if (!approvedTypes.includes('All Reports')) {
       reports = reports.filter((r: any) => {
         return approvedTypes.some(type => 
@@ -602,7 +597,7 @@ export class ClinicService {
       const h = await this.db.queryOne('SELECT name FROM hospital WHERE id = ?', [doctor.hospitalId]);
       await this.db.query(
         'INSERT INTO notification (id, hospitalId, type, title, message, isRead, actionRequired, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, false, true, ?, ?)',
-        [uuidv4(), data.labId, 'Request', 'New Lab Test Request', `Dr. ${doctor.name} from ${h?.name || 'Clinic'} has requested a ${data.labTestName}.`, new Date(), new Date()]
+          [uuidv4(), data.labId, 'Request', 'New Lab Test Request', `Dr. ${doctor.name.replace(/^(Dr\.?\s*)+/i, '')} from ${h?.name || 'Clinic'} has requested a ${data.labTestName}.`, new Date(), new Date()]
       );
     }
 
@@ -613,7 +608,7 @@ export class ClinicService {
       if (userForNotif) {
         await this.db.query(
           'INSERT INTO notification (id, userId, type, title, message, isRead, actionRequired, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, false, false, ?, ?)',
-          [uuidv4(), userForNotif.id, 'PRESCRIPTION', 'New Prescription Added', `Dr. ${doctor.name} has added a new prescription for ${data.medicine}.`, new Date(), new Date()]
+          [uuidv4(), userForNotif.id, 'PRESCRIPTION', 'New Prescription Added', `Dr. ${doctor.name.replace(/^(Dr\.?\s*)+/i, '')} has added a new prescription for ${data.medicine}.`, new Date(), new Date()]
         );
       }
     }
