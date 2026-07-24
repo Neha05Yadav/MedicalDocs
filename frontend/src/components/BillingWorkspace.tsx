@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, FileText, Plus, ReceiptText, Trash2 } from "lucide-react";
+import { CheckCircle2, Download, FileText, Plus, ReceiptText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 type CatalogItem = { id: string; code?: string; name: string; category: string; price: number; taxRate: number };
@@ -12,6 +12,7 @@ type Invoice = {
   id: string; invoiceNo: string; patientName?: string; facilityName: string; facilityType: string;
   status: string; subtotal: number; discountTotal: number; taxTotal: number; totalAmount: number;
   amountPaid: number; createdAt: string; dueDate?: string; notes?: string; items: Array<Line & { lineTotal: number; taxAmount: number }>;
+  insuranceDeduction?: number; depositAdjusted?: number; patientPayable?: number; encounterType?: string;
 };
 
 const categories: Record<string, string[]> = {
@@ -229,14 +230,19 @@ function InvoiceList({ invoices, patient = false, onPaid }: { invoices: Invoice[
       <button onClick={() => setOpen(open === invoice.id ? null : invoice.id)} className="grid w-full gap-4 p-5 text-left md:grid-cols-[1.2fr_1fr_.7fr_.7fr_auto] md:items-center">
         <div><p className="font-bold text-slate-900">{invoice.invoiceNo}</p><p className="text-xs text-slate-500">{new Date(invoice.createdAt).toLocaleDateString("en-IN")}</p></div>
         <div><p className="text-xs text-slate-500">{patient ? invoice.facilityType : "Patient"}</p><p className="font-semibold text-slate-800">{patient ? invoice.facilityName : invoice.patientName}</p></div>
-        <div><p className="text-xs text-slate-500">Amount</p><p className="font-bold text-slate-900">{money(invoice.totalAmount)}</p></div>
+        <div><p className="text-xs text-slate-500">{patient ? "Patient payable" : "Amount"}</p><p className="font-bold text-slate-900">{money(patient ? (invoice.patientPayable ?? invoice.totalAmount) : invoice.totalAmount)}</p></div>
         <span className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${invoice.status === "PAID" ? "bg-emerald-50 text-emerald-700" : invoice.status === "PARTIALLY_PAID" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"}`}>{invoice.status.replaceAll("_", " ")}</span>
         <span className="text-sm font-semibold text-cyan-700">{open === invoice.id ? "Hide" : "View bill"}</span>
       </button>
       {open === invoice.id && <div className="border-t border-slate-100 bg-slate-50/60 p-5">
         <div className="overflow-x-auto"><table className="w-full min-w-[650px] text-sm"><thead><tr className="text-left text-xs uppercase tracking-wide text-slate-500"><th className="pb-3">Item</th><th>Category</th><th>Qty</th><th>Rate</th><th>Discount</th><th>Tax</th><th className="text-right">Total</th></tr></thead><tbody className="divide-y divide-slate-200">{invoice.items.map((item, index) => <tr key={index}><td className="py-3 font-semibold">{item.name}</td><td>{item.category}</td><td>{item.quantity}</td><td>{money(item.unitPrice)}</td><td>{money(item.discount)}</td><td>{item.taxRate ? `${item.taxRate}%` : "Exempt"}</td><td className="text-right font-bold">{money(item.lineTotal)}</td></tr>)}</tbody></table></div>
-        <div className="ml-auto mt-5 max-w-sm space-y-2 rounded-xl bg-white p-4 text-sm"><Summary label="Subtotal" value={invoice.subtotal} /><Summary label="Discount" value={-invoice.discountTotal} /><Summary label="Tax" value={invoice.taxTotal} /><div className="flex justify-between border-t pt-2 text-base font-black"><span>Total</span><span>{money(invoice.totalAmount)}</span></div></div>
-        {!patient && invoice.status !== "PAID" && onPaid && <button onClick={() => onPaid(invoice.id)} className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white"><CheckCircle2 className="size-4" /> Mark fully paid</button>}
+        <div className="ml-auto mt-5 max-w-sm space-y-2 rounded-xl bg-white p-4 text-sm"><Summary label="Subtotal" value={invoice.subtotal} /><Summary label="Discount" value={-invoice.discountTotal} /><Summary label="Tax" value={invoice.taxTotal} />{!!invoice.insuranceDeduction && <Summary label="Insurance / TPA" value={-invoice.insuranceDeduction} />}{!!invoice.depositAdjusted && <Summary label="Deposit adjusted" value={-invoice.depositAdjusted} />}<div className="flex justify-between border-t pt-2 text-base font-black"><span>{invoice.insuranceDeduction || invoice.depositAdjusted ? "Patient payable" : "Total"}</span><span>{money(invoice.patientPayable ?? invoice.totalAmount)}</span></div></div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <a href={`/api/care/documents/INVOICE/${invoice.id}/pdf`} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700"><Download className="size-4" /> Download verified PDF</a>
+          {typeof navigator !== "undefined" && <a href={`https://wa.me/?text=${encodeURIComponent(`MedicalDocs invoice ${invoice.invoiceNo}: ${window.location.origin}/patient/billing`)}`} target="_blank" rel="noreferrer" className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700">Share on WhatsApp</a>}
+          {typeof navigator !== "undefined" && <a href={`mailto:?subject=${encodeURIComponent(`MedicalDocs invoice ${invoice.invoiceNo}`)}&body=${encodeURIComponent(`Your invoice is available at ${window.location.origin}/patient/billing`)}`} className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700">Share by email</a>}
+          {!patient && invoice.status !== "PAID" && onPaid && <button onClick={() => onPaid(invoice.id)} className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white"><CheckCircle2 className="size-4" /> Mark fully paid</button>}
+        </div>
       </div>}
     </article>
   ))}</div>;

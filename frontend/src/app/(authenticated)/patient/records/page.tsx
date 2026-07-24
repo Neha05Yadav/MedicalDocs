@@ -383,6 +383,16 @@ export default function RecordsAndReportsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 sm:p-8 animate-in fade-in duration-200">
           <div className="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 relative">
             <div className="absolute top-4 right-4 z-10 flex gap-2">
+              {String(selectedReportDetails.type || "").toUpperCase() === "LAB_REPORT" && (
+                <a
+                  href={`/api/care/documents/LAB_REPORT/${encodeURIComponent(selectedReportDetails.id)}/pdf`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full bg-cyan-600 px-4 py-2 text-xs font-bold text-white"
+                >
+                  Verified PDF
+                </a>
+              )}
               {selectedReportDetails.fileUrl && (
                 <a 
                   href={selectedReportDetails.fileUrl.startsWith('http') ? selectedReportDetails.fileUrl : `/uploads/${selectedReportDetails.fileUrl}`}

@@ -3,7 +3,6 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
-  OnModuleInit,
 } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { MysqlService } from '../mysql.service';
@@ -19,35 +18,8 @@ type LineInput = {
 };
 
 @Injectable()
-export class BillingService implements OnModuleInit {
+export class BillingService {
   constructor(private readonly db: MysqlService) {}
-
-  async onModuleInit() {
-    await this.db.query(`CREATE TABLE IF NOT EXISTS billing_catalog (
-      id VARCHAR(36) PRIMARY KEY, facilityId VARCHAR(191) NOT NULL, facilityType VARCHAR(30) NOT NULL,
-      code VARCHAR(40) NULL, name VARCHAR(191) NOT NULL, category VARCHAR(80) NOT NULL,
-      price DECIMAL(12,2) NOT NULL DEFAULT 0, taxRate DECIMAL(5,2) NOT NULL DEFAULT 0,
-      active TINYINT(1) NOT NULL DEFAULT 1, createdAt DATETIME(3) NOT NULL, updatedAt DATETIME(3) NOT NULL,
-      INDEX idx_billing_catalog_facility (facilityId, active)
-    )`);
-    await this.db.query(`CREATE TABLE IF NOT EXISTS billing_invoice (
-      id VARCHAR(36) PRIMARY KEY, invoiceNo VARCHAR(50) NOT NULL UNIQUE, patientId VARCHAR(191) NOT NULL,
-      facilityId VARCHAR(191) NOT NULL, facilityType VARCHAR(30) NOT NULL, facilityName VARCHAR(191) NOT NULL,
-      status VARCHAR(30) NOT NULL DEFAULT 'PENDING', subtotal DECIMAL(12,2) NOT NULL,
-      discountTotal DECIMAL(12,2) NOT NULL DEFAULT 0, taxTotal DECIMAL(12,2) NOT NULL DEFAULT 0,
-      totalAmount DECIMAL(12,2) NOT NULL, amountPaid DECIMAL(12,2) NOT NULL DEFAULT 0,
-      dueDate DATE NULL, notes TEXT NULL, createdAt DATETIME(3) NOT NULL, updatedAt DATETIME(3) NOT NULL,
-      INDEX idx_billing_invoice_patient (patientId, createdAt),
-      INDEX idx_billing_invoice_facility (facilityId, createdAt)
-    )`);
-    await this.db.query(`CREATE TABLE IF NOT EXISTS billing_invoice_item (
-      id VARCHAR(36) PRIMARY KEY, invoiceId VARCHAR(36) NOT NULL, catalogItemId VARCHAR(36) NULL,
-      name VARCHAR(191) NOT NULL, category VARCHAR(80) NOT NULL, quantity DECIMAL(10,2) NOT NULL,
-      unitPrice DECIMAL(12,2) NOT NULL, discount DECIMAL(12,2) NOT NULL DEFAULT 0,
-      taxRate DECIMAL(5,2) NOT NULL DEFAULT 0, taxAmount DECIMAL(12,2) NOT NULL DEFAULT 0,
-      lineTotal DECIMAL(12,2) NOT NULL, INDEX idx_billing_item_invoice (invoiceId)
-    )`);
-  }
 
   private facilityType(role: string) {
     const value = String(role || '').toUpperCase();
@@ -111,6 +83,9 @@ export class BillingService implements OnModuleInit {
       taxTotal: Number(invoice.taxTotal),
       totalAmount: Number(invoice.totalAmount),
       amountPaid: Number(invoice.amountPaid),
+      insuranceDeduction: Number(invoice.insuranceDeduction || 0),
+      depositAdjusted: Number(invoice.depositAdjusted || 0),
+      patientPayable: Number(invoice.patientPayable ?? invoice.totalAmount),
       items: items
         .filter((item) => item.invoiceId === invoice.id)
         .map((item) => ({
@@ -278,8 +253,10 @@ export class BillingService implements OnModuleInit {
       await connection.beginTransaction();
       await connection.execute(
         `INSERT INTO billing_invoice
-        (id, invoiceNo, patientId, facilityId, facilityType, facilityName, status, subtotal, discountTotal, taxTotal, totalAmount, amountPaid, dueDate, notes, createdAt, updatedAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (id, invoiceNo, patientId, facilityId, facilityType, facilityName, encounterType,
+         status, subtotal, discountTotal, taxTotal, totalAmount, amountPaid, patientPayable,
+         dueDate, notes, createdAt, updatedAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           invoiceNo,
@@ -287,12 +264,14 @@ export class BillingService implements OnModuleInit {
           facility.id,
           facility.type,
           facility.name,
+          body.encounterType || 'OPD',
           status,
           subtotal,
           discountTotal,
           taxTotal,
           totalAmount,
           amountPaid,
+          totalAmount,
           body.dueDate || null,
           String(body.notes || '').trim() || null,
           now,
