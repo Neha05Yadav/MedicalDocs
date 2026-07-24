@@ -369,6 +369,16 @@ export default function PrescriptionsClient() {
               </button>
             </div>
             <div className="p-6 space-y-4">
+              {selectedPrescriptionDetails.rawId && (
+                <a
+                  href={`/api/care/documents/PRESCRIPTION/${encodeURIComponent(selectedPrescriptionDetails.rawId)}/pdf`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex w-full items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-bold text-cyan-700"
+                >
+                  Download signed prescription PDF
+                </a>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Prescription ID</p>

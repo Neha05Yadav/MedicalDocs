@@ -40,3 +40,5 @@ frontend/.env*
 !frontend/.env.example
 backend/uploads/
 *.sql
+!backend/migrations/
+!backend/migrations/*.sql

@@ -12,6 +12,7 @@ import { LaboratoryModule } from './laboratory/laboratory.module';
 import { ManagementModule } from './management/management.module';
 import { SupportTicketModule } from './support-ticket/support-ticket.module';
 import { BillingModule } from './billing/billing.module';
+import { CareModule } from './care/care.module';
 
 import { RedisModule } from './redis/redis.module';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -38,6 +39,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     ManagementModule,
     SupportTicketModule,
     BillingModule,
+    CareModule,
   ],
   controllers: [AppController],
   providers: [AppService],

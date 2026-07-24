@@ -34,7 +34,22 @@ Requirements: Node.js 20+ and MySQL.
 
 2. Copy `backend/.env.example` to `backend/.env` and `frontend/.env.example` to `frontend/.env.local`, then enter local credentials.
 
-3. Start the API and frontend in separate terminals:
+3. Create the versioned MySQL schema and optional demo data:
+
+   ```bash
+   npm run db:migrate
+   npm run db:seed
+   ```
+
+   `db:migrate` is safe to run repeatedly and records checksums in `schema_migration`.
+   Demo accounts all use the password `Demo@123`:
+
+   - `patient@demo.com`
+   - `hospital@demo.com`
+   - `clinic@demo.com`
+   - `lab@demo.com`
+
+4. Start the API and frontend in separate terminals:
 
    ```bash
    npm run dev:backend
@@ -50,4 +65,10 @@ npm run build
 npm test
 ```
 
-Database migration and seed utilities are kept in `backend/` until they are consolidated into a versioned migration workflow.
+## Integrated clinical workflows
+
+- Appointment availability, booking, rescheduling, cancellation, reminders, clinician calendar and consultation billing
+- Laboratory test/rate catalogue, discounted packages, home collection, QR sample labels, sample tracking, abnormal result flags and automatic report billing
+- Hospital IPD rooms/beds, admissions, deposits, itemized clinical charges, insurance adjustments, discharge summaries and final bills
+- Insurance policies, cashless/reimbursement claims, TPA decisions, claim documents and patient-payable calculations
+- Professionally generated invoice, prescription, lab report and discharge PDF documents with digital signer metadata, SHA-256 integrity hashes and public QR verification
