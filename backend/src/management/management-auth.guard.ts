@@ -16,6 +16,7 @@ export class ManagementAuthGuard extends AuthGuard('jwt') {
       || (path.startsWith('/api/management/accounts') && role.includes('ACCOUNT'))
       || (path.startsWith('/api/management/sales') && role.includes('SALE'))
       || (path.startsWith('/api/management/support') && role.includes('SUPPORT'))
+      || (path.startsWith('/api/management/super-admin/facilities') && role.includes('SUPPORT'))
       || path === '/api/management/status';
     if (!roleMatchesArea) throw new ForbiddenException('You cannot access another management team dashboard.');
     return user as TUser;

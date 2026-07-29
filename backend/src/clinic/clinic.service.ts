@@ -48,7 +48,7 @@ export class ClinicService {
 
   async getOverview() {
     const doctor = await this.getDoctorContext();
-    const cacheKey = `clinic:overview:v2:${doctor.id}`;
+    const cacheKey = `clinic:overview:v3:${doctor.id}`;
     const cached = await this.redisService.get(cacheKey);
     if (cached) return cached;
 
@@ -60,15 +60,8 @@ export class ClinicService {
     const pendingAppointments = appts.filter(a => a.status === 'SCHEDULED' && new Date(a.dateTime) >= new Date()).length;
     
     // Total Patients
-    const cpRows = await this.db.query('SELECT id FROM clinic_patient WHERE doctorId = ?', [doctor.id]);
-    let totalPatients = cpRows.length;
-    if (totalPatients === 0) {
-      const pMap = new Set();
-      appts.forEach(a => pMap.add(a.patientId));
-      const reqs = await this.db.query('SELECT patientId FROM accessrequest WHERE doctorId = ?', [doctor.id]);
-      reqs.forEach(r => pMap.add(r.patientId));
-      totalPatients = pMap.size;
-    }
+    const linkedPatients = await this.getMyPatients();
+    const totalPatients = linkedPatients.length;
 
     // Prescriptions Issued
     const rxs = await this.db.query('SELECT id FROM prescription WHERE doctorId = ?', [doctor.id]);
@@ -117,13 +110,12 @@ export class ClinicService {
       `, [doctor.id]);
     }
 
-    const allPatients = await this.getPatients();
-    const recentPatients = allPatients.slice(0, 5).map(p => ({
+    const recentPatients = linkedPatients.slice(0, 5).map(p => ({
       id: p.id,
       name: p.name,
       condition: p.diagnosis || 'General',
       age: p.age || 'N/A',
-      last_visit: !p.lastVisit || p.lastVisit === 'N/A' ? null : new Date(p.lastVisit).toISOString()
+      last_visit: !p.lastVisit || p.lastVisit === 'N/A' ? null : p.lastVisit,
     }));
     
     const activePatients = await this.db.query(`
@@ -227,8 +219,53 @@ export class ClinicService {
   // --- Prescriptions Module APIs ---
   async getMyPatients() {
     const doctor = await this.getDoctorContext();
-    const rows = await this.db.query('SELECT * FROM clinic_patient WHERE doctorId = ? ORDER BY createdAt DESC', [doctor.id]);
-    return rows;
+    const customRows = await this.db.query(
+      'SELECT * FROM clinic_patient WHERE doctorId = ? ORDER BY updatedAt DESC',
+      [doctor.id],
+    );
+    const linkedRows = await this.db.query(`
+      SELECT p.*,
+        MAX(activity.activityAt) AS activityAt,
+        MAX(activity.diagnosis) AS diagnosis
+      FROM patient p
+      INNER JOIN (
+        SELECT patientId, MAX(dateTime) AS activityAt, MAX(notes) AS diagnosis
+          FROM appointment WHERE doctorId = ? GROUP BY patientId
+        UNION ALL
+        SELECT patientId, MAX(requestDate), MAX(admissionInfo)
+          FROM accessrequest WHERE doctorId = ? OR hospitalId = ? GROUP BY patientId
+        UNION ALL
+        SELECT patientId, MAX(createdAt), MAX(medicine)
+          FROM prescription WHERE doctorId = ? OR hospitalId = ? GROUP BY patientId
+        UNION ALL
+        SELECT patientId, MAX(createdAt), MAX(description)
+          FROM medicalrecord WHERE hospitalId = ? GROUP BY patientId
+      ) activity ON activity.patientId = p.id
+      GROUP BY p.id
+      ORDER BY activityAt DESC, p.updatedAt DESC
+    `, [doctor.id, doctor.id, doctor.hospitalId, doctor.id, doctor.hospitalId, doctor.hospitalId]);
+
+    const customIds = new Set(customRows.map((row: any) => row.id));
+    const realRows = linkedRows
+      .filter((row: any) => !customIds.has(row.id))
+      .map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        phone: row.phone || '',
+        age: row.dateOfBirth
+          ? Math.max(0, Math.floor((Date.now() - new Date(row.dateOfBirth).getTime()) / 31557600000))
+          : 'N/A',
+        gender: row.gender || 'Unknown',
+        bloodGroup: row.bloodGroup || 'N/A',
+        lastVisit: row.activityAt ? new Date(row.activityAt).toLocaleDateString('en-IN') : 'N/A',
+        diagnosis: row.diagnosis || 'General consultation',
+        followUp: 'Not scheduled',
+        status: 'Treatment Ongoing',
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        source: 'database',
+      }));
+    return [...customRows, ...realRows];
   }
 
   private generatePatientId(name: string, phone: string, year: string) {
@@ -242,7 +279,9 @@ export class ClinicService {
   async createMyPatient(data: any) {
     const doctor = await this.getDoctorContext();
     const year = new Date().getFullYear().toString();
-    const id = this.generatePatientId(data.name, data.phone, year);
+    let id = this.generatePatientId(data.name, data.phone, year);
+    const existing = await this.db.queryOne('SELECT id FROM clinic_patient WHERE id = ?', [id]);
+    if (existing) id = `${id}-${uuidv4().slice(0, 4).toUpperCase()}`;
     await this.db.query(
       'INSERT INTO clinic_patient (id, doctorId, name, phone, age, gender, bloodGroup, lastVisit, diagnosis, followUp, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
@@ -253,8 +292,8 @@ export class ClinicService {
         data.status, new Date(), new Date()
       ]
     );
-    await this.redisService.del(`clinic:patients:${doctor.id}`);
-    await this.redisService.del(`clinic:overview:v2:${doctor.id}`);
+    await this.redisService.del(`clinic:patients:v3:${doctor.id}`);
+    await this.redisService.del(`clinic:overview:v3:${doctor.id}`);
     return { success: true, id };
   }
 
@@ -268,7 +307,7 @@ export class ClinicService {
         data.status, new Date(), id, doctor.id
       ]
     );
-    await this.redisService.del(`clinic:patients:${doctor.id}`);
+    await this.redisService.del(`clinic:patients:v3:${doctor.id}`);
     return { success: true };
   }
 
@@ -277,21 +316,19 @@ export class ClinicService {
     const patient = await this.db.queryOne('SELECT id FROM clinic_patient WHERE id = ? AND doctorId = ?', [id, doctor.id]);
     if (!patient) throw new NotFoundException('Clinic patient not found.');
     await this.db.query('DELETE FROM clinic_patient WHERE id = ? AND doctorId = ?', [id, doctor.id]);
-    await this.redisService.del(`clinic:patients:${doctor.id}`);
-    await this.redisService.del(`clinic:overview:v2:${doctor.id}`);
+    await this.redisService.del(`clinic:patients:v3:${doctor.id}`);
+    await this.redisService.del(`clinic:overview:v3:${doctor.id}`);
     return { success: true };
   }
 
   async getPatients() {
     const doctor = await this.getDoctorContext();
-    const cacheKey = `clinic:patients:${doctor.id}`;
+    const cacheKey = `clinic:patients:v3:${doctor.id}`;
     const cached = await this.redisService.get<any[]>(cacheKey);
     if (cached) return cached;
 
-    const appts = await this.db.query('SELECT patientId FROM appointment WHERE doctorId = ?', [doctor.id]);
-    const reqs = await this.db.query('SELECT patientId FROM accessrequest WHERE doctorId = ?', [doctor.id]);
-
-    const pIds = Array.from(new Set([...appts.map(a => a.patientId), ...reqs.map(r => r.patientId)]));
+    const directoryRows = await this.db.query('SELECT id FROM patient ORDER BY updatedAt DESC, createdAt DESC');
+    const pIds = directoryRows.map((row: any) => row.id);
     const patients: any[] = [];
 
     for (const pid of pIds) {
@@ -339,10 +376,12 @@ export class ClinicService {
           age: p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / 31557600000) : 'N/A',
           gender: p.gender || 'Unknown',
           phone: p.phone || 'N/A',
+          mobile: p.phone || 'N/A',
           lastVisit: lastAppt ? new Date(lastAppt.dateTime).toLocaleDateString() : 'N/A',
           bloodGroup: p.bloodGroup || 'N/A',
           status,
-          accessValidTill: validTill
+          accessValidTill: validTill,
+          validTill
         });
       }
     }
@@ -400,12 +439,14 @@ export class ClinicService {
         id: p.id,
         name: p.name,
         phone: p.phone,
+        mobile: p.phone || 'N/A',
         email: p.email,
         age: p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / 31557600000) : 'N/A',
         gender: p.gender || 'Unknown',
         bloodGroup: p.bloodGroup || 'N/A',
         status,
-        accessValidTill: validTill
+        accessValidTill: validTill,
+        validTill
       });
     }
     return result;
@@ -613,7 +654,7 @@ export class ClinicService {
       }
     }
 
-    await this.redisService.del(`clinic:overview:v2:${doctor.id}`);
+    await this.redisService.del(`clinic:overview:v3:${doctor.id}`);
     return { id: pId };
   }
 
@@ -713,21 +754,19 @@ export class ClinicService {
   }
 
   async getReports() {
-    const doctor = await this.getDoctorContext();
-    const appts = await this.db.query('SELECT patientId FROM appointment WHERE doctorId = ?', [doctor.id]);
-    const reqs = await this.db.query('SELECT patientId FROM accessrequest WHERE doctorId = ?', [doctor.id]);
-
-    const pIds = Array.from(new Set([...appts.map(a => a.patientId), ...reqs.map(r => r.patientId)]));
+    await this.getDoctorContext();
+    const linkedPatients = await this.getMyPatients();
+    const pIds = Array.from(new Set(linkedPatients.map((patient: any) => patient.id)));
     if (pIds.length === 0) return [];
 
-    const pIdsStr = pIds.map(id => `'${id}'`).join(',');
+    const placeholders = pIds.map(() => '?').join(',');
     const records = await this.db.query(`
       SELECT m.*, p.name as patientName 
       FROM medicalrecord m
       LEFT JOIN patient p ON m.patientId = p.id
-      WHERE m.patientId IN (${pIdsStr})
+      WHERE m.patientId IN (${placeholders})
       ORDER BY m.date DESC
-    `);
+    `, pIds);
 
     return records.map(r => ({
       id: r.id,

@@ -46,7 +46,7 @@ export default function DoctorsPage() {
       const res = await fetch(`/api/hospital/doctors?t=${Date.now()}`, { headers: authHeaders(), cache: 'no-store' });
       if (!res.ok) throw new Error("Failed to load doctors");
       const data = await res.json();
-      setDoctors(data);
+      setDoctors(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error(e);
       toast.error("Failed to load doctors");
@@ -68,7 +68,7 @@ export default function DoctorsPage() {
         method: "DELETE", headers: authHeaders()
       });
       if (!res.ok) throw new Error("Failed to delete");
-      setDoctors(doctors.filter(d => d.id !== id));
+      await fetchDoctors();
       toast.success("Doctor removed successfully");
     } catch (e) {
       console.error(e);
@@ -101,8 +101,8 @@ export default function DoctorsPage() {
           body: JSON.stringify(currentDoctor)
         });
         if (!res.ok) throw new Error("Failed to add");
-        const newDoc = await res.json();
-        setDoctors([...doctors, newDoc]);
+        await res.json();
+        await fetchDoctors();
         toast.success("Doctor added successfully");
       } else {
         const res = await fetch(`/api/hospital/doctors/${currentDoctor.id}`, {
@@ -111,8 +111,8 @@ export default function DoctorsPage() {
           body: JSON.stringify(currentDoctor)
         });
         if (!res.ok) throw new Error("Failed to update");
-        const updatedDoc = await res.json();
-        setDoctors(doctors.map(d => d.id === currentDoctor.id ? updatedDoc : d));
+        await res.json();
+        await fetchDoctors();
         toast.success("Doctor updated successfully");
       }
       setIsModalOpen(false);

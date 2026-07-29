@@ -21,6 +21,7 @@ const Phone = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg"
 const Calendar = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
 const HospitalIcon = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="5" y="5" rx="2" ry="2"/><path d="M12 9v6"/><path d="M9 12h6"/></svg>;
 const FlaskConical = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a2 2 0 0 0 1.8 2.95h10.96a2 2 0 0 0 1.8-2.95L14.21 10.42a2 2 0 0 1-.21-.896V2"/><path d="M8.5 2h7"/><path d="M14 16.5 9 11"/></svg>;
+const Plus = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>;
 
 export default function FacilityManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -31,6 +32,9 @@ export default function FacilityManagementPage() {
   // Modal State
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState<any>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [hospitalForm, setHospitalForm] = useState({ name: '', email: '', phone: '', address: '', licenseNumber: '' });
 
   const tabs = ["All Facilities", "Hospitals", "Labs", "Pending Approvals", "Suspended"];
 
@@ -52,6 +56,29 @@ export default function FacilityManagementPage() {
       toast.error("Failed to fetch facilities");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createHospital = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const response = await fetch('/api/management/super-admin/facilities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(hospitalForm),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.message || 'Failed to add hospital');
+      toast.success('Hospital added successfully.');
+      setHospitalForm({ name: '', email: '', phone: '', address: '', licenseNumber: '' });
+      setIsAddModalOpen(false);
+      setActiveTab('Hospitals');
+      await fetchFacilities();
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to add hospital');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -156,9 +183,14 @@ export default function FacilityManagementPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans space-y-6">
-      <div>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Facility Management</h1>
-        <p className="text-sm text-slate-500 mt-1 font-medium">Manage and verify hospitals, clinics, and laboratories on the platform.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Facility Management</h1>
+          <p className="text-sm text-slate-500 mt-1 font-medium">Manage and verify hospitals, clinics, and laboratories on the platform.</p>
+        </div>
+        <button onClick={() => setIsAddModalOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-700">
+          <Plus className="size-4" /> Add Hospital
+        </button>
       </div>
 
       {/* Filters Bar */}
@@ -308,6 +340,41 @@ export default function FacilityManagementPage() {
           </table>
         </div>
       </div>
+
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+          <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-extrabold text-slate-900">Add Hospital</h2>
+                <p className="mt-1 text-sm text-slate-500">Create the hospital workspace and its login account.</p>
+              </div>
+              <button type="button" onClick={() => setIsAddModalOpen(false)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X className="size-5" /></button>
+            </div>
+            <form onSubmit={createHospital} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {[
+                ['name', 'Hospital name', 'text'],
+                ['email', 'Admin email', 'email'],
+                ['phone', 'Phone number', 'tel'],
+                ['licenseNumber', 'License number', 'text'],
+              ].map(([key, label, type]) => (
+                <label key={key} className="space-y-1.5 text-sm font-bold text-slate-700">
+                  <span>{label}</span>
+                  <input required={key !== 'licenseNumber'} type={type} value={(hospitalForm as any)[key]} onChange={event => setHospitalForm(current => ({ ...current, [key]: event.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-medium outline-none focus:border-indigo-500" />
+                </label>
+              ))}
+              <label className="space-y-1.5 text-sm font-bold text-slate-700 sm:col-span-2">
+                <span>Address</span>
+                <textarea required rows={3} value={hospitalForm.address} onChange={event => setHospitalForm(current => ({ ...current, address: event.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-medium outline-none focus:border-indigo-500" />
+              </label>
+              <div className="flex justify-end gap-3 sm:col-span-2">
+                <button type="button" onClick={() => setIsAddModalOpen(false)} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600">Cancel</button>
+                <button disabled={saving} type="submit" className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Adding...' : 'Add Hospital'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Profile & Verification Modal */}
       {isProfileModalOpen && selectedFacility && (

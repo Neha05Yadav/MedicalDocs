@@ -15,12 +15,18 @@ export class LaboratoryService {
   private async getHospitalContext(userEmail: string | undefined) {
     let hospital: any = null;
     if (userEmail) {
-      hospital = await this.db.queryOne('SELECT * FROM hospital WHERE email = ? AND type IN ("LABORATORY", "LAB")', [userEmail]);
+      // The explicit user-to-facility link is the tenant boundary. Legacy data
+      // can contain duplicate facility rows sharing an email, so email-only
+      // lookup may silently open an empty workspace.
+      const user = await this.db.queryOne('SELECT hospitalId FROM user WHERE email = ?', [userEmail]);
+      if (user?.hospitalId) {
+        hospital = await this.db.queryOne('SELECT * FROM hospital WHERE id = ? AND type IN ("LABORATORY", "LAB")', [user.hospitalId]);
+      }
       if (!hospital) {
-        const user = await this.db.queryOne('SELECT hospitalId FROM user WHERE email = ?', [userEmail]);
-        if (user && user.hospitalId) {
-          hospital = await this.db.queryOne('SELECT * FROM hospital WHERE id = ? AND type IN ("LABORATORY", "LAB")', [user.hospitalId]);
-        }
+        hospital = await this.db.queryOne(
+          'SELECT * FROM hospital WHERE LOWER(email) = LOWER(?) AND type IN ("LABORATORY", "LAB") ORDER BY isVerified DESC, updatedAt DESC LIMIT 1',
+          [userEmail],
+        );
       }
     }
     if (!hospital) throw new UnauthorizedException('No laboratory workspace is linked to this identity.');
@@ -268,8 +274,17 @@ export class LaboratoryService {
     const hospital = await this.getHospitalContext(userEmail);
     
     const patients = await this.db.query(
-      `SELECT DISTINCT p.* FROM patient p JOIN medicalrecord m ON p.id = m.patientId WHERE m.hospitalId = ? AND m.type = 'LAB_REPORT' AND (p.name LIKE ? OR p.id LIKE ? OR p.phone LIKE ?) LIMIT 10`,
-      [hospital.id, `%${query}%`, `%${query}%`, `%${query}%`]
+      `SELECT p.*,
+              (SELECT ar.status
+               FROM accessrequest ar
+               WHERE ar.patientId = p.id AND ar.hospitalId = ?
+               ORDER BY ar.updatedAt DESC LIMIT 1) AS accessStatus,
+              (SELECT MAX(m.date) FROM medicalrecord m WHERE m.patientId = p.id) AS lastTest
+       FROM patient p
+       WHERE p.name LIKE ? OR p.id LIKE ? OR p.phone LIKE ? OR p.email LIKE ?
+       ORDER BY p.updatedAt DESC
+       LIMIT 10`,
+      [hospital.id, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`]
     );
     
     return patients.map(p => {
@@ -280,6 +295,8 @@ export class LaboratoryService {
         gender: p.gender || 'Unknown',
         phone: p.phone || 'N/A',
         email: p.email || 'N/A',
+        lastTest: p.lastTest ? new Date(p.lastTest).toLocaleDateString() : 'N/A',
+        accessStatus: p.accessStatus || 'NOT_REQUESTED',
       };
     });
   }
@@ -287,7 +304,15 @@ export class LaboratoryService {
   async getPatients(userEmail?: string) {
     const hospital = await this.getHospitalContext(userEmail);
     const patients = await this.db.query(
-      `SELECT DISTINCT p.* FROM patient p JOIN medicalrecord m ON p.id = m.patientId WHERE m.hospitalId = ? AND m.type = 'LAB_REPORT' ORDER BY p.createdAt DESC LIMIT 50`,
+      `SELECT p.*,
+              (SELECT ar.status
+               FROM accessrequest ar
+               WHERE ar.patientId = p.id AND ar.hospitalId = ?
+               ORDER BY ar.updatedAt DESC LIMIT 1) AS accessStatus,
+              (SELECT MAX(m.date) FROM medicalrecord m WHERE m.patientId = p.id) AS lastTest
+       FROM patient p
+       ORDER BY p.updatedAt DESC
+       LIMIT 50`,
       [hospital.id]
     );
 
@@ -299,31 +324,69 @@ export class LaboratoryService {
         gender: p.gender || 'Unknown',
         phone: p.phone || 'N/A',
         email: p.email || 'N/A',
-        lastTest: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'N/A',
+        lastTest: p.lastTest ? new Date(p.lastTest).toLocaleDateString() : 'N/A',
+        accessStatus: p.accessStatus || 'NOT_REQUESTED',
       };
     });
   }
 
   async requestAccess(userEmail: string | undefined, patientId: string) {
     const hospital = await this.getHospitalContext(userEmail);
-    await this.db.query(
-      'INSERT INTO accessrequest (id, patientId, hospitalId, status, updatedAt, requestDate, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [uuidv4(), patientId, hospital.id, 'PENDING', new Date(), new Date(), new Date()]
+    const patient = await this.db.queryOne<any>('SELECT id, name, email FROM patient WHERE id = ?', [patientId]);
+    if (!patient) throw new NotFoundException('Patient not found');
+    const existing = await this.db.queryOne<any>(
+      'SELECT id FROM accessrequest WHERE patientId = ? AND hospitalId = ? ORDER BY updatedAt DESC LIMIT 1',
+      [patientId, hospital.id],
     );
+    const now = new Date();
+    if (existing) {
+      await this.db.query(
+        `UPDATE accessrequest
+         SET status = 'PENDING', requestDate = ?, updatedAt = ?
+         WHERE id = ?`,
+        [now, now, existing.id],
+      );
+    } else {
+      await this.db.query(
+        'INSERT INTO accessrequest (id, patientId, hospitalId, status, updatedAt, requestDate, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [uuidv4(), patientId, hospital.id, 'PENDING', now, now, now],
+      );
+    }
+    if (patient.email) {
+      const patientUser = await this.db.queryOne<any>(
+        'SELECT id FROM user WHERE LOWER(email) = LOWER(?)',
+        [patient.email],
+      );
+      if (patientUser) {
+        await this.db.query(
+          `INSERT INTO notification
+             (id, userId, type, title, message, isRead, actionRequired, severity, createdAt, updatedAt)
+           VALUES (?, ?, 'ACCESS_REQUEST', 'New laboratory access request', ?, 0, 1, 'Medium', ?, ?)`,
+          [uuidv4(), patientUser.id, `${hospital.name} requested access to your medical records.`, now, now],
+        );
+      }
+    }
     return { success: true };
   }
 
   async getPatientRecords(userEmail: string | undefined, patientId: string) {
     const hospital = await this.getHospitalContext(userEmail);
-    // Directly fetch records without checking accessrequest
+    const access = await this.db.queryOne<any>(
+      `SELECT status FROM accessrequest
+       WHERE patientId = ? AND hospitalId = ?
+       ORDER BY updatedAt DESC LIMIT 1`,
+      [patientId, hospital.id],
+    );
+    const hasApprovedAccess = String(access?.status || '').toUpperCase() === 'APPROVED';
 
     const records = await this.db.query(`
       SELECT m.*, h.name as hospitalName 
       FROM medicalrecord m
       LEFT JOIN hospital h ON m.hospitalId = h.id
-      WHERE m.patientId = ? AND m.hospitalId = ?
+      WHERE m.patientId = ?
+        AND (? = 1 OR m.hospitalId = ?)
       ORDER BY m.date DESC
-    `, [patientId, hospital.id]);
+    `, [patientId, hasApprovedAccess ? 1 : 0, hospital.id]);
 
     return records.map(r => ({
       id: r.id,
@@ -499,21 +562,27 @@ export class LaboratoryService {
       new Date()
     ]);
 
-    // Send notification to patient
-    await this.db.query(`
-      INSERT INTO notification (id, userId, title, message, type, isRead, actionRequired, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      uuidv4(),
-      testReq.patientId,
-      'Lab Report Ready',
-      `Your lab report for ${testReq.testType} is ready.`,
-      'Report',
-      false,
-      false,
-      new Date(),
-      new Date()
-    ]);
+    // Notifications are owned by the authenticated user record, not patient IDs.
+    const patient = await this.db.queryOne<any>('SELECT email FROM patient WHERE id = ?', [testReq.patientId]);
+    const patientUser = patient?.email
+      ? await this.db.queryOne<any>('SELECT id FROM user WHERE LOWER(email) = LOWER(?)', [patient.email])
+      : null;
+    if (patientUser) {
+      await this.db.query(`
+        INSERT INTO notification (id, userId, title, message, type, isRead, actionRequired, createdAt, updatedAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        uuidv4(),
+        patientUser.id,
+        'Lab Report Ready',
+        `Your lab report for ${testReq.testType} is ready.`,
+        'Report',
+        false,
+        false,
+        new Date(),
+        new Date()
+      ]);
+    }
 
     return { success: true, fileUrl };
   }

@@ -23,6 +23,7 @@ export default function DashboardHeaderClient() {
   const isHospital = path.startsWith("/hospital");
   const isClinic = path.startsWith("/clinic");
   const isLaboratory = path.startsWith("/laboratory");
+  const isPatient = path.startsWith("/patient");
 
   useEffect(() => {
     // Get user from local storage
@@ -41,6 +42,38 @@ export default function DashboardHeaderClient() {
       console.error(e);
     }
 
+    // The database profile is authoritative. Refresh the cached login name so
+    // an existing browser session cannot keep showing an older/mismatched name.
+    const refreshPatientIdentity = async () => {
+      if (!isPatient) return;
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      try {
+        const response = await fetch("/api/patient/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) return;
+        const profile = await response.json();
+        if (!profile?.name) return;
+
+        setUserName(profile.name);
+        const parts = String(profile.name).trim().split(/\s+/);
+        setUserInitials(
+          (parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : parts[0][0]).toUpperCase(),
+        );
+
+        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+        localStorage.setItem(
+          "user",
+          JSON.stringify({ ...storedUser, name: profile.name, email: profile.email, id: storedUser.id || profile.id }),
+        );
+      } catch {
+        // Keep the last known identity while the backend is temporarily unavailable.
+      }
+    };
+
+    refreshPatientIdentity();
+
     // Fetch unread notifications
     const fetchNotifications = async () => {
       try {
@@ -51,7 +84,12 @@ export default function DashboardHeaderClient() {
         if (isHospital) endpoint = "/api/hospital/notifications";
         else if (isClinic) endpoint = "/api/clinic/notifications";
         else if (isLaboratory) endpoint = "/api/laboratory/notifications";
-        else if (!isSuperAdmin && !isSales && !isAccounts && !isAdmin && !isSupport) {
+        else if (isSupport) endpoint = "/api/support-tickets/notifications";
+        else if (isSuperAdmin) endpoint = "/api/management/super-admin/notifications";
+        else if (isSales) endpoint = "/api/management/sales/notifications";
+        else if (isAccounts) endpoint = "/api/management/accounts/notifications";
+        else if (isAdmin) endpoint = "/api/management/admin/notifications";
+        else {
           endpoint = "/api/patient/notifications";
         }
 
@@ -61,12 +99,24 @@ export default function DashboardHeaderClient() {
           });
           if (res.ok) {
             const data = await res.json();
-            const unread = data.filter((n: any) => !n.isRead && !n.read).length;
+            const notifications = Array.isArray(data) ? data : data.notifications || [];
+            const unread = notifications.filter((notification: any) => {
+              const isRead =
+                notification.isRead === true ||
+                notification.isRead === 1 ||
+                notification.read === true ||
+                notification.read === 1 ||
+                notification.is_read === true ||
+                notification.is_read === 1;
+
+              return !isRead;
+            }).length;
             setUnreadCount(unread);
           }
         }
       } catch (err) {
-        console.error(err);
+        // Silently ignore fetch errors during background polling
+        // This prevents terminal spam (TypeError: Failed to fetch) when the backend restarts
       }
     };
 
@@ -81,7 +131,7 @@ export default function DashboardHeaderClient() {
       clearInterval(interval);
       window.removeEventListener('notificationsRead', fetchNotifications);
     };
-  }, [isHospital, isSuperAdmin, isSales, isAccounts, isAdmin, isSupport, isClinic, isLaboratory]);
+  }, [isHospital, isSuperAdmin, isSales, isAccounts, isAdmin, isSupport, isClinic, isLaboratory, isPatient]);
   const getHeaderInfo = () => {
     // Collect all navigation items
     const allRoutes = [

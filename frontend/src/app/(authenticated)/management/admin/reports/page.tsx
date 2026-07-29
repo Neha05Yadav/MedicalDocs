@@ -1,306 +1,267 @@
 "use client";
-const FileText = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>;
-const Search = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>;
-const Filter = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"></path></svg>;
-const Download = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg>;
-const Eye = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path><circle cx="12" cy="12" r="3"></circle></svg>;
-const Calendar = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>;
-const MapPin = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"></path><circle cx="12" cy="10" r="3"></circle></svg>;
-const CheckCircle2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>;
-const ChevronDown = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>;
-const File = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path></svg>;
-const Flag = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>;
-const Trash2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
-const AlertTriangle = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>;
 
+import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, Calendar, ChevronRight, FileText, Flag, Mail, Phone, Search, Trash2, UserRound, X } from "lucide-react";
+import { toast } from "sonner";
 
+type Report = {
+  id: string;
+  title: string;
+  description?: string | null;
+  type: string;
+  category: string;
+  fileUrl?: string | null;
+  date: string;
+  status: string;
+  hospital: { id?: string | null; name: string; type: string };
+};
 
+type Patient = {
+  id: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  age?: number | null;
+  gender: string;
+  bloodGroup: string;
+  registeredAt: string;
+  reportCount: number;
+  lastReportAt?: string | null;
+  reports: Report[];
+};
 
-
-
-
-
-
-
-
-import React, { useState, useEffect } from 'react';
-import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+const dateText = (value?: string | null) => {
+  if (!value) return "Not available";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "Not available"
+    : date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+};
 
 export default function ReportsMonitoringPage() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<any>(null);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [reports, setReports] = useState<any[]>([]);
+  const apiBase = "/api/management/admin/reports";
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [selectedId, setSelectedId] = useState("");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
-
-  useEffect(() => {
-    fetchReports();
-  }, []);
-
-  const fetchReports = async () => {
+  const load = async (preferredId?: string) => {
     try {
-      setLoading(true);
-      const res = await fetch('/api/management/admin/reports');
-      if (res.ok) {
-        const data = await res.json();
-        setReports(data);
-      }
-    } catch (e) {
-      console.error('Error fetching reports', e);
-      toast.error('Failed to fetch reports');
+      const response = await fetch(`${apiBase}/patients`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.message || "Failed to load report monitoring");
+      const rows: Patient[] = Array.isArray(data) ? data : [];
+      setPatients(rows);
+      setSelectedId(current => {
+        const wanted = preferredId || current;
+        return rows.some(patient => patient.id === wanted) ? wanted : rows[0]?.id || "";
+      });
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to load patients and reports");
     } finally {
       setLoading(false);
     }
   };
 
-  const [reportToDelete, setReportToDelete] = useState<string | null>(null);
+  useEffect(() => { void load(); }, []);
 
-  const handleFlagReport = async (id: string, currentStatus: string) => {
-    try {
-      const newStatus = currentStatus === 'Flagged' ? 'Available' : 'Flagged';
-      const res = await fetch(`/api/management/admin/reports/${id}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
-      });
-      if (res.ok) {
-        toast.success(`Report marked as ${newStatus}`);
-        fetchReports();
-      }
-    } catch (e) {
-      toast.error('Error updating report status');
-    }
-  };
+  const filteredPatients = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return patients;
+    return patients.filter(patient =>
+      patient.name.toLowerCase().includes(query) ||
+      patient.id.toLowerCase().includes(query) ||
+      String(patient.email || "").toLowerCase().includes(query) ||
+      String(patient.phone || "").includes(query)
+    );
+  }, [patients, search]);
 
-  const handleDeleteReport = async () => {
-    if (!reportToDelete) return;
-    try {
-      const res = await fetch(`/api/management/admin/reports/${reportToDelete}`, {
-        method: 'DELETE'
-      });
-      if (res.ok) {
-        toast.success('Report permanently deleted');
-        setReportToDelete(null);
-        fetchReports();
-      }
-    } catch (e) {
-      toast.error('Error deleting report');
-    }
-  };
-
-  const openViewModal = (report: any) => {
-    setSelectedReport(report);
-    setIsViewModalOpen(true);
-  };
-
-  const filteredReports = reports.filter(rep => 
-    rep.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    rep.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    rep.hospital?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  const selectedPatient = patients.find(patient => patient.id === selectedId) || null;
+  const totalReports = patients.reduce((sum, patient) => sum + patient.reportCount, 0);
+  const flaggedReports = patients.reduce(
+    (sum, patient) => sum + patient.reports.filter(report => report.status === "Flagged").length,
+    0,
   );
 
-  const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
-  const paginatedReports = filteredReports.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-  return (
-    <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans">
-      {/* Header section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-end gap-4 mb-8">
-      </div>
-      {/* Filters and Search */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-6 flex justify-end items-center">
-        <div className="relative w-full sm:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="Search by ID, Patient, or Facility..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
-          />
-        </div>
-      </div>
-      {/* Reports Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
-              <tr>
-                <th className="px-6 py-4">Report ID / Type</th>
-                <th className="px-6 py-4">Patient</th>
-                <th className="px-6 py-4">Facility</th>
-                <th className="px-6 py-4">Date</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {paginatedReports.map(report => (
-                <tr key={report.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="font-bold text-slate-900 group-hover:text-rose-600 transition-colors line-clamp-1">{report.id}</div>
-                    <div className="text-xs font-semibold text-slate-500 mt-0.5">{report.type}</div>
-                  </td>
-                  <td className="px-6 py-4 font-bold text-slate-700 line-clamp-1">
-                    {report.patient?.name || 'Unknown Patient'}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1.5 text-slate-600">
-                      <MapPin className="size-3.5 text-slate-400" />
-                      <span className="font-medium line-clamp-1">{report.hospital?.name || 'External'}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1.5 text-slate-600">
-                      <Calendar className="size-3.5 text-slate-400" />
-                      <span className="font-medium">{new Date(report.date || report.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    {report.status === "Flagged" ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-rose-50 text-rose-600 border border-rose-100">
-                        <AlertTriangle className="size-3" /> Flagged
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-100">
-                        <CheckCircle2 className="size-3" /> Available
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-right flex justify-end gap-2">
-                    <button onClick={() => openViewModal(report)} title="View Report" className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                      <Eye className="size-4" />
-                    </button>
-                    <button 
-                      onClick={() => handleFlagReport(report.id, report.status)} 
-                      title={report.status === 'Flagged' ? "Unflag Report" : "Flag as Suspicious"}
-                      className={`p-2 rounded-lg transition-colors ${report.status === 'Flagged' ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50 bg-amber-50' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50'}`}
-                    >
-                      <Flag className="size-4" />
-                    </button>
-                    <button onClick={() => setReportToDelete(report.id)} title="Delete Report" className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
-                      <Trash2 className="size-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {filteredReports.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
-                    <FileText className="size-10 text-slate-300 mx-auto mb-3" />
-                    <p className="text-slate-500 font-medium">No reports found.</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 bg-slate-50">
-            <p className="text-xs text-slate-500 font-medium">
-              Showing <span className="font-bold text-slate-900">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-slate-900">{Math.min(currentPage * itemsPerPage, filteredReports.length)}</span> of <span className="font-bold text-slate-900">{filteredReports.length}</span> reports
-            </p>
-            <div className="flex gap-2">
-              <button 
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 text-xs font-bold bg-white border border-slate-200 text-slate-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors shadow-sm"
-              >
-                Previous
-              </button>
-              <button 
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1.5 text-xs font-bold bg-white border border-slate-200 text-slate-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors shadow-sm"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-      {/* View Report Modal */}
-      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="max-w-md bg-white">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-900">Report Metadata Details</DialogTitle>
-          </DialogHeader>
-          {selectedReport && (
-            <div className="space-y-5 py-4">
-              <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-lg text-sm font-medium flex items-start gap-2 mb-2">
-                <span className="text-amber-500 mt-0.5">⚠️</span>
-                Due to privacy policies, actual medical reports and attachments cannot be viewed or downloaded by administrators. You can only view the metadata.
-              </div>
-              <div>
-                <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Patient Name</span>
-                <div className="font-semibold text-slate-900 text-base">{selectedReport.patient?.name || 'Unknown'}</div>
-              </div>
-              <div>
-                <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Report Type / Title</span>
-                <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                  <div className="p-2 bg-white rounded-lg shadow-sm border border-slate-100">
-                    <FileText className="size-6 text-slate-400" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-bold text-slate-900 line-clamp-1">{selectedReport.title || `${selectedReport.type} Report`}</div>
-                    <div className="text-xs text-slate-500 font-medium mt-0.5">Attachment access restricted</div>
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Uploaded By Lab/Hospital</span>
-                  <div className="font-semibold text-slate-900">{selectedReport.hospital?.name || 'External'}</div>
-                </div>
-                <div>
-                  <span className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Upload Date</span>
-                  <div className="font-semibold text-slate-900">{new Date(selectedReport.date || selectedReport.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
-                </div>
-              </div>
-            </div>
-          )}
-          <div className="flex justify-end pt-4 border-t border-slate-100">
-            <button onClick={() => setIsViewModalOpen(false)} className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-black transition-colors w-full sm:w-auto">
-              Close
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
+  const toggleFlag = async (report: Report) => {
+    const status = report.status === "Flagged" ? "Available" : "Flagged";
+    const response = await fetch(`${apiBase}/${encodeURIComponent(report.id)}/status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    if (!response.ok) return toast.error("Report status could not be updated");
+    toast.success(`Report marked as ${status}`);
+    await load(selectedId);
+  };
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!reportToDelete} onOpenChange={(isOpen) => !isOpen && setReportToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the report from our servers.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteReport} className="bg-rose-600 hover:bg-rose-700">Delete Permanently</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+  const deleteReport = async () => {
+    if (!deletingId) return;
+    const response = await fetch(`${apiBase}/${encodeURIComponent(deletingId)}`, { method: "DELETE" });
+    if (!response.ok) return toast.error("Report could not be deleted");
+    toast.success("Report permanently deleted");
+    setDeletingId(null);
+    setSelectedReport(null);
+    await load(selectedId);
+  };
+
+  return (
+    <div className="mx-auto min-h-screen w-full max-w-[1500px] space-y-6 p-6 lg:p-8">
+      <div className="grid gap-4 sm:grid-cols-3">
+        {[
+          ["Registered Patients", patients.length, "bg-indigo-50 text-indigo-700"],
+          ["Medical Reports", totalReports, "bg-cyan-50 text-cyan-700"],
+          ["Flagged Reports", flaggedReports, "bg-rose-50 text-rose-700"],
+        ].map(([label, value, color]) => (
+          <div key={String(label)} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-xs font-extrabold uppercase tracking-wider text-slate-500">{label}</p>
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-3xl font-black text-slate-900">{value}</span>
+              <span className={`rounded-xl p-2.5 ${color}`}><FileText className="size-5" /></span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid min-h-[650px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:grid-cols-[360px_1fr]">
+        <aside className="border-b border-slate-200 bg-slate-50/60 lg:border-b-0 lg:border-r">
+          <div className="border-b border-slate-200 p-5">
+            <h2 className="text-lg font-extrabold text-slate-900">Patient Directory</h2>
+            <p className="mt-1 text-sm text-slate-500">Select a patient to inspect report metadata.</p>
+            <div className="relative mt-4">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+              <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Name, ID, email or phone" className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-indigo-500" />
+            </div>
+          </div>
+          <div className="max-h-[590px] overflow-y-auto p-3">
+            {loading ? (
+              <p className="p-6 text-center text-sm text-slate-500">Loading patients...</p>
+            ) : filteredPatients.length === 0 ? (
+              <p className="p-6 text-center text-sm text-slate-500">No patients found.</p>
+            ) : filteredPatients.map(patient => (
+              <button key={patient.id} onClick={() => setSelectedId(patient.id)} className={`mb-2 flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${selectedId === patient.id ? "border-indigo-200 bg-indigo-50 shadow-sm" : "border-transparent hover:border-slate-200 hover:bg-white"}`}>
+                <span className={`flex size-11 shrink-0 items-center justify-center rounded-xl font-black ${selectedId === patient.id ? "bg-indigo-600 text-white" : "bg-white text-slate-600 shadow-sm"}`}>
+                  {patient.name.split(/\s+/).map(part => part[0]).slice(0, 2).join("").toUpperCase()}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-extrabold text-slate-900">{patient.name}</span>
+                  <span className="mt-0.5 block truncate text-xs font-medium text-slate-500">{patient.id} · {patient.reportCount} report{patient.reportCount === 1 ? "" : "s"}</span>
+                </span>
+                <ChevronRight className="size-4 text-slate-400" />
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        <main className="min-w-0">
+          {!selectedPatient ? (
+            <div className="flex h-full min-h-[500px] flex-col items-center justify-center text-slate-400">
+              <UserRound className="mb-3 size-12" />
+              <p className="font-bold">Select a patient</p>
+            </div>
+          ) : (
+            <>
+              <div className="border-b border-slate-200 bg-gradient-to-r from-indigo-50/70 to-cyan-50/50 p-6">
+                <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-start">
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <span className="flex size-14 items-center justify-center rounded-2xl bg-indigo-600 text-lg font-black text-white">
+                        {selectedPatient.name.split(/\s+/).map(part => part[0]).slice(0, 2).join("").toUpperCase()}
+                      </span>
+                      <div>
+                        <h2 className="text-2xl font-black text-slate-900">{selectedPatient.name}</h2>
+                        <p className="text-sm font-bold text-indigo-700">Patient ID: {selectedPatient.id}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-3">
+                    <span><b className="block text-xs uppercase text-slate-400">Age / Gender</b>{selectedPatient.age ?? "N/A"} / {selectedPatient.gender}</span>
+                    <span><b className="block text-xs uppercase text-slate-400">Blood Group</b>{selectedPatient.bloodGroup}</span>
+                    <span><b className="block text-xs uppercase text-slate-400">Registered</b>{dateText(selectedPatient.registeredAt)}</span>
+                  </div>
+                </div>
+                <div className="mt-5 flex flex-wrap gap-3 text-sm text-slate-600">
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/80 px-3 py-2"><Phone className="size-4 text-indigo-500" />{selectedPatient.phone || "No phone"}</span>
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/80 px-3 py-2"><Mail className="size-4 text-indigo-500" />{selectedPatient.email || "No email"}</span>
+                </div>
+              </div>
+
+              <div className="p-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-extrabold text-slate-900">Medical Reports</h3>
+                    <p className="text-sm text-slate-500">{selectedPatient.reportCount} report records found in the database.</p>
+                  </div>
+                </div>
+                {selectedPatient.reports.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-slate-300 p-12 text-center">
+                    <FileText className="mx-auto mb-3 size-10 text-slate-300" />
+                    <p className="font-bold text-slate-600">No reports uploaded for this patient</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedPatient.reports.map(report => (
+                      <div key={report.id} className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 transition hover:border-indigo-200 hover:shadow-sm xl:flex-row xl:items-center">
+                        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-700"><FileText className="size-5" /></span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button onClick={() => setSelectedReport(report)} className="truncate text-left font-extrabold text-slate-900 hover:text-indigo-600">{report.title}</button>
+                            {report.status === "Flagged" && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-black uppercase text-rose-600">Flagged</span>}
+                          </div>
+                          <p className="mt-1 text-xs font-medium text-slate-500">{report.id} · {report.type} · {report.hospital.name}</p>
+                        </div>
+                        <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-500"><Calendar className="size-4" />{dateText(report.date)}</span>
+                        <div className="flex gap-2">
+                          <button onClick={() => setSelectedReport(report)} className="rounded-lg bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700">View info</button>
+                          <button onClick={() => void toggleFlag(report)} title="Flag report" className="rounded-lg border border-slate-200 p-2 text-amber-600 hover:bg-amber-50"><Flag className="size-4" /></button>
+                          <button onClick={() => setDeletingId(report.id)} title="Delete report" className="rounded-lg border border-slate-200 p-2 text-rose-600 hover:bg-rose-50"><Trash2 className="size-4" /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </main>
+      </div>
+
+      {selectedReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between">
+              <div><h3 className="text-xl font-black text-slate-900">{selectedReport.title}</h3><p className="mt-1 text-sm text-slate-500">{selectedReport.id}</p></div>
+              <button onClick={() => setSelectedReport(null)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X className="size-5" /></button>
+            </div>
+            <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              Admin monitoring shows metadata only; medical attachments remain privacy-restricted.
+            </div>
+            <dl className="mt-5 grid grid-cols-2 gap-4 text-sm">
+              <div><dt className="font-bold text-slate-400">Patient</dt><dd className="mt-1 font-bold text-slate-800">{selectedPatient?.name}</dd></div>
+              <div><dt className="font-bold text-slate-400">Report type</dt><dd className="mt-1 font-bold text-slate-800">{selectedReport.type}</dd></div>
+              <div><dt className="font-bold text-slate-400">Facility</dt><dd className="mt-1 font-bold text-slate-800">{selectedReport.hospital.name}</dd></div>
+              <div><dt className="font-bold text-slate-400">Date</dt><dd className="mt-1 font-bold text-slate-800">{dateText(selectedReport.date)}</dd></div>
+              <div className="col-span-2"><dt className="font-bold text-slate-400">Description</dt><dd className="mt-1 text-slate-700">{selectedReport.description || "No description provided."}</dd></div>
+            </dl>
+          </div>
+        </div>
+      )}
+
+      {deletingId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/55 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-2xl">
+            <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-rose-50 text-rose-600"><AlertTriangle className="size-6" /></span>
+            <h3 className="mt-4 text-xl font-black text-slate-900">Delete report permanently?</h3>
+            <p className="mt-2 text-sm text-slate-500">This action cannot be undone.</p>
+            <div className="mt-6 flex gap-3">
+              <button onClick={() => setDeletingId(null)} className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 font-bold text-slate-700">Cancel</button>
+              <button onClick={() => void deleteReport()} className="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 font-bold text-white">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

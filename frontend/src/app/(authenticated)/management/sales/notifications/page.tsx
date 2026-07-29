@@ -22,8 +22,22 @@ export default function SalesNotificationsPage() {
   useEffect(() => {
     fetch('/api/management/sales/notifications')
       .then(res => res.json())
-      .then(data => {
-        setNotifications(data.notifications || []);
+      .then(async data => {
+        const fetchedNotifications = data.notifications || [];
+        setNotifications(fetchedNotifications);
+        if (fetchedNotifications.some((notification: any) => !notification.isRead)) {
+          const response = await fetch('/api/management/sales/notifications', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'mark_all_read' }),
+          });
+          if (response.ok) {
+            setNotifications(
+              fetchedNotifications.map((notification: any) => ({ ...notification, isRead: true })),
+            );
+            window.dispatchEvent(new Event('notificationsRead'));
+          }
+        }
         setLoading(false);
       })
       .catch(err => {

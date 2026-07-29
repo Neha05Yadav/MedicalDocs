@@ -13,12 +13,19 @@ export class HospitalService {
   ) {}
 
   private async getHospitalByEmail(userEmail: string) {
-    let hospital = await this.db.queryOne('SELECT * FROM hospital WHERE email = ? AND type = "HOSPITAL"', [userEmail]);
+    // Resolve the account's explicit tenant first. Email-only matching is a
+    // compatibility fallback because historical imports can contain duplicate
+    // facilities with the same email.
+    let hospital: any = null;
+    const user = await this.db.queryOne('SELECT hospitalId FROM user WHERE email = ?', [userEmail]);
+    if (user?.hospitalId) {
+      hospital = await this.db.queryOne('SELECT * FROM hospital WHERE id = ? AND type = "HOSPITAL"', [user.hospitalId]);
+    }
     if (!hospital) {
-      const user = await this.db.queryOne('SELECT hospitalId FROM user WHERE email = ?', [userEmail]);
-      if (user && user.hospitalId) {
-        hospital = await this.db.queryOne('SELECT * FROM hospital WHERE id = ? AND type = "HOSPITAL"', [user.hospitalId]);
-      }
+      hospital = await this.db.queryOne(
+        'SELECT * FROM hospital WHERE LOWER(email) = LOWER(?) AND type = "HOSPITAL" ORDER BY isVerified DESC, updatedAt DESC LIMIT 1',
+        [userEmail],
+      );
     }
     if (!hospital) throw new UnauthorizedException('No hospital workspace is linked to this identity.');
     return hospital;
@@ -35,7 +42,7 @@ export class HospitalService {
   async getOverview(userEmail: string) {
     const cacheKey = `hospital:overview:${userEmail}`;
     const cached = await this.redisService.get(cacheKey);
-    // if (cached) return cached; // Temporarily bypass to reflect mock chart data
+    if (cached) return cached;
 
     const hospital = await this.getHospitalByEmail(userEmail);
 
@@ -88,13 +95,6 @@ export class HospitalService {
       const key = localDateKey(date);
       return { name: date.toLocaleDateString('en-US', { weekday: 'short' }), reports: reportsByDate.get(key) || 0 };
     });
-
-    // Add realistic dummy data if there are no reports at all, to make the UI look good
-    const totalReports = reportStats.reduce((sum, stat) => sum + stat.reports, 0);
-    if (totalReports === 0) {
-      const dummyData = [4, 7, 5, 12, 9, 15, 11]; // Realistic looking trend
-      reportStats.forEach((stat, idx) => stat.reports = dummyData[idx]);
-    }
 
     const deptStatsRow = await this.db.query(`
       SELECT d.specialization as name, COUNT(DISTINCT d.id) as doctors, COUNT(a.id) as patients,
@@ -204,16 +204,21 @@ export class HospitalService {
   }
 
   async updateDoctor(userEmail: string, id: string, data: any) {
+    const hospital = await this.getHospitalByEmail(userEmail);
     await this.db.query(
-      'UPDATE doctor SET name = ?, specialization = ?, phone = ?, email = ?, status = ?, shift = ? WHERE id = ?',
-      [data.name, data.department || data.specialty, data.phone || '', data.email || '', data.status, data.shift || '09:00 AM - 05:00 PM', id]
+      'UPDATE doctor SET name = ?, specialization = ?, phone = ?, email = ?, status = ?, shift = ? WHERE id = ? AND hospitalId = ?',
+      [data.name, data.department || data.specialty, data.phone || '', data.email || '', data.status, data.shift || '09:00 AM - 05:00 PM', id, hospital.id]
     );
     await this.redisService.del(`hospital:doctors:${userEmail}`);
     return { success: true, message: "Doctor updated successfully" };
   }
 
   async deleteDoctor(userEmail: string, id: string) {
-    await this.db.query('DELETE FROM doctor WHERE id = ?', [id]);
+    const hospital = await this.getHospitalByEmail(userEmail);
+    await this.db.query(
+      'DELETE FROM doctor WHERE id = ? AND hospitalId = ?',
+      [id, hospital.id],
+    );
     await this.redisService.del(`hospital:doctors:${userEmail}`);
     await this.redisService.del(`hospital:overview:${userEmail}`);
     return { success: true, message: "Doctor deleted successfully" };
@@ -692,12 +697,20 @@ export class HospitalService {
   }
 
   async markNotificationAsRead(userEmail: string, id: string) {
-    await this.db.query('UPDATE notification SET isRead = true WHERE id = ?', [id]);
+    const hospital = await this.getHospitalByEmail(userEmail);
+    await this.db.query(
+      'UPDATE notification SET isRead = true WHERE id = ? AND hospitalId = ?',
+      [id, hospital.id],
+    );
     return { success: true };
   }
 
   async deleteNotification(userEmail: string, id: string) {
-    await this.db.query('DELETE FROM notification WHERE id = ?', [id]);
+    const hospital = await this.getHospitalByEmail(userEmail);
+    await this.db.query(
+      'DELETE FROM notification WHERE id = ? AND hospitalId = ?',
+      [id, hospital.id],
+    );
     return { success: true };
   }
 

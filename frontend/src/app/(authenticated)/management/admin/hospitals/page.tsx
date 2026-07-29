@@ -91,14 +91,15 @@ export default function HospitalManagementPage() {
         const res = await fetch('/api/management/admin/hospitals', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: newName, email: newEmail, phone: newPhone, address: newAddress, type: 'General', licenseNumber: newLicenseNumber })
+          body: JSON.stringify({ name: newName, email: newEmail, phone: newPhone, address: newAddress, type: 'HOSPITAL', licenseNumber: newLicenseNumber })
         });
         if (res.ok) {
           toast.success("Hospital added successfully");
           closeModal();
           fetchHospitals(); // refresh
         } else {
-          toast.error("Error adding hospital");
+          const error = await res.json().catch(() => null);
+          toast.error(error?.message || "Error adding hospital");
         }
       }
     } catch (e) {

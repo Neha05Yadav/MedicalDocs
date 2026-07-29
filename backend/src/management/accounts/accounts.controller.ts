@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ManagementService } from '../management.service';
 import { ManagementAuthGuard } from '../management-auth.guard';
 
@@ -15,6 +15,11 @@ export class AccountsController {
   @Get('billing') getBilling() { return this.managementService.getAccountsBilling(); }
   @Get('refunds') getRefunds() { return this.managementService.getAccountRefunds(); }
   @Get('reports') getReports() { return this.managementService.getAccountsOverview(); }
-  @Get('notifications') getNotifications() { return this.managementService.getAccountsNotifications(); }
+  @Get('notifications') getNotifications(@Req() request: any) {
+    return this.managementService.getAccountsNotifications(request.user.userId);
+  }
+  @Patch('notifications') markNotificationsRead(@Req() request: any, @Body() body: { id?: string; action?: string }) {
+    return this.managementService.markAccountsNotificationsRead(request.user.userId, body);
+  }
   @Post('payment-reminders') sendReminder(@Body('invoiceId') invoiceId?: string) { return this.managementService.sendPaymentReminder(invoiceId); }
 }

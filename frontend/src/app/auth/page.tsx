@@ -61,7 +61,7 @@ export default function AuthPage() {
         let errorMessage = "Login failed";
         try {
           const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
+          errorMessage = Array.isArray(errorData.message) ? errorData.message[0] : (errorData.message || errorMessage);
         } catch {
           if (response.status === 500 || response.status === 502) {
             errorMessage = "Backend server is offline or unreachable.";

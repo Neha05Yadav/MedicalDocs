@@ -111,6 +111,11 @@ export class AdminController {
     return this.adminService.getAllReports();
   }
 
+  @Get('reports/patients')
+  async getReportPatients() {
+    return this.adminService.getReportPatients();
+  }
+
   @Put('reports/:id/status')
   async updateReportStatus(@Param('id') id: string, @Body() body: { status: string }) {
     return this.adminService.updateReportStatus(id, body.status);

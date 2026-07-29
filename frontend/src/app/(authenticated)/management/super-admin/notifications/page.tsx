@@ -26,6 +26,18 @@ export default function SuperAdminNotificationsPage() {
       const data = await res.json();
       if (Array.isArray(data)) {
         setNotifications(data);
+        if (data.some(notification => !notification.is_read)) {
+          const markReadResponse = await fetch('/api/management/super-admin/notifications', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'mark_all_read' })
+          });
+
+          if (markReadResponse.ok) {
+            setNotifications(data.map(notification => ({ ...notification, is_read: true })));
+            window.dispatchEvent(new Event('notificationsRead'));
+          }
+        }
       } else {
         console.error("API returned non-array:", data);
         setNotifications([]);
@@ -48,6 +60,7 @@ export default function SuperAdminNotificationsPage() {
       });
       if (res.ok) {
         setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n));
+        window.dispatchEvent(new Event('notificationsRead'));
         toast.success("Marked as read");
       }
     } catch (error) {
@@ -64,6 +77,7 @@ export default function SuperAdminNotificationsPage() {
       });
       if (res.ok) {
         setNotifications(notifications.map(n => ({ ...n, is_read: true })));
+        window.dispatchEvent(new Event('notificationsRead'));
         toast.success("All notifications marked as read");
       }
     } catch (error) {

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
 import { ManagementService } from '../management.service';
 import { ManagementAuthGuard } from '../management-auth.guard';
 
@@ -43,7 +43,12 @@ export class SalesController {
   }
 
   @Get('notifications')
-  getNotifications() {
-    return this.managementService.getSalesNotifications();
+  getNotifications(@Req() request: any) {
+    return this.managementService.getSalesNotifications(request.user.userId);
+  }
+
+  @Patch('notifications')
+  markNotificationsRead(@Req() request: any, @Body() body: { action?: string }) {
+    return this.managementService.markSalesNotificationsRead(request.user.userId, body);
   }
 }

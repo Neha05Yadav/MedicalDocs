@@ -51,7 +51,7 @@ function listFiles(directory) {
 async function createTables(connection) {
   await connection.query(`
     CREATE TABLE IF NOT EXISTS stored_file (
-      id CHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL PRIMARY KEY,
+      id CHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL PRIMARY KEY,
       fileName VARCHAR(255) NOT NULL,
       relativePath VARCHAR(512) NOT NULL UNIQUE,
       mimeType VARCHAR(127) NOT NULL,
@@ -69,13 +69,13 @@ async function createTables(connection) {
   // utf8mb4_unicode_ci identifiers, including when an earlier empty table exists.
   await connection.query(`
     ALTER TABLE stored_file
-    MODIFY id CHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
+    MODIFY id CHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL
   `);
 
   await connection.query(`
     CREATE TABLE IF NOT EXISTS stored_file_medical_record (
-      storedFileId CHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-      medicalRecordId VARCHAR(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+      storedFileId CHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+      medicalRecordId VARCHAR(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
       createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
       PRIMARY KEY (storedFileId, medicalRecordId),
       INDEX idx_file_medical_record (medicalRecordId),

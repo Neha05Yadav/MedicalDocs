@@ -21,6 +21,7 @@ type LineInput = {
 export class BillingService {
   constructor(private readonly db: MysqlService) {}
 
+
   private facilityType(role: string) {
     const value = String(role || '').toUpperCase();
     if (value.includes('LAB')) return 'LABORATORY';

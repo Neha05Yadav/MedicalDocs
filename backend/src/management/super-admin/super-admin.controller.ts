@@ -1,11 +1,15 @@
 import { Controller, Get, Post, Put, Delete, Param, Query, Body, Patch, UseGuards } from '@nestjs/common';
 import { SuperAdminService } from './super-admin.service';
 import { ManagementAuthGuard } from '../management-auth.guard';
+import { AdminService } from '../admin/admin.service';
 
 @Controller('management/super-admin')
 @UseGuards(ManagementAuthGuard)
 export class SuperAdminController {
-  constructor(private readonly superAdminService: SuperAdminService) {}
+  constructor(
+    private readonly superAdminService: SuperAdminService,
+    private readonly adminService: AdminService,
+  ) {}
 
   @Get('overview')
   async getOverview() {
@@ -20,6 +24,26 @@ export class SuperAdminController {
   @Get('facilities')
   async getFacilities() {
     return this.superAdminService.getFacilities();
+  }
+
+  @Get('reports/patients')
+  async getReportPatients() {
+    return this.adminService.getReportPatients();
+  }
+
+  @Put('reports/:id/status')
+  async updateReportStatus(@Param('id') id: string, @Body() body: { status: string }) {
+    return this.adminService.updateReportStatus(id, body.status);
+  }
+
+  @Delete('reports/:id')
+  async deleteReport(@Param('id') id: string) {
+    return this.adminService.deleteReport(id);
+  }
+
+  @Post('facilities')
+  async createHospital(@Body() body: any) {
+    return this.adminService.createHospital({ ...body, type: 'HOSPITAL' });
   }
 
   @Patch('facilities')

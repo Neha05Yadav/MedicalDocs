@@ -100,7 +100,7 @@ export default function PatientDashboard() {
     );
   }
 
-  const { patientInfo, timeline, testResultsStats, recentReports } = data;
+  const { patientInfo, timeline, testResultsStats, recentReports, providerStats } = data;
 
   const getIcon = (type: string) => {
     if (type === 'APPOINTMENT') return Stethoscope;
@@ -218,15 +218,15 @@ export default function PatientDashboard() {
                 <div className="relative mt-6 grid flex-1 grid-cols-2 gap-4">
                   <div className="flex items-center gap-4 rounded-2xl border border-cyan-100 bg-cyan-50/70 p-4">
                     <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-cyan-700 shadow-sm"><Building2 className="size-5" /></span>
-                    <div><p className="text-[clamp(.78rem,.68vw,.9rem)] font-semibold text-slate-500">Connected Hospitals</p><p className="mt-0.5 text-[clamp(1.35rem,1.25vw,1.7rem)] font-extrabold text-slate-900">2</p></div>
+                    <div><p className="text-[clamp(.78rem,.68vw,.9rem)] font-semibold text-slate-500">Connected Hospitals</p><p className="mt-0.5 text-[clamp(1.35rem,1.25vw,1.7rem)] font-extrabold text-slate-900">{providerStats?.connectedHospitals ?? 0}</p></div>
                   </div>
                   <div className="flex items-center gap-4 rounded-2xl border border-violet-100 bg-violet-50/70 p-4">
                     <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-violet-700 shadow-sm"><FlaskConical className="size-5" /></span>
-                    <div><p className="text-[clamp(.78rem,.68vw,.9rem)] font-semibold text-slate-500">Connected Labs</p><p className="mt-0.5 text-[clamp(1.35rem,1.25vw,1.7rem)] font-extrabold text-slate-900">1</p></div>
+                    <div><p className="text-[clamp(.78rem,.68vw,.9rem)] font-semibold text-slate-500">Connected Labs</p><p className="mt-0.5 text-[clamp(1.35rem,1.25vw,1.7rem)] font-extrabold text-slate-900">{providerStats?.connectedLabs ?? 0}</p></div>
                   </div>
                   <div className="flex items-center gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
                     <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-emerald-700 shadow-sm"><ShieldCheck className="size-5" /></span>
-                    <div><p className="text-[clamp(.78rem,.68vw,.9rem)] font-semibold text-slate-500">Access Granted</p><p className="mt-0.5 text-[clamp(1.35rem,1.25vw,1.7rem)] font-extrabold text-slate-900">3</p></div>
+                    <div><p className="text-[clamp(.78rem,.68vw,.9rem)] font-semibold text-slate-500">Access Granted</p><p className="mt-0.5 text-[clamp(1.35rem,1.25vw,1.7rem)] font-extrabold text-slate-900">{providerStats?.accessGranted ?? 0}</p></div>
                   </div>
                   <div className="flex items-center gap-4 rounded-2xl border border-amber-100 bg-amber-50/70 p-4">
                     <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-amber-700 shadow-sm"><History className="size-5" /></span>

@@ -118,6 +118,29 @@ export default function LabPatientsPage() {
       setLoadingRecords(false);
     }
   };
+
+  const requestPatientAccess = async (patient: any) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/laboratory/patients/request-access", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ patientId: patient.id }),
+      });
+      if (!response.ok) throw new Error("Failed to request access");
+      setLabPatients((current) =>
+        current.map((item) =>
+          item.id === patient.id ? { ...item, accessStatus: "PENDING" } : item,
+        ),
+      );
+      toast.success("Access request sent to patient");
+    } catch {
+      toast.error("Failed to request patient access");
+    }
+  };
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen">
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-8 flex flex-col md:flex-row gap-4 justify-end items-center">
@@ -162,12 +185,25 @@ export default function LabPatientsPage() {
               </div>
             </div>
             <div className="p-4 bg-slate-50/50 mt-auto border-t border-slate-100 flex gap-3">
-              <button 
-                onClick={() => openReportsModal(patient)}
-                className="flex-1 py-2 bg-white border border-slate-200 hover:border-[#0891b2] text-slate-700 hover:text-[#0891b2] rounded-lg text-sm font-semibold transition-all shadow-sm"
-              >
-                View Records
-              </button>
+              {String(patient.accessStatus || "").toUpperCase() === "APPROVED" ? (
+                <button
+                  onClick={() => openReportsModal(patient)}
+                  className="flex-1 py-2 bg-white border border-slate-200 hover:border-[#0891b2] text-slate-700 hover:text-[#0891b2] rounded-lg text-sm font-semibold transition-all shadow-sm"
+                >
+                  View Records
+                </button>
+              ) : String(patient.accessStatus || "").toUpperCase() === "PENDING" ? (
+                <button disabled className="flex-1 py-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg text-sm font-semibold">
+                  Access Pending
+                </button>
+              ) : (
+                <button
+                  onClick={() => requestPatientAccess(patient)}
+                  className="flex-1 py-2 bg-[#0891b2] text-white rounded-lg text-sm font-semibold hover:bg-cyan-700 transition-colors"
+                >
+                  Request Access
+                </button>
+              )}
             </div>
           </div>
         ))}

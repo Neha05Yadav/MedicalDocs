@@ -39,16 +39,23 @@ export class PatientService {
         'sample',
         'testrequest',
       ];
+      // Update the parent first so MySQL can apply each foreign key's
+      // ON UPDATE CASCADE rule. Updating children to an ID that does not yet
+      // exist violates their patient foreign keys.
+      await connection.execute('UPDATE patient SET id = ? WHERE id = ?', [
+        newId,
+        patient.id,
+      ]);
+
+      // Keep legacy/non-constrained references in sync as well. Rows covered
+      // by cascading foreign keys have already moved and are harmlessly
+      // skipped by these updates.
       for (const table of referenceTables) {
         await connection.execute(
           `UPDATE \`${table}\` SET patientId = ? WHERE patientId = ?`,
           [newId, patient.id],
         );
       }
-      await connection.execute('UPDATE patient SET id = ? WHERE id = ?', [
-        newId,
-        patient.id,
-      ]);
       await connection.execute(
         'UPDATE setting SET `key` = REPLACE(`key`, ?, ?) WHERE `key` = ?',
         [patient.id, newId, `profile.logo.patient.${patient.id}`],
@@ -123,6 +130,21 @@ export class PatientService {
 
     const records = await this.db.query(
       'SELECT * FROM medicalrecord WHERE patientId = ? ORDER BY date DESC LIMIT 5',
+      [patient.id],
+    );
+    const providerStats = await this.db.queryOne(
+      `SELECT
+         COUNT(DISTINCT CASE
+           WHEN UPPER(COALESCE(h.type, '')) NOT LIKE '%LAB%' THEN ar.hospitalId
+         END) AS connectedHospitals,
+         COUNT(DISTINCT CASE
+           WHEN UPPER(COALESCE(h.type, '')) LIKE '%LAB%' THEN ar.hospitalId
+         END) AS connectedLabs,
+         SUM(CASE WHEN UPPER(COALESCE(ar.status, '')) = 'APPROVED' THEN 1 ELSE 0 END) AS accessGranted
+       FROM accessrequest ar
+       LEFT JOIN hospital h ON h.id = ar.hospitalId
+       WHERE ar.patientId = ?
+         AND UPPER(COALESCE(ar.status, '')) = 'APPROVED'`,
       [patient.id],
     );
 
@@ -218,6 +240,11 @@ export class PatientService {
       },
       vitals: {
         bloodPressure: bloodPressure,
+      },
+      providerStats: {
+        connectedHospitals: Number(providerStats?.connectedHospitals || 0),
+        connectedLabs: Number(providerStats?.connectedLabs || 0),
+        accessGranted: Number(providerStats?.accessGranted || 0),
       },
       recentHighlights: recentHighlights,
       timeline: recentTimeline,
@@ -876,9 +903,14 @@ export class PatientService {
   }
 
   async markNotificationAsRead(userEmail: string, id: string) {
-    await this.db.query('UPDATE notification SET isRead = true WHERE id = ?', [
-      id,
+    const user = await this.db.queryOne('SELECT id FROM user WHERE email = ?', [
+      userEmail,
     ]);
+    if (!user) return { success: false };
+    await this.db.query(
+      'UPDATE notification SET isRead = true WHERE id = ? AND userId = ?',
+      [id, user.id],
+    );
     return { success: true };
   }
 

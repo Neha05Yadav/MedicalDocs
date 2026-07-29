@@ -8,8 +8,8 @@ async function migrate() {
   try {
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS stored_file_prescription (
-        storedFileId CHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-        prescriptionId VARCHAR(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+        storedFileId CHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+        prescriptionId VARCHAR(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
         createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
         PRIMARY KEY (storedFileId, prescriptionId),
         UNIQUE KEY uq_prescription_image (prescriptionId),

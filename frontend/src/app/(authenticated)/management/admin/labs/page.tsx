@@ -122,7 +122,8 @@ export default function LabManagementPage() {
           closeModal();
           fetchLabs();
         } else {
-          toast.error("Error adding lab");
+          const error = await res.json().catch(() => null);
+          toast.error(error?.message || "Error adding lab");
         }
       }
     } catch (e) {
@@ -607,6 +608,10 @@ export default function LabManagementPage() {
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Email *</label>
                     <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="contact@lab.com" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" required />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Phone Number *</label>
+                    <input type="tel" inputMode="numeric" pattern="[0-9]{10}" maxLength={10} value={newPhone} onChange={e => setNewPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit phone number" className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500" required />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Address *</label>

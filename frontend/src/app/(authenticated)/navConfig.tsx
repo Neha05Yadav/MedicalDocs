@@ -69,6 +69,7 @@ export const superAdminNav = [
   { title: "Team Management", subtitle: "Manage system administrators and their permissions.", url: "/management/super-admin/team", iconName: "ShieldCheck" },
   { title: "User Management", subtitle: "Global oversight of all platform users.", url: "/management/super-admin/users", iconName: "Users" },
   { title: "Facility Management", subtitle: "Manage and verify all registered facilities.", url: "/management/super-admin/facilities", iconName: "Hospital" },
+  { title: "Reports Monitoring", subtitle: "Review every patient and maintain report metadata.", url: "/management/super-admin/reports", iconName: "ClipboardList" },
   { title: "Subscriptions", subtitle: "Manage plans, active subscriptions, and revenue.", url: "/management/super-admin/subscriptions", iconName: "CreditCard" },
   { title: "Platform Analytics", subtitle: "Track business growth, API usage, and system health.", url: "/management/super-admin/analytics", iconName: "BarChart3" },
   { title: "Notifications", subtitle: "Global announcements and system alerts.", url: "/management/super-admin/notifications", iconName: "Bell" },

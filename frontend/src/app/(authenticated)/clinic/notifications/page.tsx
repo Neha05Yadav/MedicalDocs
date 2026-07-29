@@ -26,6 +26,18 @@ export default function DoctorNotificationsPage() {
       const data = await res.json();
       if (Array.isArray(data)) {
         setNotifications(data);
+        // Opening the notification centre counts as viewing the notifications.
+        // Persist that state so the dashboard bell badge also clears.
+        if (data.some((notification: any) => !notification.isRead)) {
+          const markReadResponse = await fetch("/api/clinic/notifications/read-all", {
+            method: "PUT",
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (markReadResponse.ok) {
+            setNotifications(data.map((notification: any) => ({ ...notification, isRead: true })));
+            window.dispatchEvent(new Event("notificationsRead"));
+          }
+        }
       } else {
         setNotifications([]);
       }
@@ -44,11 +56,13 @@ export default function DoctorNotificationsPage() {
   const markAsRead = async (id: string) => {
     try {
       const token = localStorage.getItem("token");
-      await fetch(`/api/clinic/notifications/${id}/read`, { 
+      const response = await fetch(`/api/clinic/notifications/${id}/read`, {
         method: "PUT",
         headers: { "Authorization": `Bearer ${token}` }
       });
+      if (!response.ok) throw new Error("Failed to mark notification as read");
       setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
+      window.dispatchEvent(new Event("notificationsRead"));
       toast.success("Marked as read");
     } catch (e) {
       toast.error("Failed to mark as read");
@@ -58,11 +72,13 @@ export default function DoctorNotificationsPage() {
   const markAllAsRead = async () => {
     try {
       const token = localStorage.getItem("token");
-      await fetch(`/api/clinic/notifications/read-all`, { 
+      const response = await fetch(`/api/clinic/notifications/read-all`, {
         method: "PUT",
         headers: { "Authorization": `Bearer ${token}` }
       });
+      if (!response.ok) throw new Error("Failed to mark notifications as read");
       setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+      window.dispatchEvent(new Event("notificationsRead"));
       toast.success("All notifications marked as read");
     } catch (e) {
       toast.error("Failed to mark all as read");
@@ -78,6 +94,7 @@ export default function DoctorNotificationsPage() {
       });
       if (res.ok) {
         setNotifications(prev => prev.filter(n => n.id !== id));
+        window.dispatchEvent(new Event("notificationsRead"));
       }
     } catch (e) {
       toast.error("Failed to delete notification.");

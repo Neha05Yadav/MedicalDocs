@@ -680,7 +680,7 @@ export default function DoctorPatientsPage() {
                       // Update existing
                       const res = await fetch(`/api/clinic/my-patients/${editingPatientId}`, {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
                         body: JSON.stringify(newPatientForm)
                       });
                       if (res.ok) {
@@ -692,7 +692,7 @@ export default function DoctorPatientsPage() {
                       // Add new
                       const res = await fetch('/api/clinic/my-patients', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
                         body: JSON.stringify(newPatientForm)
                       });
                       if (res.ok) {

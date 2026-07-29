@@ -37,6 +37,15 @@ export default function AdminNotificationsPage() {
       if (res.ok) {
         const data = await res.json();
         setNotifications(data);
+        if (Array.isArray(data) && data.some((notification: any) => !notification.isRead)) {
+          const markReadResponse = await fetch('/api/management/admin/notifications/read-all', {
+            method: 'PUT'
+          });
+          if (markReadResponse.ok) {
+            setNotifications(data.map((notification: any) => ({ ...notification, isRead: true })));
+            window.dispatchEvent(new Event('notificationsRead'));
+          }
+        }
       }
     } catch (e) {
       toast.error('Failed to load notifications');
@@ -47,8 +56,12 @@ export default function AdminNotificationsPage() {
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      await fetch(`/api/management/admin/notifications/${id}/read`, { method: 'PUT' });
-      fetchNotifications();
+      const response = await fetch(`/api/management/admin/notifications/${id}/read`, { method: 'PUT' });
+      if (!response.ok) throw new Error('Failed to mark notification as read');
+      setNotifications(current => current.map(notification =>
+        notification.id === id ? { ...notification, isRead: true } : notification
+      ));
+      window.dispatchEvent(new Event('notificationsRead'));
     } catch (e) {
       toast.error('Error updating notification');
     }
@@ -56,9 +69,11 @@ export default function AdminNotificationsPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`/api/management/admin/notifications/${id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/management/admin/notifications/${id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Failed to delete notification');
       toast.success('Notification deleted');
-      fetchNotifications();
+      setNotifications(current => current.filter(notification => notification.id !== id));
+      window.dispatchEvent(new Event('notificationsRead'));
     } catch (e) {
       toast.error('Error deleting notification');
     }
@@ -66,9 +81,11 @@ export default function AdminNotificationsPage() {
 
   const handleMarkAllAsRead = async () => {
     try {
-      await fetch('/api/management/admin/notifications/read-all', { method: 'PUT' });
+      const response = await fetch('/api/management/admin/notifications/read-all', { method: 'PUT' });
+      if (!response.ok) throw new Error('Failed to mark notifications as read');
       toast.success('All notifications marked as read');
-      fetchNotifications();
+      setNotifications(current => current.map(notification => ({ ...notification, isRead: true })));
+      window.dispatchEvent(new Event('notificationsRead'));
     } catch (e) {
       toast.error('Error updating notifications');
     }
@@ -86,7 +103,8 @@ export default function AdminNotificationsPage() {
         toast.success('Notification created');
         setIsCreateModalOpen(false);
         setNewNotif({ title: '', message: '', type: 'Info', severity: 'Low' });
-        fetchNotifications();
+        await fetchNotifications();
+        window.dispatchEvent(new Event('notificationsRead'));
       }
     } catch (e) {
       toast.error('Error creating notification');

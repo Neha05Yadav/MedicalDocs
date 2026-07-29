@@ -9,6 +9,6 @@ export class SupportController {
 
   @Get('overview')
   async getOverview() {
-    return { message: 'Support overview pending implementation' };
+    return this.managementService.getSupportOverview();
   }
 }

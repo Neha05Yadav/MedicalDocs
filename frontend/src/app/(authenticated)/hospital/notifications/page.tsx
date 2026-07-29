@@ -44,6 +44,16 @@ export default function HospitalNotificationsPage() {
       if (!res.ok) throw new Error("Failed to load");
       const data = await res.json();
       setNotifications(data);
+      if (data.some((notification: any) => !notification.isRead)) {
+        const markReadResponse = await fetch("/api/hospital/notifications/read-all", {
+          method: "PUT",
+          headers: authHeaders(),
+        });
+        if (markReadResponse.ok) {
+          setNotifications(data.map((notification: any) => ({ ...notification, isRead: true })));
+          window.dispatchEvent(new Event("notificationsRead"));
+        }
+      }
     } catch (err) {
       console.error(err);
       toast.error("Failed to fetch notifications");
@@ -58,9 +68,12 @@ export default function HospitalNotificationsPage() {
 
   const markAllAsRead = async () => {
     try {
-      await fetch("/api/hospital/notifications/read-all", { method: "PUT", headers: authHeaders() });
-      setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-      toast.success("All notifications marked as read");
+      const response = await fetch("/api/hospital/notifications/read-all", { method: "PUT", headers: authHeaders() });
+      if (response.ok) {
+        setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+        window.dispatchEvent(new Event("notificationsRead"));
+        toast.success("All notifications marked as read");
+      }
     } catch (err) {
       toast.error("Failed to mark read");
     }
@@ -68,8 +81,11 @@ export default function HospitalNotificationsPage() {
 
   const markAsRead = async (id: string) => {
     try {
-      await fetch(`/api/hospital/notifications/${id}/read`, { method: "PUT", headers: authHeaders() });
-      setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
+      const response = await fetch(`/api/hospital/notifications/${id}/read`, { method: "PUT", headers: authHeaders() });
+      if (response.ok) {
+        setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
+        window.dispatchEvent(new Event("notificationsRead"));
+      }
     } catch (err) {
       console.error(err);
     }

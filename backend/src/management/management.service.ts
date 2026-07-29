@@ -276,19 +276,148 @@ export class ManagementService {
     return { sent: invoices.length, message: invoices.length ? `Sent ${invoices.length} in-app payment reminder${invoices.length === 1 ? '' : 's'}.` : 'No pending invoice matched.' };
   }
 
-  async getSalesNotifications() {
+  async getSalesNotifications(userId: string) {
     const [subscriptions, invoices] = await Promise.all([
-      this.db.query(`SELECT hs.id, hs.status, hs.endDate, h.name AS facility, sp.name AS plan FROM hospitalsubscription hs INNER JOIN hospital h ON h.id = hs.hospitalId INNER JOIN subscriptionplan sp ON sp.id = hs.planId WHERE hs.endDate IS NOT NULL AND hs.endDate <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) ORDER BY hs.endDate ASC LIMIT 20`),
-      this.db.query(`SELECT i.id, i.status, i.totalAmount, i.date, h.name AS facility FROM invoice i LEFT JOIN hospital h ON h.id = i.hospitalId WHERE UPPER(i.status) = 'PENDING' ORDER BY i.date DESC LIMIT 20`),
+      this.db.query(
+        `SELECT hs.id, hs.status, hs.endDate, h.name AS facility, sp.name AS plan,
+                CASE WHEN mnr.notificationKey IS NULL THEN 0 ELSE 1 END AS isRead
+         FROM hospitalsubscription hs
+         INNER JOIN hospital h ON h.id = hs.hospitalId
+         INNER JOIN subscriptionplan sp ON sp.id = hs.planId
+         LEFT JOIN management_notification_read mnr
+           ON mnr.userId = ?
+          AND mnr.notificationKey = CONCAT('sales-subscription-', hs.id, '-', UPPER(hs.status), '-', DATE_FORMAT(hs.endDate, '%Y-%m-%d'))
+         WHERE hs.endDate IS NOT NULL
+           AND hs.endDate <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+         ORDER BY hs.endDate ASC
+         LIMIT 20`,
+        [userId],
+      ),
+      this.db.query(
+        `SELECT i.id, i.status, i.totalAmount, i.date, h.name AS facility,
+                CASE WHEN mnr.notificationKey IS NULL THEN 0 ELSE 1 END AS isRead
+         FROM invoice i
+         LEFT JOIN hospital h ON h.id = i.hospitalId
+         LEFT JOIN management_notification_read mnr
+           ON mnr.userId = ?
+          AND mnr.notificationKey = CONCAT('sales-invoice-', i.id, '-', UPPER(i.status))
+         WHERE UPPER(i.status) = 'PENDING'
+         ORDER BY i.date DESC
+         LIMIT 20`,
+        [userId],
+      ),
     ]);
-    const expiry = subscriptions.map(row => ({ id: `subscription-${row.id}`, type: new Date(row.endDate) < new Date() ? 'expired' : 'expiry', title: `${row.plan} subscription ${new Date(row.endDate) < new Date() ? 'expired' : 'expires soon'}`, facility: row.facility, desc: `End date: ${new Date(row.endDate).toLocaleDateString('en-IN')}`, time: new Date(row.endDate).toLocaleDateString('en-IN') }));
-    const payment = invoices.map(row => ({ id: `invoice-${row.id}`, type: 'payment', title: 'Payment pending', facility: row.facility || 'Unknown facility', desc: `Invoice ${row.id} · ${this.money(Number(row.totalAmount || 0))}`, time: new Date(row.date).toLocaleDateString('en-IN') }));
+    const expiry = subscriptions.map(row => ({ id: `subscription-${row.id}`, type: new Date(row.endDate) < new Date() ? 'expired' : 'expiry', title: `${row.plan} subscription ${new Date(row.endDate) < new Date() ? 'expired' : 'expires soon'}`, facility: row.facility, desc: `End date: ${new Date(row.endDate).toLocaleDateString('en-IN')}`, time: new Date(row.endDate).toLocaleDateString('en-IN'), isRead: Boolean(row.isRead) }));
+    const payment = invoices.map(row => ({ id: `invoice-${row.id}`, type: 'payment', title: 'Payment pending', facility: row.facility || 'Unknown facility', desc: `Invoice ${row.id} · ${this.money(Number(row.totalAmount || 0))}`, time: new Date(row.date).toLocaleDateString('en-IN'), isRead: Boolean(row.isRead) }));
     return { notifications: [...expiry, ...payment] };
   }
 
-  async getAccountsNotifications() {
-    const rows = await this.db.query(`SELECT i.id, i.status, i.totalAmount, i.date, h.name AS facility FROM invoice i LEFT JOIN hospital h ON h.id = i.hospitalId ORDER BY i.date DESC LIMIT 30`);
-    return { notifications: rows.map(row => { const paid = ['PAID','SUCCESSFUL'].includes(String(row.status).toUpperCase()); return { id: row.id, tab: paid ? 'Invoices' : 'Payment Alerts', type: paid ? 'invoice' : 'payment', title: paid ? 'Invoice paid' : 'Payment requires attention', facility: row.facility || 'Unknown facility', desc: `Invoice ${row.id} · ${this.money(Number(row.totalAmount || 0))} · ${row.status}`, time: new Date(row.date).toLocaleDateString('en-IN') }; }) };
+  async markSalesNotificationsRead(userId: string, body: { action?: string }) {
+    if (body.action !== 'mark_all_read') return { success: true };
+
+    await Promise.all([
+      this.db.query(
+        `INSERT IGNORE INTO management_notification_read (userId, notificationKey, readAt)
+         SELECT ?, CONCAT('sales-subscription-', hs.id, '-', UPPER(hs.status), '-', DATE_FORMAT(hs.endDate, '%Y-%m-%d')), NOW(3)
+         FROM hospitalsubscription hs
+         WHERE hs.endDate IS NOT NULL
+           AND hs.endDate <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+         ORDER BY hs.endDate ASC
+         LIMIT 20`,
+        [userId],
+      ),
+      this.db.query(
+        `INSERT IGNORE INTO management_notification_read (userId, notificationKey, readAt)
+         SELECT ?, CONCAT('sales-invoice-', i.id, '-', UPPER(i.status)), NOW(3)
+         FROM invoice i
+         WHERE UPPER(i.status) = 'PENDING'
+         ORDER BY i.date DESC
+         LIMIT 20`,
+        [userId],
+      ),
+    ]);
+    return { success: true };
+  }
+
+  async getAccountsNotifications(userId: string) {
+    const rows = await this.db.query(
+      `SELECT i.id, i.status, i.totalAmount, i.date, h.name AS facility,
+              CASE WHEN mnr.notificationKey IS NULL THEN 0 ELSE 1 END AS isRead
+       FROM invoice i
+       LEFT JOIN hospital h ON h.id = i.hospitalId
+       LEFT JOIN management_notification_read mnr
+         ON mnr.userId = ?
+        AND mnr.notificationKey = CONCAT('accounts-invoice-', i.id, '-', UPPER(i.status))
+       ORDER BY i.date DESC
+       LIMIT 30`,
+      [userId],
+    );
+    return { notifications: rows.map(row => { const paid = ['PAID','SUCCESSFUL'].includes(String(row.status).toUpperCase()); return { id: row.id, tab: paid ? 'Invoices' : 'Payment Alerts', type: paid ? 'invoice' : 'payment', title: paid ? 'Invoice paid' : 'Payment requires attention', facility: row.facility || 'Unknown facility', desc: `Invoice ${row.id} · ${this.money(Number(row.totalAmount || 0))} · ${row.status}`, time: new Date(row.date).toLocaleDateString('en-IN'), isRead: Boolean(row.isRead) }; }) };
+  }
+
+  async markAccountsNotificationsRead(userId: string, body: { id?: string; action?: string }) {
+    if (body.action === 'mark_all_read') {
+      await this.db.query(
+        `INSERT IGNORE INTO management_notification_read (userId, notificationKey, readAt)
+         SELECT ?, CONCAT('accounts-invoice-', i.id, '-', UPPER(i.status)), NOW(3)
+         FROM invoice i
+         ORDER BY i.date DESC
+         LIMIT 30`,
+        [userId],
+      );
+      return { success: true };
+    }
+
+    if (body.id) {
+      const invoice = await this.db.queryOne<any>('SELECT id, status FROM invoice WHERE id = ? LIMIT 1', [body.id]);
+      if (invoice) {
+        await this.db.query(
+          `INSERT IGNORE INTO management_notification_read (userId, notificationKey, readAt)
+           VALUES (?, ?, NOW(3))`,
+          [userId, `accounts-invoice-${invoice.id}-${String(invoice.status).toUpperCase()}`],
+        );
+      }
+    }
+    return { success: true };
+  }
+
+  async getSupportOverview() {
+    const [summary, recentTickets, priorityRows] = await Promise.all([
+      this.db.queryOne(`
+        SELECT
+          COUNT(*) AS total,
+          SUM(CASE WHEN UPPER(status) = 'OPEN' THEN 1 ELSE 0 END) AS openCount,
+          SUM(CASE WHEN UPPER(status) = 'IN PROGRESS' THEN 1 ELSE 0 END) AS inProgressCount,
+          SUM(CASE WHEN UPPER(status) IN ('RESOLVED', 'CLOSED') THEN 1 ELSE 0 END) AS resolvedCount
+        FROM support_ticket
+      `),
+      this.db.query(`
+        SELECT id, ticketId, userName, userRole, category, subject, priority, status, createdAt, updatedAt
+        FROM support_ticket
+        ORDER BY updatedAt DESC
+        LIMIT 10
+      `),
+      this.db.query(`
+        SELECT priority AS name, COUNT(*) AS value
+        FROM support_ticket
+        GROUP BY priority
+        ORDER BY value DESC
+      `),
+    ]);
+
+    return {
+      kpis: {
+        totalTickets: Number(summary?.total || 0),
+        openTickets: Number(summary?.openCount || 0),
+        inProgress: Number(summary?.inProgressCount || 0),
+        resolvedTickets: Number(summary?.resolvedCount || 0),
+      },
+      priorityDistribution: priorityRows.map((row) => ({
+        name: row.name || 'Unspecified',
+        value: Number(row.value || 0),
+      })),
+      recentTickets,
+    };
   }
 
   async getStatus() {

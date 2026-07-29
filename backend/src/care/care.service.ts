@@ -157,13 +157,23 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  async providers() {
+  async providers(user: any) {
+    const role = this.role(user);
+    const params: any[] = [];
+    let facilityFilter = '';
+    if (!role.includes('PATIENT')) {
+      const facility = await this.facility(user, ['HOSPITAL', 'CLINIC']);
+      facilityFilter = 'AND h.id = ?';
+      params.push(facility.id);
+    }
     return this.db.query(
       `SELECT d.id doctorId, d.name doctorName, d.specialization, d.department,
               d.consultationFee, d.slotDurationMinutes, h.id hospitalId, h.name hospitalName, h.type facilityType
        FROM doctor d INNER JOIN hospital h ON h.id = d.hospitalId
        WHERE UPPER(d.status) = 'ACTIVE' AND UPPER(h.status) = 'ACTIVE'
+       ${facilityFilter}
        ORDER BY h.name, d.name`,
+      params,
     );
   }
 

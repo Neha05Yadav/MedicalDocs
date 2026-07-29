@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { MysqlService } from '../../mysql.service';
 import { v4 as uuidv4 } from 'uuid';
 import { formatPrescriptionRecord } from '../../prescription-id';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AdminService {
@@ -112,20 +113,118 @@ export class AdminService {
   }
 
   async createHospital(data: any) {
-    const hId = this.generateHospitalId(data.name, data.phone);
-    await this.db.query(
-      'INSERT INTO hospital (id, name, email, phone, address, licenseNumber, type, status, isVerified, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [hId, data.name, data.email, data.phone, data.address, data.licenseNumber, data.type || 'HOSPITAL', 'Pending', false, new Date()]
+    const name = String(data.name || '').trim();
+    const phone = String(data.phone || '').trim();
+    const email = String(data.email || '').trim().toLowerCase();
+    if (!name || !phone || !email) {
+      throw new BadRequestException('Hospital name, email and phone are required.');
+    }
+
+    const facilityType = String(data.type || '').toUpperCase() === 'LAB' ? 'LAB' : 'HOSPITAL';
+    const existingByEmail = await this.db.queryOne(
+      'SELECT * FROM hospital WHERE LOWER(email) = ? LIMIT 1',
+      [email],
     );
+    const existingByPhone = await this.db.queryOne(
+      'SELECT * FROM hospital WHERE phone = ? LIMIT 1',
+      [phone],
+    );
+    if (existingByPhone && existingByPhone.id !== existingByEmail?.id) {
+      throw new ConflictException('A facility with this phone already exists.');
+    }
+    const existingUser = await this.db.queryOne('SELECT * FROM user WHERE LOWER(email) = ? LIMIT 1', [email]);
+
+    // Old builds could save hospitals as type "General". A retry should repair
+    // that pending workspace instead of trapping the user behind a duplicate error.
+    if (existingByEmail) {
+      if (String(existingByEmail.status).toUpperCase() !== 'PENDING') {
+        throw new ConflictException('A facility with this email already exists.');
+      }
+      if (existingUser && existingUser.hospitalId && existingUser.hospitalId !== existingByEmail.id) {
+        throw new ConflictException('This email belongs to another account.');
+      }
+
+      const temporaryPassword = String(data.password || 'password123');
+      const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+      const now = new Date();
+      const connection = await this.db.getPool().getConnection();
+      try {
+        await connection.beginTransaction();
+        await connection.execute(
+          `UPDATE hospital
+           SET name = ?, email = ?, phone = ?, address = ?, licenseNumber = ?,
+               type = ?, updatedAt = ?
+           WHERE id = ?`,
+          [name, email, phone, data.address || existingByEmail.address, data.licenseNumber || existingByEmail.licenseNumber, facilityType, now, existingByEmail.id],
+        );
+        if (existingUser) {
+          await connection.execute(
+            `UPDATE user SET name = ?, phone = ?, password = ?, role = ?,
+              hospitalId = ?, status = 'Active', updatedAt = ? WHERE id = ?`,
+            [`${name} Admin`, phone, passwordHash, facilityType === 'LAB' ? 'LABORATORY' : 'HOSPITAL', existingByEmail.id, now, existingUser.id],
+          );
+        } else {
+          const userId = uuidv4();
+          await connection.execute(
+            `INSERT INTO user
+              (id, name, email, phone, password, role, hospitalId, status, createdAt, updatedAt)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?)`,
+            [userId, `${name} Admin`, email, phone, passwordHash, facilityType === 'LAB' ? 'LABORATORY' : 'HOSPITAL', existingByEmail.id, now, now],
+          );
+        }
+        await connection.commit();
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
+      return {
+        success: true,
+        recovered: true,
+        hospital: { id: existingByEmail.id, name, email, type: facilityType, status: 'Pending' },
+        adminUser: { id: existingUser?.id, email },
+      };
+    }
+    if (existingUser) throw new ConflictException('A user with this email already exists.');
+
+    let hId = this.generateHospitalId(name, phone);
+    if (await this.db.queryOne('SELECT id FROM hospital WHERE id = ?', [hId])) {
+      hId = `${hId}-${uuidv4().slice(0, 4).toUpperCase()}`;
+    }
 
     const uId = uuidv4();
-    const email = data.email || `admin@${data.name.replace(/\s+/g, '').toLowerCase()}.com`;
-    await this.db.query(
-      'INSERT INTO user (id, name, email, phone, password, role, hospitalId, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [uId, `${data.name} Admin`, email, data.phone, 'password123', 'HOSPITAL', hId, new Date()]
-    );
+    const temporaryPassword = String(data.password || 'password123');
+    const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+    const now = new Date();
+    const connection = await this.db.getPool().getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.execute(
+        `INSERT INTO hospital
+          (id, name, email, phone, address, licenseNumber, type, status, isVerified, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending', false, ?, ?)`,
+        [hId, name, email, phone, data.address || null, data.licenseNumber || null, facilityType, now, now],
+      );
+      await connection.execute(
+        `INSERT INTO user
+          (id, name, email, phone, password, role, hospitalId, status, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'Active', ?, ?)`,
+        [uId, `${name} Admin`, email, phone, passwordHash, facilityType === 'LAB' ? 'LABORATORY' : 'HOSPITAL', hId, now, now],
+      );
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
 
-    return { hospital: { id: hId }, adminUser: { id: uId } };
+    return {
+      success: true,
+      hospital: { id: hId, name, email, type: facilityType, status: 'Pending' },
+      adminUser: { id: uId, email },
+    };
   }
 
   async verifyHospital(id: string) {
@@ -181,6 +280,70 @@ export class AdminService {
     }));
   }
 
+  async getReportPatients() {
+    const rows = await this.db.query(`
+      SELECT
+        p.id AS patientId, p.name AS patientName, p.email AS patientEmail,
+        p.phone AS patientPhone, p.dateOfBirth, p.gender, p.bloodGroup,
+        p.createdAt AS patientCreatedAt,
+        m.id AS reportId, m.title, m.description, m.type, m.category,
+        m.fileUrl, m.date AS reportDate, m.status AS reportStatus,
+        m.createdAt AS reportCreatedAt, m.hospitalId,
+        h.name AS hospitalName, h.type AS hospitalType
+      FROM patient p
+      LEFT JOIN medicalrecord m ON m.patientId = p.id
+      LEFT JOIN hospital h ON h.id = m.hospitalId
+      ORDER BY p.name ASC, COALESCE(m.date, m.createdAt) DESC
+    `);
+
+    const patients = new Map<string, any>();
+    for (const row of rows) {
+      if (!patients.has(row.patientId)) {
+        const birthDate = row.dateOfBirth ? new Date(row.dateOfBirth) : null;
+        const age = birthDate && !Number.isNaN(birthDate.getTime())
+          ? Math.max(0, Math.floor((Date.now() - birthDate.getTime()) / 31557600000))
+          : null;
+        patients.set(row.patientId, {
+          id: row.patientId,
+          name: row.patientName,
+          email: row.patientEmail || null,
+          phone: row.patientPhone || null,
+          dateOfBirth: row.dateOfBirth || null,
+          age,
+          gender: row.gender || 'Not specified',
+          bloodGroup: row.bloodGroup || 'Unknown',
+          registeredAt: row.patientCreatedAt,
+          reportCount: 0,
+          lastReportAt: null,
+          reports: [],
+        });
+      }
+      if (row.reportId) {
+        const patient = patients.get(row.patientId);
+        const report = {
+          id: row.reportId,
+          title: row.title || row.type || 'Medical report',
+          description: row.description || null,
+          type: row.type || row.category || 'DOCUMENT',
+          category: row.category || row.type || 'General',
+          fileUrl: row.fileUrl || null,
+          date: row.reportDate || row.reportCreatedAt,
+          createdAt: row.reportCreatedAt,
+          status: row.reportStatus || 'Available',
+          hospital: {
+            id: row.hospitalId || null,
+            name: row.hospitalName || 'Patient uploaded',
+            type: row.hospitalType || 'Personal',
+          },
+        };
+        patient.reports.push(report);
+        patient.reportCount += 1;
+        if (!patient.lastReportAt) patient.lastReportAt = report.date;
+      }
+    }
+    return Array.from(patients.values());
+  }
+
   async updateReportStatus(reportId: string, status: string) {
     await this.db.query('UPDATE medicalrecord SET status = ? WHERE id = ?', [status, reportId]);
     return { success: true };
@@ -196,7 +359,7 @@ export class AdminService {
   }
 
   async markNotificationAsRead(id: string) {
-    await this.db.query('UPDATE notification SET isRead = true WHERE id = ?', [id]);
+    await this.db.query('UPDATE notification SET isRead = true WHERE id = ? AND hospitalId IS NULL', [id]);
     return { success: true };
   }
 
@@ -206,15 +369,16 @@ export class AdminService {
   }
 
   async createAdminNotification(data: any) {
+    const now = new Date();
     await this.db.query(
-      'INSERT INTO notification (id, title, message, type, severity, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
-      [uuidv4(), data.title, data.message, data.type || 'System', data.severity || 'Low', new Date()]
+      'INSERT INTO notification (id, title, message, type, severity, isRead, actionRequired, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, false, false, ?, ?)',
+      [uuidv4(), data.title, data.message, data.type || 'System', data.severity || 'Low', now, now]
     );
     return { success: true };
   }
 
   async deleteNotification(id: string) {
-    await this.db.query('DELETE FROM notification WHERE id = ?', [id]);
+    await this.db.query('DELETE FROM notification WHERE id = ? AND hospitalId IS NULL', [id]);
     return { success: true };
   }
 

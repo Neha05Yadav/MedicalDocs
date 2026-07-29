@@ -23,8 +23,8 @@ export class CareController {
   constructor(private readonly care: CareService) {}
 
   @Get('appointments/providers')
-  providers() {
-    return this.care.providers();
+  providers(@Request() req: any) {
+    return this.care.providers(req.user);
   }
 
   @Get('appointments/availability')
