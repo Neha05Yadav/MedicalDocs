@@ -46,6 +46,17 @@ export default function TestRequestsPage() {
 
   useEffect(() => {
     fetchTestRequests();
+    const interval = window.setInterval(fetchTestRequests, 15000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") fetchTestRequests();
+    };
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    window.addEventListener("focus", fetchTestRequests);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener("focus", fetchTestRequests);
+    };
   }, []);
 
   useEffect(() => {

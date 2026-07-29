@@ -1,0 +1,32 @@
+ALTER TABLE appointment
+  ADD COLUMN IF NOT EXISTS endTime DATETIME(3) NULL AFTER dateTime;
+
+ALTER TABLE appointment
+  ADD COLUMN IF NOT EXISTS type VARCHAR(50) NOT NULL DEFAULT 'OPD' AFTER endTime;
+
+ALTER TABLE appointment
+  ADD COLUMN IF NOT EXISTS reason TEXT NULL AFTER notes;
+
+ALTER TABLE appointment
+  ADD COLUMN IF NOT EXISTS consultationFee DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER reason;
+
+ALTER TABLE appointment
+  ADD COLUMN IF NOT EXISTS invoiceId VARCHAR(191) NULL AFTER consultationFee;
+
+ALTER TABLE appointment
+  ADD COLUMN IF NOT EXISTS checkedInAt DATETIME(3) NULL AFTER invoiceId;
+
+ALTER TABLE appointment
+  ADD COLUMN IF NOT EXISTS completedAt DATETIME(3) NULL AFTER checkedInAt;
+
+ALTER TABLE appointment
+  ADD COLUMN IF NOT EXISTS cancelledAt DATETIME(3) NULL AFTER completedAt;
+
+ALTER TABLE appointment
+  ADD COLUMN IF NOT EXISTS cancellationReason TEXT NULL AFTER cancelledAt;
+
+ALTER TABLE appointment
+  ADD COLUMN IF NOT EXISTS rescheduledFromId VARCHAR(191) NULL AFTER cancellationReason;
+
+ALTER TABLE appointment
+  ADD COLUMN IF NOT EXISTS deletedAt DATETIME(3) NULL AFTER updatedAt;

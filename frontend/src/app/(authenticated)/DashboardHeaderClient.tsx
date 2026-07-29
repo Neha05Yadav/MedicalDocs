@@ -74,6 +74,22 @@ export default function DashboardHeaderClient() {
 
     refreshPatientIdentity();
 
+    const recordActivity = () => {
+      const token = localStorage.getItem("token");
+      if (!token || document.visibilityState === "hidden") return;
+      fetch("/api/auth/activity/heartbeat", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        keepalive: true,
+      }).catch(() => undefined);
+    };
+    recordActivity();
+    const activityInterval = setInterval(recordActivity, 60000);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") recordActivity();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
     // Fetch unread notifications
     const fetchNotifications = async () => {
       try {
@@ -129,6 +145,8 @@ export default function DashboardHeaderClient() {
     
     return () => {
       clearInterval(interval);
+      clearInterval(activityInterval);
+      document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener('notificationsRead', fetchNotifications);
     };
   }, [isHospital, isSuperAdmin, isSales, isAccounts, isAdmin, isSupport, isClinic, isLaboratory, isPatient]);
@@ -201,6 +219,14 @@ export default function DashboardHeaderClient() {
         <div 
           onClick={() => {
             if (confirm("Are you sure you want to log out?")) {
+              const token = localStorage.getItem("token");
+              if (token) {
+                fetch("/api/auth/logout", {
+                  method: "POST",
+                  headers: { Authorization: `Bearer ${token}` },
+                  keepalive: true,
+                }).catch(() => undefined);
+              }
               localStorage.removeItem("token");
               localStorage.removeItem("user");
               document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";

@@ -315,29 +315,81 @@ export class SuperAdminService {
   }
 
   async getAllUsers() {
-    const patients = await this.db.query('SELECT id, name, email, createdAt FROM patient ORDER BY createdAt DESC');
-    const doctors = await this.db.query('SELECT id, name, email, address, status, createdAt FROM doctor ORDER BY createdAt DESC');
+    const patients = await this.db.query(
+      `SELECT p.id, p.name, p.email, p.phone, p.createdAt, u.id AS accountUserId
+       FROM patient p
+       LEFT JOIN user u ON LOWER(u.email) = LOWER(p.email)
+       ORDER BY p.createdAt DESC`,
+    );
+    const doctors = await this.db.query(
+      `SELECT d.id, d.name, d.email, d.phone, d.address, d.status, d.createdAt,
+              u.id AS accountUserId
+       FROM doctor d
+       LEFT JOIN user u ON LOWER(u.email) = LOWER(d.email)
+       ORDER BY d.createdAt DESC`,
+    );
+    const activityRows = await this.db.query(
+      `SELECT
+         userId,
+         COUNT(*) AS sessionCount,
+         SUM(
+           durationSeconds +
+           CASE
+             WHEN endedAt IS NULL AND lastSeenAt >= DATE_SUB(NOW(3), INTERVAL 2 MINUTE)
+             THEN LEAST(GREATEST(TIMESTAMPDIFF(SECOND, lastSeenAt, NOW(3)), 0), 120)
+             ELSE 0
+           END
+         ) AS totalSeconds,
+         MAX(lastSeenAt) AS lastActiveAt,
+         MAX(startedAt) AS latestSessionStartedAt,
+         MAX(
+           CASE
+             WHEN endedAt IS NULL AND lastSeenAt >= DATE_SUB(NOW(3), INTERVAL 2 MINUTE)
+             THEN 1 ELSE 0
+           END
+         ) AS isOnline
+       FROM user_activity_session
+       GROUP BY userId`,
+    );
+    const activityByUser = new Map(
+      activityRows.map((row: any) => [row.userId, row]),
+    );
+    const withActivity = (profile: any) => {
+      const activity: any = activityByUser.get(profile.accountUserId);
+      return {
+        accountUserId: profile.accountUserId || null,
+        totalTimeSeconds: Number(activity?.totalSeconds || 0),
+        sessionCount: Number(activity?.sessionCount || 0),
+        lastActiveAt: activity?.lastActiveAt || null,
+        latestSessionStartedAt: activity?.latestSessionStartedAt || null,
+        isOnline: Boolean(Number(activity?.isOnline || 0)),
+      };
+    };
 
     const formattedUsers = [
       ...patients.map(p => ({
         id: p.id,
         name: p.name || 'Unknown Patient',
         email: p.email || 'No email provided',
+        phone: p.phone || '',
         type: 'Patient',
         location: 'Not specified',
         joined: new Date(p.createdAt).toISOString().split('T')[0],
         status: 'Active',
-        isVerified: true
+        isVerified: true,
+        ...withActivity(p),
       })),
       ...doctors.map(d => ({
         id: d.id,
         name: d.name || 'Unknown Doctor',
         email: d.email || 'No email provided',
+        phone: d.phone || '',
         type: 'Doctor',
         location: d.address || 'Not specified',
         joined: new Date(d.createdAt).toISOString().split('T')[0],
         status: d.status || 'Active',
-        isVerified: d.status === 'Active'
+        isVerified: d.status === 'Active',
+        ...withActivity(d),
       }))
     ];
 

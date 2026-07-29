@@ -88,6 +88,14 @@ export default function DashboardSidebar() {
       <div className={styles.sidebarFooter}>
         <button
           onClick={() => {
+            const token = localStorage.getItem("token");
+            if (token) {
+              fetch("/api/auth/logout", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+                keepalive: true,
+              }).catch(() => undefined);
+            }
             localStorage.removeItem("token");
             localStorage.removeItem("user");
             document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";

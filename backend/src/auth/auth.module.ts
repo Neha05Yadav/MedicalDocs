@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
 import { JwtStrategy } from './jwt.strategy';
+import { MailService } from './mail.service';
 
 export const jwtSecret = process.env.JWT_SECRET || 'medidoc-super-secret-key';
 
@@ -17,6 +18,6 @@ export const jwtSecret = process.env.JWT_SECRET || 'medidoc-super-secret-key';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, MailService],
 })
 export class AuthModule {}

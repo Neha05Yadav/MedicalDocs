@@ -133,7 +133,7 @@ export class LaboratoryService {
         patientAge: r.patientDob ? Math.floor((Date.now() - new Date(r.patientDob).getTime()) / 31557600000) + ' yrs' : 'N/A',
         testType: r.testType,
         priority: r.priority,
-        status: r.status,
+        status: r.status === 'Pending Collection' ? 'Pending' : r.status,
         date: new Date(r.createdAt).toLocaleDateString(),
         doctorName: r.doctorName ? `Dr. ${r.doctorName.replace(/^(Dr\.?\s*)+/i, '')}` : 'Unknown Doctor',
         doctorDepartment: r.doctorDepartment || 'General',
@@ -153,13 +153,62 @@ export class LaboratoryService {
     const hospital = await this.getHospitalContext(userEmail);
     const testReq = await this.db.queryOne('SELECT * FROM testrequest WHERE id = ? AND hospitalId = ?', [id, hospital.id]);
     if (!testReq) throw new NotFoundException('Request not found');
+    if (testReq.status === status) return { success: true };
 
     await this.db.query('UPDATE testrequest SET status = ? WHERE id = ?', [status, id]);
+
+    const patient = await this.db.queryOne<any>(
+      'SELECT name, email FROM patient WHERE id = ?',
+      [testReq.patientId],
+    );
+    const patientUser = patient?.email
+      ? await this.db.queryOne<any>(
+          'SELECT id FROM user WHERE LOWER(email) = LOWER(?) LIMIT 1',
+          [patient.email],
+        )
+      : null;
+    const patientStatusContent: Record<string, { title: string; message: string; severity: string }> = {
+      Accepted: {
+        title: 'Lab test request accepted',
+        message: `${hospital.name} accepted your ${testReq.testType} test request.`,
+        severity: 'Low',
+      },
+      Tested: {
+        title: 'Lab testing completed',
+        message: `${hospital.name} completed testing for ${testReq.testType}. Your report will be uploaded soon.`,
+        severity: 'Medium',
+      },
+      Completed: {
+        title: 'Lab report ready',
+        message: `Your ${testReq.testType} report from ${hospital.name} is ready.`,
+        severity: 'Medium',
+      },
+      Cancelled: {
+        title: 'Lab test request rejected',
+        message: `${hospital.name} could not accept your ${testReq.testType} test request.`,
+        severity: 'High',
+      },
+    };
+    const patientContent = patientStatusContent[status];
+    if (patientUser && patientContent) {
+      await this.db.query(
+        `INSERT INTO notification
+         (id, userId, type, title, message, isRead, actionRequired, actionUrl,
+          severity, createdAt, updatedAt)
+         VALUES (?, ?, 'LAB_STATUS', ?, ?, 0, 1, '/patient/lab-tests', ?, NOW(3), NOW(3))`,
+        [
+          uuidv4(),
+          patientUser.id,
+          patientContent.title,
+          patientContent.message,
+          patientContent.severity,
+        ],
+      );
+    }
 
     // Notify referring hospital/clinic about status changes
     if (testReq.referringHospitalId) {
       const refHospital = await this.db.queryOne('SELECT name FROM hospital WHERE id = ?', [testReq.referringHospitalId]);
-      const patient = await this.db.queryOne('SELECT name FROM patient WHERE id = ?', [testReq.patientId]);
       const patientName = patient?.name || 'Unknown';
 
       if (status === 'Accepted') {

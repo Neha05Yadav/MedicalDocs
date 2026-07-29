@@ -113,15 +113,6 @@ export default function AdminNotificationsPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans">
-      <div className="flex flex-col md:flex-row md:items-center justify-end gap-4 mb-8">
-        <button 
-          onClick={() => setIsCreateModalOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center gap-2"
-        >
-          <Plus className="size-4" />
-          Create Notification
-        </button>
-      </div>
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <h3 className="text-sm font-bold text-slate-900">System Alerts & Logs</h3>

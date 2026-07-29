@@ -22,6 +22,27 @@ const Calendar = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/s
 const ChevronLeft = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>;
 const ChevronRight = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>;
 
+const formatDuration = (seconds: number) => {
+  const total = Math.max(0, Number(seconds || 0));
+  if (total === 0) return "No activity yet";
+  if (total < 60) return "< 1 min";
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    return `${days}d ${hours % 24}h`;
+  }
+  return hours ? `${hours}h ${minutes}m` : `${minutes} min`;
+};
+
+const formatActivityDate = (value?: string | null) =>
+  value
+    ? new Date(value).toLocaleString("en-IN", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      })
+    : "Never tracked";
+
 export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("All Users");
@@ -36,6 +57,8 @@ export default function UserManagementPage() {
 
   useEffect(() => {
     fetchUsers();
+    const interval = setInterval(fetchUsers, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchUsers = async () => {
@@ -205,13 +228,15 @@ export default function UserManagementPage() {
       {/* Users Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto w-full">
-          <table className="w-full min-w-[800px] text-sm text-left">
+          <table className="w-full min-w-[1100px] text-sm text-left">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
               <tr>
                 <th className="px-6 py-4 whitespace-nowrap">User Name</th>
                 <th className="px-6 py-4 whitespace-nowrap">Type</th>
                 <th className="px-6 py-4 whitespace-nowrap">Location</th>
                 <th className="px-6 py-4 whitespace-nowrap">Joined Date</th>
+                <th className="px-6 py-4 whitespace-nowrap">Time on Website</th>
+                <th className="px-6 py-4 whitespace-nowrap">Last Active</th>
                 <th className="px-6 py-4 whitespace-nowrap">Status</th>
                 <th className="px-6 py-4 text-right whitespace-nowrap">Actions</th>
               </tr>
@@ -219,7 +244,7 @@ export default function UserManagementPage() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500 font-medium animate-pulse">
+                  <td colSpan={8} className="px-6 py-12 text-center text-slate-500 font-medium animate-pulse">
                     Loading users...
                   </td>
                 </tr>
@@ -239,6 +264,16 @@ export default function UserManagementPage() {
                   </td>
                   <td className="px-6 py-4 font-medium text-slate-600 whitespace-nowrap text-xs">
                     {user.joined}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="font-bold text-slate-800">{formatDuration(user.totalTimeSeconds)}</div>
+                    <div className="mt-1 flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+                      <span className={`size-2 rounded-full ${user.isOnline ? "bg-emerald-500 animate-pulse" : "bg-slate-300"}`} />
+                      {user.isOnline ? "Online now" : `${user.sessionCount || 0} sessions`}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 font-medium text-slate-600 whitespace-nowrap text-xs">
+                    {formatActivityDate(user.lastActiveAt)}
                   </td>
                   <td className="px-6 py-4">
                     {user.status === "Active" ? (
@@ -300,7 +335,7 @@ export default function UserManagementPage() {
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
+                  <td colSpan={8} className="px-6 py-12 text-center">
                     <AlertCircle className="size-10 text-slate-300 mx-auto mb-3" />
                     <p className="text-slate-500 font-medium">No users found matching your criteria.</p>
                   </td>
@@ -405,6 +440,33 @@ export default function UserManagementPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Website Activity</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total time</p>
+                    <p className="mt-1 font-bold text-slate-900">{formatDuration(selectedUser.totalTimeSeconds)}</p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Sessions</p>
+                    <p className="mt-1 font-bold text-slate-900">{selectedUser.sessionCount || 0}</p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Presence</p>
+                    <p className={`mt-1 font-bold ${selectedUser.isOnline ? "text-emerald-600" : "text-slate-700"}`}>
+                      {selectedUser.isOnline ? "Online now" : "Offline"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Last active</p>
+                    <p className="mt-1 text-xs font-bold text-slate-900">{formatActivityDate(selectedUser.lastActiveAt)}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Real activity is recorded from authenticated sessions. Historical time before this tracking was enabled is not estimated.
+                </p>
               </div>
 
               {/* KYC & Documents (Only for Doctors/Hospitals/Labs) */}

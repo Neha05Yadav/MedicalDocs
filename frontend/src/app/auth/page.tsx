@@ -45,6 +45,14 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetStep, setResetStep] = useState<"email" | "otp" | "password">("email");
+  const [resetEmail, setResetEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
 
   async function handleEmailLogin(event: React.FormEvent) {
     event.preventDefault();
@@ -108,6 +116,84 @@ export default function AuthPage() {
       options: { redirectTo: `${window.location.origin}/patient` },
     });
     if (error) toast.error(error.message || "Google login failed");
+  }
+
+  const readError = async (response: Response, fallback: string) => {
+    try {
+      const data = await response.json();
+      return Array.isArray(data.message) ? data.message[0] : data.message || fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
+  async function requestResetOtp(event: React.FormEvent) {
+    event.preventDefault();
+    setResetLoading(true);
+    try {
+      const response = await fetch("/api/auth/forgot-password/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: resetEmail }),
+      });
+      if (!response.ok) throw new Error(await readError(response, "Could not send OTP."));
+      toast.success("If this email is registered, an OTP has been sent.");
+      setResetStep("otp");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not send OTP.");
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
+  async function verifyResetOtp(event: React.FormEvent) {
+    event.preventDefault();
+    setResetLoading(true);
+    try {
+      const response = await fetch("/api/auth/forgot-password/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: resetEmail, otp }),
+      });
+      if (!response.ok) throw new Error(await readError(response, "OTP verification failed."));
+      const data = await response.json();
+      setResetToken(data.resetToken);
+      setResetStep("password");
+      toast.success("OTP verified.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "OTP verification failed.");
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
+  async function submitNewPassword(event: React.FormEvent) {
+    event.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+    setResetLoading(true);
+    try {
+      const response = await fetch("/api/auth/forgot-password/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: resetEmail, resetToken, newPassword }),
+      });
+      if (!response.ok) throw new Error(await readError(response, "Password reset failed."));
+      setPassword("");
+      setResetOpen(false);
+      setResetStep("email");
+      setOtp("");
+      setResetToken("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Password reset successful. Sign in with your new password.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Password reset failed.");
+    } finally {
+      setResetLoading(false);
+    }
   }
 
   return (
@@ -227,7 +313,17 @@ export default function AuthPage() {
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <label htmlFor="password" className="text-sm font-semibold text-slate-300">Password</label>
-                  <button type="button" onClick={() => toast.info("Please contact support to reset your password.")} className="text-sm font-semibold text-cyan-300 transition hover:text-cyan-200">Forgot password?</button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResetEmail(email);
+                      setResetStep("email");
+                      setResetOpen(true);
+                    }}
+                    className="text-sm font-semibold text-cyan-300 transition hover:text-cyan-200"
+                  >
+                    Forgot password?
+                  </button>
                 </div>
                 <div className="relative">
                   <LockKeyhole className="absolute left-5 top-1/2 size-5 -translate-y-1/2 text-slate-500" />
@@ -283,6 +379,101 @@ export default function AuthPage() {
           </div>
         </section>
       </div>
+
+      {resetOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-5 backdrop-blur-md">
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0c131c] p-7 shadow-2xl">
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">Secure password reset</p>
+                <h3 className="mt-2 text-2xl font-semibold">
+                  {resetStep === "email" ? "Send email OTP" : resetStep === "otp" ? "Verify your OTP" : "Create new password"}
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-slate-400">
+                  {resetStep === "email"
+                    ? "Enter the email registered with your MedicalDocs account."
+                    : resetStep === "otp"
+                      ? `Enter the 6-digit code sent to ${resetEmail}.`
+                      : "Use at least 8 characters with a letter and number."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setResetOpen(false)}
+                className="rounded-full border border-white/10 px-3 py-1.5 text-sm text-slate-400 hover:text-white"
+                aria-label="Close password reset"
+              >
+                ×
+              </button>
+            </div>
+
+            {resetStep === "email" && (
+              <form onSubmit={requestResetOtp} className="space-y-4">
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={(event) => setResetEmail(event.target.value)}
+                  className={styles.input}
+                  placeholder="Registered email address"
+                  autoFocus
+                  required
+                />
+                <button disabled={resetLoading} className="w-full rounded-2xl bg-cyan-300 px-5 py-4 font-bold text-slate-950 disabled:opacity-60">
+                  {resetLoading ? "Sending OTP..." : "Send OTP"}
+                </button>
+              </form>
+            )}
+
+            {resetStep === "otp" && (
+              <form onSubmit={verifyResetOtp} className="space-y-4">
+                <input
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  value={otp}
+                  onChange={(event) => setOtp(event.target.value.replace(/\D/g, ""))}
+                  className={`${styles.input} text-center text-2xl tracking-[0.45em]`}
+                  placeholder="000000"
+                  autoFocus
+                  required
+                />
+                <button disabled={resetLoading} className="w-full rounded-2xl bg-cyan-300 px-5 py-4 font-bold text-slate-950 disabled:opacity-60">
+                  {resetLoading ? "Verifying..." : "Verify OTP"}
+                </button>
+                <button type="button" onClick={() => setResetStep("email")} className="w-full text-sm font-semibold text-cyan-300">
+                  Change email or resend OTP
+                </button>
+              </form>
+            )}
+
+            {resetStep === "password" && (
+              <form onSubmit={submitNewPassword} className="space-y-4">
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  className={styles.input}
+                  placeholder="New password"
+                  minLength={8}
+                  required
+                />
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  className={styles.input}
+                  placeholder="Confirm new password"
+                  minLength={8}
+                  required
+                />
+                <button disabled={resetLoading} className="w-full rounded-2xl bg-cyan-300 px-5 py-4 font-bold text-slate-950 disabled:opacity-60">
+                  {resetLoading ? "Updating password..." : "Reset password"}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

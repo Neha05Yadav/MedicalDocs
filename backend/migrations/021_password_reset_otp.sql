@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS password_reset_otp (
+  email VARCHAR(191) NOT NULL,
+  userId VARCHAR(191) NOT NULL,
+  otpHash VARCHAR(191) NOT NULL,
+  expiresAt DATETIME(3) NOT NULL,
+  attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  verifiedAt DATETIME(3) NULL,
+  resetTokenHash VARCHAR(191) NULL,
+  resetTokenExpiresAt DATETIME(3) NULL,
+  createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (email),
+  INDEX idx_password_reset_expiry (expiresAt),
+  CONSTRAINT fk_password_reset_user
+    FOREIGN KEY (userId) REFERENCES user(id) ON DELETE CASCADE
+);

@@ -110,6 +110,21 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
+  private async notifyFacility(
+    hospitalId: string,
+    type: string,
+    title: string,
+    message: string,
+    actionUrl?: string,
+  ) {
+    await this.db.query(
+      `INSERT INTO notification
+       (id, hospitalId, type, title, message, isRead, actionRequired, actionUrl, severity, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, 0, 1, ?, 'Medium', NOW(3), NOW(3))`,
+      [uuidv4(), hospitalId, type, title, message, actionUrl || null],
+    );
+  }
+
   private async runAppointmentReminders() {
     const due = await this.db.query<any>(
       `SELECT a.id, a.patientId, a.dateTime, d.name doctorName, h.name facilityName
@@ -321,7 +336,7 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
   async createAppointment(user: any, body: any) {
     const patient = await this.patient(user);
     const doctor = await this.db.queryOne<any>(
-      `SELECT d.*, h.name facilityName FROM doctor d JOIN hospital h ON h.id = d.hospitalId
+      `SELECT d.*, h.name facilityName, h.type facilityType FROM doctor d JOIN hospital h ON h.id = d.hospitalId
        WHERE d.id = ? AND d.hospitalId = ? AND UPPER(d.status) = 'ACTIVE'`,
       [body.doctorId, body.hospitalId],
     );
@@ -357,12 +372,14 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
         Number(doctor.consultationFee || 0),
       ],
     );
-    await this.notifyPatient(
-      patient.id,
-      'APPOINTMENT',
-      'Appointment confirmed',
-      `${doctor.name} at ${doctor.facilityName} on ${startsAt.toLocaleString('en-IN')}.`,
-      '/patient/appointments',
+    await this.notifyFacility(
+      doctor.hospitalId,
+      'APPOINTMENT_BOOKED',
+      'New appointment booked',
+      `${patient.name || 'A patient'} booked an appointment with ${doctor.name} for ${startsAt.toLocaleString('en-IN')}.`,
+      String(doctor.facilityType || '').toUpperCase() === 'CLINIC'
+        ? '/clinic/appointments'
+        : '/hospital/appointments',
     );
     await this.audit(user, 'CREATE', 'appointment', id, body);
     return { id, message: 'Appointment booked successfully.' };
@@ -719,12 +736,16 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
       );
       created.push(id);
     }
-    await this.notifyPatient(
-      patient.id,
-      'LAB_ORDER',
-      'Lab tests ordered',
-      `${tests.length} test(s) booked with ${lab.name}.`,
-      '/patient/records',
+    await this.db.query(
+      `INSERT INTO notification
+       (id, hospitalId, type, title, message, isRead, actionRequired, actionUrl, severity, createdAt, updatedAt)
+       VALUES (?, ?, 'LAB_ORDER', 'New patient lab booking', ?, 0, 1,
+               '/laboratory/test-requests', 'Medium', NOW(3), NOW(3))`,
+      [
+        uuidv4(),
+        lab.id,
+        `${patient.name} booked ${tests.length} test(s): ${tests.map((test: any) => test.name).join(', ')}.`,
+      ],
     );
     return { orderGroup, requestIds: created };
   }
@@ -1293,6 +1314,33 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
       throw new BadRequestException(
         'Patient, insurer, policy number and validity are required.',
       );
+    const existingPolicy = await this.db.queryOne<any>(
+      `SELECT id FROM insurance_policy
+       WHERE patientId = ? AND policyNumber = ? LIMIT 1`,
+      [patient.id, String(body.policyNumber).trim()],
+    );
+    if (existingPolicy) {
+      await this.db.query(
+        `UPDATE insurance_policy
+         SET insurerName = ?, tpaName = ?, memberId = ?, planName = ?,
+             coverageAmount = ?, validFrom = ?, validUntil = ?,
+             status = 'ACTIVE', isPrimary = ?, updatedAt = NOW(3)
+         WHERE id = ?`,
+        [
+          body.insurerName,
+          body.tpaName || null,
+          body.memberId || null,
+          body.planName || null,
+          Number(body.coverageAmount || 0),
+          body.validFrom,
+          body.validUntil,
+          body.isPrimary ? 1 : 0,
+          existingPolicy.id,
+        ],
+      );
+      return { id: existingPolicy.id, updated: true };
+    }
+
     const id = uuidv4();
     await this.db.query(
       `INSERT INTO insurance_policy
@@ -1324,6 +1372,33 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
     );
     if (!policy)
       throw new BadRequestException('Valid patient policy is required.');
+    const requestedAmount = Number(body.requestedAmount || 0);
+    if (!Number.isFinite(requestedAmount) || requestedAmount <= 0) {
+      throw new BadRequestException('Requested amount must be greater than zero.');
+    }
+    // Browser retries must not create a second draft for the same
+    // pre-authorization. Return the recently created real DB record instead.
+    const existingClaim = await this.db.queryOne<any>(
+      `SELECT id, claimNumber FROM insurance_claim
+       WHERE policyId = ? AND patientId = ? AND hospitalId = ?
+         AND claimType = ? AND requestedAmount = ? AND status = 'DRAFT'
+         AND createdAt >= DATE_SUB(NOW(3), INTERVAL 30 MINUTE)
+       ORDER BY createdAt DESC LIMIT 1`,
+      [
+        policy.id,
+        body.patientId,
+        hospital.id,
+        body.claimType || 'CASHLESS',
+        requestedAmount,
+      ],
+    );
+    if (existingClaim) {
+      return {
+        id: existingClaim.id,
+        claimNumber: existingClaim.claimNumber,
+        existing: true,
+      };
+    }
     const id = uuidv4();
     const claimNumber = `CLM-${new Date().getFullYear()}-${Date.now().toString().slice(-8)}`;
     await this.db.query(
@@ -1341,8 +1416,8 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
         body.admissionId || null,
         body.invoiceId || null,
         body.claimType || 'CASHLESS',
-        Number(body.requestedAmount || 0),
-        Number(body.requestedAmount || 0),
+        requestedAmount,
+        requestedAmount,
         body.notes || null,
       ],
     );
