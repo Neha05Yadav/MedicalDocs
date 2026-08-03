@@ -454,20 +454,51 @@ export class ClinicService {
 
   async getPatientDetails(patientId: string) {
     const doctor = await this.getDoctorContext();
-    const p = await this.db.queryOne('SELECT * FROM patient WHERE id = ?', [patientId]);
-    if (!p) throw new NotFoundException('Patient not found');
+    let p = await this.db.queryOne('SELECT * FROM patient WHERE id = ?', [patientId]);
+    let resolvedPatientId = patientId;
 
-    const appts = await this.db.query('SELECT * FROM appointment WHERE doctorId = ? AND patientId = ? ORDER BY dateTime DESC LIMIT 5', [doctor.id, patientId]);
-    const rxs = await this.db.query('SELECT * FROM prescription WHERE doctorId = ? AND patientId = ? ORDER BY createdAt DESC LIMIT 5', [doctor.id, patientId]);
-    const recs = await this.db.query('SELECT * FROM medicalrecord WHERE patientId = ? ORDER BY date DESC LIMIT 5', [patientId]);
+    // Clinic-created patients live in clinic_patient until they are linked to
+    // a central patient identity. The dashboard contains both sources.
+    if (!p) {
+      const clinicPatient = await this.db.queryOne(
+        'SELECT * FROM clinic_patient WHERE id = ? AND doctorId = ?',
+        [patientId, doctor.id],
+      );
+      if (!clinicPatient) throw new NotFoundException('Patient not found');
+
+      const linkedPatient = clinicPatient.phone
+        ? await this.db.queryOne(
+            'SELECT * FROM patient WHERE phone = ? ORDER BY updatedAt DESC LIMIT 1',
+            [clinicPatient.phone],
+          )
+        : null;
+      if (linkedPatient) {
+        p = linkedPatient;
+        resolvedPatientId = linkedPatient.id;
+      } else {
+        p = {
+          id: clinicPatient.id,
+          name: clinicPatient.name,
+          email: null,
+          phone: clinicPatient.phone,
+          age: clinicPatient.age,
+          gender: clinicPatient.gender,
+          bloodGroup: clinicPatient.bloodGroup,
+        };
+      }
+    }
+
+    const appts = await this.db.query('SELECT * FROM appointment WHERE doctorId = ? AND patientId = ? ORDER BY dateTime DESC LIMIT 5', [doctor.id, resolvedPatientId]);
+    const rxs = await this.db.query('SELECT * FROM prescription WHERE doctorId = ? AND patientId = ? ORDER BY createdAt DESC LIMIT 5', [doctor.id, resolvedPatientId]);
+    const recs = await this.db.query('SELECT * FROM medicalrecord WHERE patientId = ? ORDER BY date DESC LIMIT 20', [resolvedPatientId]);
 
     return {
       patient: {
-        id: p.id,
+        id: patientId,
         name: p.name,
         email: p.email,
         phone: p.phone,
-        age: p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / 31557600000) : 'N/A',
+        age: p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / 31557600000) : (p.age ?? 'N/A'),
         gender: p.gender || 'Unknown',
         bloodGroup: p.bloodGroup || 'N/A'
       },

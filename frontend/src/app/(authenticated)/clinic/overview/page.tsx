@@ -33,6 +33,14 @@ import Link from "next/link";
 import AppointmentsListClient from "./AppointmentsListClient";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+
+const formatClinicDate = (value?: string) => {
+  if (!value) return "No visit yet";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "Date not recorded";
+  return parsed.toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" });
+};
+
 export default function DoctorDashboard() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
@@ -77,8 +85,8 @@ export default function DoctorDashboard() {
   const todayLabel = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
 
   return (
-    <div className="min-h-screen w-full bg-[#f4f7f6] p-4 sm:p-6 lg:p-8">
-      <section className="relative mb-6 overflow-hidden rounded-[2rem] bg-[#062e2b] px-6 py-8 text-white shadow-xl sm:px-9 lg:px-11 lg:py-10">
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-cyan-50/25 to-emerald-50/20 p-4 sm:p-6 lg:p-8">
+      <section className="relative mb-6 overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#073b3a] via-[#07514d] to-[#086b66] px-6 py-8 text-white shadow-[0_24px_60px_-30px_rgba(6,78,73,.75)] sm:px-9 lg:px-11 lg:py-10">
         <div className="absolute -right-24 -top-28 size-80 rounded-full border-[50px] border-emerald-300/10" /><div className="absolute bottom-0 right-1/3 h-28 w-56 rounded-t-full bg-cyan-300/5 blur-2xl" />
         <div className="relative flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
           <div><div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200/15 bg-emerald-200/10 px-3 py-1.5 text-xs font-black uppercase tracking-[.18em] text-emerald-200"><Activity className="size-4" /> Live practice briefing</div><h1 className="text-3xl font-black tracking-tight sm:text-5xl">Your clinic, at a glance.</h1><p className="mt-3 max-w-2xl text-base font-medium leading-7 text-emerald-50/65">Prioritize today’s consultations, pending reports and recent patient activity from one operational view.</p></div>
@@ -91,7 +99,7 @@ export default function DoctorDashboard() {
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpiCards.map((card) => (
-          <div key={card.label} className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <div key={card.label} className="group relative overflow-hidden rounded-2xl border border-white bg-white/95 p-6 shadow-[0_12px_32px_-24px_rgba(15,23,42,.45)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_38px_-22px_rgba(8,145,178,.3)]">
             <span className={`absolute inset-x-0 top-0 h-1 ${card.accent}`} />
             <div className="flex items-start justify-between"><div><p className="text-xs font-black uppercase tracking-[.12em] text-slate-400">{card.label}</p><p className="mt-4 text-4xl font-black tracking-tight text-slate-950">{card.value}</p></div><span className={`rounded-2xl p-3 ${card.iconColor}`}><card.icon className="size-6" /></span></div>
             <p className="mt-4 text-xs font-semibold text-slate-400">Live database total</p>
@@ -107,7 +115,7 @@ export default function DoctorDashboard() {
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[.85fr_1.6fr]">
         <AppointmentsListClient appointments={appointments} mode={data?.scheduleMode === "recent" ? "recent" : "upcoming"} />
-        <div className="flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-[0_16px_38px_-30px_rgba(15,23,42,.4)]">
           <div className="flex items-center justify-between border-b border-slate-100 px-6 py-6 sm:px-8">
             <div><p className="text-xs font-black uppercase tracking-[.16em] text-cyan-700">Patient activity</p><h2 className="mt-1 text-2xl font-black text-slate-950">Recent patients</h2></div>
             <Link href="/clinic/patients" className="flex items-center gap-1.5 rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-cyan-50 hover:text-cyan-800">
@@ -127,7 +135,7 @@ export default function DoctorDashboard() {
               <tbody className="divide-y divide-slate-100">
                 {patients.length === 0 && <tr><td colSpan={4} className="px-6 py-14 text-center text-base text-slate-500">No patient activity has been recorded yet.</td></tr>}
                 {patients.map((patient) => (
-                  <tr key={patient.id} className="group transition-colors hover:bg-cyan-50/40">
+                  <tr key={patient.id} className="group transition-colors odd:bg-white even:bg-slate-50/30 hover:bg-cyan-50/50">
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
                         <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-cyan-100 bg-cyan-50 font-black text-cyan-800">
@@ -137,16 +145,17 @@ export default function DoctorDashboard() {
                       </div>
                     </td>
                     <td className="px-6 py-5">
-                      <div className="text-sm font-bold text-slate-900">{patient.condition || "Not recorded"}</div>
+                      <div className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">{patient.condition || "Not recorded"}</div>
                       <div className="mt-1 text-xs font-medium text-slate-500">{patient.age} yrs</div>
                     </td>
                     <td className="px-6 py-5 font-semibold text-slate-600">
-                      {patient.last_visit ? new Date(patient.last_visit).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" }) : "No visit yet"}
+                      {formatClinicDate(patient.last_visit)}
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center justify-center gap-3 transition-opacity">
-                        <Link href="/clinic/patients" className="inline-flex items-center justify-center rounded-xl border border-cyan-200 p-2.5 text-cyan-700 transition hover:bg-cyan-50" title="View Records">
-                          <FileText className="size-4" />
+                        <Link href={`/clinic/patients/${encodeURIComponent(patient.id)}`} className="inline-flex items-center gap-2 rounded-xl border border-cyan-200 bg-white px-3 py-2 text-xs font-bold text-cyan-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-cyan-600 hover:text-white" title="Open patient details">
+                          <ArrowUpRight className="size-4" />
+                          <span>Open</span>
                         </Link>
                       </div>
                     </td>

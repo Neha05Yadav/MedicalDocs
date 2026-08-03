@@ -539,11 +539,12 @@ export class AdminService {
   async createSubscriptionPlan(data: any) {
     const id = require('crypto').randomUUID();
     const features = JSON.stringify(data.features || []);
+    const now = new Date();
     await this.db.query(
-      'INSERT INTO subscriptionplan (id, name, price, target, features, popular) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, data.name, data.price, data.target, features, data.popular ? 1 : 0]
+      'INSERT INTO subscriptionplan (id, name, price, target, features, popular, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, data.name, data.price, data.target || null, features, data.popular ? 1 : 0, now, now]
     );
-    return { plan: { id, ...data } };
+    return { plan: { id, ...data, createdAt: now, updatedAt: now } };
   }
 
   async deleteSubscriptionPlan(id: string) {

@@ -23,8 +23,16 @@ export class SupportTicketService {
     user = await this.db.queryOne('SELECT id, name FROM doctor WHERE email = ?', [userEmail]);
     if (user) return { id: user.id, name: user.name, role: 'Clinic' };
 
-    user = await this.db.queryOne('SELECT id, name FROM hospital WHERE email = ?', [userEmail]);
-    if (user) return { id: user.id, name: user.name, role: 'Hospital' }; // Lab or Hospital
+    user = await this.db.queryOne('SELECT id, name, type FROM hospital WHERE email = ?', [userEmail]);
+    if (user) {
+      const facilityType = String(user.type || '').toUpperCase();
+      const role = facilityType.includes('LAB')
+        ? 'Laboratory'
+        : facilityType.includes('CLINIC')
+          ? 'Clinic'
+          : 'Hospital';
+      return { id: user.id, name: user.name, role };
+    }
 
     // If not found in main tables, check if there's a generic user table or return a fallback
     return { id: 'unknown', name: 'Unknown User', role: 'Unknown' };

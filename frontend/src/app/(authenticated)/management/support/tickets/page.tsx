@@ -8,11 +8,12 @@ export default function TicketManagementAll() {
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchTickets = async () => {
-    setLoading(true);
+  const fetchTickets = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const token = localStorage.getItem("token");
       const res = await fetch("/api/support-tickets", {
+        cache: "no-store",
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -27,7 +28,9 @@ export default function TicketManagementAll() {
   };
 
   useEffect(() => {
-    fetchTickets();
+    void fetchTickets();
+    const refreshTimer = window.setInterval(() => void fetchTickets(true), 10000);
+    return () => window.clearInterval(refreshTimer);
   }, []);
 
   return (
@@ -35,7 +38,7 @@ export default function TicketManagementAll() {
       {loading ? (
         <div className="p-12 text-center text-slate-500">Loading tickets...</div>
       ) : (
-        <TicketList tickets={tickets} onRefresh={fetchTickets} />
+        <TicketList tickets={tickets} onRefresh={() => fetchTickets()} />
       )}
     </Suspense>
   );

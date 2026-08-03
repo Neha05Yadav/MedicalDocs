@@ -36,12 +36,55 @@
   mask-image: linear-gradient(to bottom right, black, transparent 54%);
 }
 
+/* Management portals use a deeper executive palette while keeping content
+   surfaces readable. Other healthcare portals retain their own themes. */
+.shell[data-dashboard-theme="management"] {
+  background: #bccdd4;
+}
+
+.shell[data-dashboard-theme="management"] .main {
+  background:
+    radial-gradient(circle at 88% -5%, rgb(var(--dash-accent-rgb) / .3), transparent 31rem),
+    radial-gradient(circle at 3% 100%, rgb(15 23 42 / .16), transparent 28rem),
+    linear-gradient(145deg, #dce7ea 0%, #cedde2 48%, #bfd1d8 100%);
+}
+
+.shell[data-dashboard-theme="management"] .main::before {
+  opacity: .32;
+}
+
+.shell[data-dashboard-theme="management"] .sidebar {
+  border-right-color: rgb(45 212 191 / .16);
+  background:
+    radial-gradient(circle at 14% 2%, rgb(var(--dash-accent-rgb) / .38), transparent 15rem),
+    linear-gradient(175deg, #091827 0%, #07121f 52%, #030914 100%);
+  box-shadow: 20px 0 55px rgb(2 8 23 / .16);
+}
+
+.shell[data-dashboard-theme="management"] .header {
+  border-bottom-color: rgb(51 65 85 / .28);
+  background: rgb(223 234 237 / .94);
+  box-shadow: 0 12px 36px rgb(15 23 42 / .11);
+}
+
+/* Management pages previously painted a light full-screen layer over the
+   shared theme. Keep their cards intact, but expose the darker portal canvas. */
+.shell[data-dashboard-theme="management"] .content > div {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
 .content {
   position: relative;
   flex: 1;
   overflow-y: auto;
   scrollbar-color: rgb(var(--dash-accent-rgb) / .3) transparent;
   scrollbar-width: thin;
+}
+
+.content :global([data-duplicate-dashboard-heading="true"]),
+.content :global([data-duplicate-dashboard-subtitle="true"]) {
+  display: none !important;
 }
 
 /* Every portal page uses the complete canvas after the sidebar. Historical

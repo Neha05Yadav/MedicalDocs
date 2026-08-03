@@ -1,57 +1,73 @@
 "use client";
 
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "@/components/RechartsWrapper";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "@/components/RechartsWrapper";
 
 export default function HospitalChartClient({ data }: { data: any[] }) {
+  const chartData = (Array.isArray(data) ? data : []).map((item) => ({
+    name: item.name,
+    reports: Math.max(0, Number(item.reports) || 0),
+  }));
+  const hasReports = chartData.some((item) => item.reports > 0);
+  const peak = Math.max(0, ...chartData.map((item) => item.reports));
+
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <AreaChart data={data} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
-        <defs>
-          <linearGradient id="colorReports" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#0891b2" stopOpacity={0.4} />
-            <stop offset="95%" stopColor="#0891b2" stopOpacity={0.0} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" opacity={0.6} />
-        <XAxis 
-          dataKey="name" 
-          axisLine={false} 
-          tickLine={false} 
-          tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))", fontWeight: 500 }} 
-          dy={10} 
-        />
-        <YAxis 
-          axisLine={false} 
-          tickLine={false} 
-          tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))", fontWeight: 500 }} 
-          dx={-10}
-        />
-        <Tooltip
-          contentStyle={{ 
-            background: "rgba(255, 255, 255, 0.9)", 
-            backdropFilter: "blur(8px)",
-            border: "1px solid rgba(8, 145, 178, 0.2)", 
-            borderRadius: "16px", 
-            fontSize: "13px",
-            boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.15)",
-            padding: "16px 20px",
-            fontWeight: 600,
-            color: "#0f172a"
-          }}
-          itemStyle={{ color: "#0891b2", fontWeight: 700 }}
-          cursor={{ stroke: 'rgba(8, 145, 178, 0.3)', strokeWidth: 2, strokeDasharray: '4 4' }}
-        />
-        <Area 
-          type="natural" 
-          dataKey="reports" 
-          stroke="#0891b2" 
-          strokeWidth={4}
-          fillOpacity={1} 
-          fill="url(#colorReports)" 
-          activeDot={{ r: 7, fill: "#0891b2", stroke: "#ffffff", strokeWidth: 3, style: { filter: "drop-shadow(0px 8px 12px rgba(8, 145, 178, 0.5))" } }}
-          animationDuration={1500}
-        />
-      </AreaChart>
-    </ResponsiveContainer>
+    <div className="relative h-[230px] w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={chartData} margin={{ top: 14, right: 10, left: -20, bottom: 0 }}>
+          <defs>
+            <linearGradient id="reportsArea" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#0891b2" stopOpacity=".24" />
+              <stop offset="100%" stopColor="#0891b2" stopOpacity=".015" />
+            </linearGradient>
+          </defs>
+          <CartesianGrid vertical={false} stroke="#e8eef3" strokeDasharray="3 5" />
+          <XAxis
+            dataKey="name"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 12, fill: "#64748b", fontWeight: 600 }}
+            dy={10}
+          />
+          <YAxis
+            allowDecimals={false}
+            axisLine={false}
+            domain={[0, Math.max(1, peak + 1)]}
+            tickLine={false}
+            tick={{ fontSize: 11, fill: "#94a3b8", fontWeight: 600 }}
+            width={38}
+          />
+          <Tooltip
+            formatter={(value: any) => [`${Number(value)} report${Number(value) === 1 ? "" : "s"}`, "Generated"]}
+            labelStyle={{ color: "#0f172a", fontWeight: 800, marginBottom: 4 }}
+            contentStyle={{
+              background: "rgba(255,255,255,.96)",
+              border: "1px solid #cffafe",
+              borderRadius: 14,
+              boxShadow: "0 16px 36px -18px rgba(8,145,178,.45)",
+              fontSize: 12,
+              padding: "10px 14px",
+            }}
+            cursor={{ stroke: "#a5f3fc", strokeWidth: 1.5, strokeDasharray: "4 4" }}
+          />
+          <Area
+            type="monotone"
+            dataKey="reports"
+            stroke="#0891b2"
+            strokeWidth={3}
+            fill="url(#reportsArea)"
+            fillOpacity={1}
+            dot={hasReports ? { r: 4, fill: "#fff", stroke: "#0891b2", strokeWidth: 2.5 } : false}
+            activeDot={{ r: 6, fill: "#0891b2", stroke: "#fff", strokeWidth: 3 }}
+            animationDuration={900}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+      {!hasReports && (
+        <div className="pointer-events-none absolute inset-x-12 top-[43%] flex -translate-y-1/2 flex-col items-center">
+          <p className="text-sm font-semibold text-slate-500">No report activity this week</p>
+          <p className="mt-1 text-xs text-slate-400">The chart will update when a report is uploaded.</p>
+        </div>
+      )}
+    </div>
   );
 }

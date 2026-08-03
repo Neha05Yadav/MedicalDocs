@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { X, Send, User, StickyNote, Save } from "lucide-react";
 import { toast } from "sonner";
 
 export default function TicketList({ tickets, onRefresh }: { tickets: any[], onRefresh: () => void }) {
+  const autoOpenedTicket = useRef("");
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [replyMessage, setReplyMessage] = useState("");
@@ -46,6 +47,15 @@ export default function TicketList({ tickets, onRefresh }: { tickets: any[], onR
       toast.error("Failed to fetch ticket details");
     }
   };
+
+  useEffect(() => {
+    const requestedTicket = new URLSearchParams(window.location.search).get("ticket") || "";
+    if (!requestedTicket || autoOpenedTicket.current === requestedTicket) return;
+    const ticket = tickets.find(item => String(item.id) === requestedTicket);
+    if (!ticket) return;
+    autoOpenedTicket.current = requestedTicket;
+    void openModal(ticket);
+  }, [tickets]);
 
   const handleReply = async () => {
     if (!replyMessage.trim() || !selectedTicket) return;

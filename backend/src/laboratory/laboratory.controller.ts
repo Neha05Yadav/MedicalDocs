@@ -91,6 +91,11 @@ export class LaboratoryController {
     return this.laboratoryService.requestAccess(req.user.email, data.patientId);
   }
 
+  @Get('patients/:id/details')
+  async getPatientDetails(@Param('id') id: string, @Request() req: any) {
+    return this.laboratoryService.getPatientDetails(req.user.email, id);
+  }
+
   @Get('patients/:id/records')
   async getPatientRecords(@Param('id') id: string, @Request() req: any) {
     return this.laboratoryService.getPatientRecords(req.user.email, id);

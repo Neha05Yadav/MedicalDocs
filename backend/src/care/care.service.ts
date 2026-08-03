@@ -196,6 +196,14 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
     if (!doctorId || !/^\d{4}-\d{2}-\d{2}$/.test(dateValue || ''))
       throw new BadRequestException('Doctor and date are required.');
     const date = new Date(`${dateValue}T00:00:00`);
+    if (Number.isNaN(date.getTime()) || date.getFullYear() < new Date().getFullYear()) {
+      throw new BadRequestException('Please select a valid current or future appointment date.');
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (date < today) {
+      throw new BadRequestException('Past dates cannot be used for appointment booking.');
+    }
     const weekday = date.getDay();
     const rules = await this.db.query<any>(
       `SELECT * FROM doctor_availability
@@ -508,21 +516,26 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
   async labCatalog(user: any, laboratoryId?: string) {
     let labId = laboratoryId;
     if (!labId) labId = (await this.facility(user, ['LAB', 'LABORATORY'])).id;
+    const resolvedLabId = String(labId);
     const [tests, packages, packageItems] = await Promise.all([
       this.db.query(
         'SELECT * FROM lab_test_catalog WHERE laboratoryId = ? ORDER BY category, name',
-        [labId],
+        [resolvedLabId],
       ),
       this.db.query(
         'SELECT * FROM lab_test_package WHERE laboratoryId = ? ORDER BY name',
-        [labId],
+        [resolvedLabId],
       ),
       this.db.query(
         `SELECT lpi.packageId, ltc.id testId, ltc.code, ltc.name, ltc.price
          FROM lab_test_package_item lpi JOIN lab_test_catalog ltc ON ltc.id = lpi.testId
          WHERE ltc.laboratoryId = ?`,
-        [labId],
+        [resolvedLabId],
       ),
+    ]);
+    const [nextTestCode, nextPackageCode] = await Promise.all([
+      this.nextLabCode('lab_test_catalog', resolvedLabId, 'TST'),
+      this.nextLabCode('lab_test_package', resolvedLabId, 'PKG'),
     ]);
     return {
       tests,
@@ -530,7 +543,22 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
         ...pkg,
         tests: packageItems.filter((item) => item.packageId === pkg.id),
       })),
+      nextTestCode,
+      nextPackageCode,
     };
+  }
+
+  private async nextLabCode(
+    table: 'lab_test_catalog' | 'lab_test_package',
+    laboratoryId: string,
+    prefix: 'TST' | 'PKG',
+  ) {
+    const row = await this.db.queryOne<any>(
+      `SELECT COALESCE(MAX(CAST(SUBSTRING(code, 5) AS UNSIGNED)), 0) + 1 nextNumber
+       FROM ${table} WHERE laboratoryId = ? AND code REGEXP ?`,
+      [laboratoryId, `^${prefix}-[0-9]+$`],
+    );
+    return `${prefix}-${String(Number(row?.nextNumber || 1)).padStart(4, '0')}`;
   }
 
   async labProviders() {
@@ -543,10 +571,11 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
 
   async saveLabTest(user: any, body: any) {
     const lab = await this.facility(user, ['LAB', 'LABORATORY']);
-    if (!body.code || !body.name || !body.sampleType || Number(body.price) < 0)
+    if (!body.name || !body.sampleType || Number(body.price) < 0)
       throw new BadRequestException(
-        'Code, name, sample type and price are required.',
+        'Name, sample type and price are required.',
       );
+    const code = await this.nextLabCode('lab_test_catalog', lab.id, 'TST');
     const id = uuidv4();
     await this.db.query(
       `INSERT INTO lab_test_catalog
@@ -556,7 +585,7 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
       [
         id,
         lab.id,
-        String(body.code).toUpperCase(),
+        code,
         body.name,
         body.category || 'Pathology Test',
         body.sampleType,
@@ -568,7 +597,7 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
       ],
     );
     await this.audit(user, 'CREATE', 'lab_test_catalog', id, body);
-    return { id };
+    return { id, code };
   }
 
   async updateLabTest(user: any, id: string, body: any) {
@@ -600,10 +629,11 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
   async saveLabPackage(user: any, body: any) {
     const lab = await this.facility(user, ['LAB', 'LABORATORY']);
     const testIds = Array.isArray(body.testIds) ? body.testIds : [];
-    if (!body.code || !body.name || !testIds.length)
+    if (!body.name || !testIds.length)
       throw new BadRequestException(
-        'Package code, name and tests are required.',
+        'Package name and tests are required.',
       );
+    const code = await this.nextLabCode('lab_test_package', lab.id, 'PKG');
     const tests = await this.db.query<any>(
       `SELECT id, price FROM lab_test_catalog WHERE laboratoryId = ? AND id IN (${testIds
         .map(() => '?')
@@ -629,7 +659,7 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
         [
           id,
           lab.id,
-          String(body.code).toUpperCase(),
+          code,
           body.name,
           body.description || null,
           listPrice,
@@ -649,7 +679,7 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
     } finally {
       connection.release();
     }
-    return { id };
+    return { id, code };
   }
 
   async createLabOrder(user: any, body: any) {

@@ -26,6 +26,11 @@ export class SuperAdminController {
     return this.superAdminService.getFacilities();
   }
 
+  @Get('facilities/:id')
+  async getFacilityDetails(@Param('id') id: string) {
+    return this.superAdminService.getFacilityDetails(id);
+  }
+
   @Get('reports/patients')
   async getReportPatients() {
     return this.adminService.getReportPatients();

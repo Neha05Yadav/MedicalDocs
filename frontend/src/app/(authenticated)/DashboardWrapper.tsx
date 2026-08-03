@@ -34,7 +34,7 @@ const themes = {
   clinic: ["#2563eb", "#38bdf8", "37 99 235"],
   hospital: ["#4f46e5", "#818cf8", "79 70 229"],
   laboratory: ["#7c3aed", "#c084fc", "124 58 237"],
-  management: ["#0f766e", "#2dd4bf", "15 118 110"],
+  management: ["#0b5f59", "#14b8a6", "11 95 89"],
 } as const;
 
 export default function DashboardWrapper({ children }: { children: React.ReactNode }) {
@@ -55,6 +55,34 @@ export default function DashboardWrapper({ children }: { children: React.ReactNo
     "--dash-accent-rgb": accentRgb,
   } as CSSProperties;
 
+  useEffect(() => {
+    const normalize = (value: string | null | undefined) =>
+      String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+
+    const removeDuplicatePageHeading = () => {
+      const canonicalHeading = document.querySelector<HTMLElement>("[data-dashboard-page-title]");
+      const content = document.querySelector<HTMLElement>("[data-dashboard-content]");
+      const canonicalTitle = normalize(canonicalHeading?.textContent);
+      if (!canonicalTitle || !content) return;
+
+      content.querySelectorAll<HTMLElement>("h1, h2").forEach(heading => {
+        const isDuplicate = normalize(heading.textContent) === canonicalTitle;
+        if (!isDuplicate) return;
+        heading.dataset.duplicateDashboardHeading = "true";
+        const subtitle = heading.nextElementSibling as HTMLElement | null;
+        if (subtitle?.tagName === "P") subtitle.dataset.duplicateDashboardSubtitle = "true";
+      });
+    };
+
+    const frame = window.requestAnimationFrame(removeDuplicatePageHeading);
+    const observer = new MutationObserver(removeDuplicatePageHeading);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [pathname]);
+
   return (
     <div className={styles.shell} style={themeVariables} data-dashboard-theme={themeName}>
       <DashboardSidebar />
@@ -63,7 +91,7 @@ export default function DashboardWrapper({ children }: { children: React.ReactNo
       <main className={styles.main}>
         <DashboardHeaderClient />
 
-        <div className={styles.content}>
+        <div className={styles.content} data-dashboard-content>
           {children}
         </div>
       </main>

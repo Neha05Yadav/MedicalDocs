@@ -29,6 +29,11 @@ export class ClinicController {
     return this.clinicService.searchPatients(query);
   }
 
+  @Get('patients/:id/details')
+  async getPatientDetails(@Param('id') id: string) {
+    return this.clinicService.getPatientDetails(id);
+  }
+
   @Get('my-patients')
   async getMyPatients() {
     return this.clinicService.getMyPatients();

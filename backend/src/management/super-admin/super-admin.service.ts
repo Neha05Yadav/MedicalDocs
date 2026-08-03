@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { MysqlService } from '../../mysql.service';
 import { v4 as uuidv4 } from 'uuid';
 import * as bcrypt from 'bcrypt';
@@ -107,6 +107,54 @@ export class SuperAdminService {
         isVerified: !!f.isVerified
       };
     });
+  }
+
+  async getFacilityDetails(id: string) {
+    const facility = await this.db.queryOne('SELECT * FROM hospital WHERE id = ?', [id]);
+    if (!facility) throw new BadRequestException('Facility not found');
+
+    const [doctors, departments, patientCount, reportsCount, appointmentsCount, invoices] = await Promise.all([
+      this.db.query(`
+        SELECT d.id, d.name, d.specialization, d.email, d.phone, d.status, d.shift,
+          (SELECT COUNT(DISTINCT ar.patientId) FROM accessrequest ar
+            WHERE ar.doctorId = d.id AND ar.hospitalId = d.hospitalId) AS patientsCount
+        FROM doctor d
+        WHERE d.hospitalId = ?
+        ORDER BY d.name ASC
+      `, [id]),
+      this.db.query(`
+        SELECT COALESCE(NULLIF(specialization, ''), 'General') AS name, COUNT(*) AS doctors
+        FROM doctor WHERE hospitalId = ?
+        GROUP BY COALESCE(NULLIF(specialization, ''), 'General')
+        ORDER BY doctors DESC, name ASC
+      `, [id]),
+      this.db.queryOne(`
+        SELECT COUNT(DISTINCT patientId) AS c FROM (
+          SELECT patientId FROM accessrequest WHERE hospitalId = ?
+          UNION SELECT patientId FROM medicalrecord WHERE hospitalId = ?
+          UNION SELECT a.patientId FROM appointment a INNER JOIN doctor d ON d.id = a.doctorId WHERE d.hospitalId = ?
+          UNION SELECT patientId FROM testrequest WHERE hospitalId = ? OR referringHospitalId = ?
+        ) linkedPatients
+      `, [id, id, id, id, id]),
+      this.db.queryOne('SELECT COUNT(*) AS c FROM medicalrecord WHERE hospitalId = ?', [id]),
+      this.db.queryOne('SELECT COUNT(*) AS c FROM appointment a INNER JOIN doctor d ON d.id = a.doctorId WHERE d.hospitalId = ?', [id]),
+      this.db.queryOne('SELECT COUNT(*) AS c, COALESCE(SUM(totalAmount), 0) AS total FROM invoice WHERE hospitalId = ?', [id]),
+    ]);
+
+    return {
+      ...facility,
+      doctors: doctors.map(doctor => ({ ...doctor, patientsCount: Number(doctor.patientsCount || 0) })),
+      departments: departments.map(department => ({ ...department, doctors: Number(department.doctors || 0) })),
+      metrics: {
+        doctors: doctors.length,
+        departments: departments.length,
+        patients: Number(patientCount?.c || 0),
+        reports: Number(reportsCount?.c || 0),
+        appointments: Number(appointmentsCount?.c || 0),
+        invoices: Number(invoices?.c || 0),
+        billedAmount: Number(invoices?.total || 0),
+      },
+    };
   }
 
   async updateFacility(id: string, updateData: { status?: string, isVerified?: boolean }) {
@@ -268,7 +316,24 @@ export class SuperAdminService {
 
   async getPlatformNotifications() {
     const rows = await this.db.query('SELECT id, type, severity, title, message, isRead, actionRequired, createdAt FROM notification WHERE hospitalId IS NULL ORDER BY createdAt DESC LIMIT 100');
-    return rows.map(row => ({ id: row.id, type: String(row.severity || row.type || 'info').toLowerCase(), title: row.title, message: row.message, is_read: Boolean(row.isRead), action_url: row.actionRequired ? '/management/support/notifications' : null, created_at: row.createdAt }));
+    return rows.map(row => {
+      const sourceType = String(row.type || '').toLowerCase();
+      const isSupportTicket = sourceType.startsWith('support_ticket');
+      return {
+        id: row.id,
+        type: String(row.severity || row.type || 'info').toLowerCase(),
+        source_type: sourceType,
+        title: row.title,
+        message: row.message,
+        is_read: Boolean(row.isRead),
+        action_url: isSupportTicket
+          ? '/management/super-admin/support'
+          : row.actionRequired
+            ? '/management/super-admin/overview'
+            : null,
+        created_at: row.createdAt,
+      };
+    });
   }
 
   async updatePlatformNotifications(id?: string, markAll = false) {

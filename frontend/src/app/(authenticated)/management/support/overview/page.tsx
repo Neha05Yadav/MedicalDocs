@@ -21,6 +21,7 @@ export default function SupportDashboard() {
       try {
         const token = localStorage.getItem("token");
         const res = await fetch("/api/support-tickets", {
+          cache: "no-store",
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {
@@ -33,7 +34,9 @@ export default function SupportDashboard() {
         setLoading(false);
       }
     };
-    fetchTickets();
+    void fetchTickets();
+    const refreshTimer = window.setInterval(() => void fetchTickets(), 10000);
+    return () => window.clearInterval(refreshTimer);
   }, []);
 
   const totalTickets = tickets.length;

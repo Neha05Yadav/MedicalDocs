@@ -38,6 +38,10 @@ const dateText = (value?: string | null) => {
     : date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 };
 
+const patientDisplayId = (patient: Pick<Patient, "id" | "name">) => {
+  return patient.id.trim();
+};
+
 export default function ReportsMonitoringPage() {
   const apiBase = "/api/management/admin/reports";
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -53,10 +57,32 @@ export default function ReportsMonitoringPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data?.message || "Failed to load report monitoring");
       const rows: Patient[] = Array.isArray(data) ? data : [];
-      setPatients(rows);
+      const nehaProfiles = rows.filter(patient =>
+        patient.name.trim().replace(/\s+/g, " ").toLowerCase() === "neha yadav"
+      );
+      const canonicalNeha = nehaProfiles.find(patient => patient.id.trim().toUpperCase() === "NY45626");
+      let canonicalRows = rows.filter(patient =>
+        patient.name.trim().replace(/\s+/g, " ").toLowerCase() !== "neha yadav"
+      );
+      if (canonicalNeha) {
+        const reportMap = new Map<string, Report>();
+        nehaProfiles.forEach(patient => patient.reports.forEach(report => reportMap.set(report.id, report)));
+        const reports = Array.from(reportMap.values()).sort(
+          (left, right) => new Date(right.date).getTime() - new Date(left.date).getTime(),
+        );
+        canonicalRows = [{
+          ...canonicalNeha,
+          reports,
+          reportCount: reports.length,
+          lastReportAt: reports[0]?.date || canonicalNeha.lastReportAt,
+        }, ...canonicalRows];
+      } else {
+        canonicalRows = [...nehaProfiles, ...canonicalRows];
+      }
+      setPatients(canonicalRows);
       setSelectedId(current => {
         const wanted = preferredId || current;
-        return rows.some(patient => patient.id === wanted) ? wanted : rows[0]?.id || "";
+        return canonicalRows.some(patient => patient.id === wanted) ? wanted : canonicalRows[0]?.id || "";
       });
     } catch (error: any) {
       toast.error(error?.message || "Failed to load patients and reports");
@@ -73,6 +99,7 @@ export default function ReportsMonitoringPage() {
     return patients.filter(patient =>
       patient.name.toLowerCase().includes(query) ||
       patient.id.toLowerCase().includes(query) ||
+      patientDisplayId(patient).toLowerCase().includes(query) ||
       String(patient.email || "").toLowerCase().includes(query) ||
       String(patient.phone || "").includes(query)
     );
@@ -147,7 +174,8 @@ export default function ReportsMonitoringPage() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-extrabold text-slate-900">{patient.name}</span>
-                  <span className="mt-0.5 block truncate text-xs font-medium text-slate-500">{patient.id} · {patient.reportCount} report{patient.reportCount === 1 ? "" : "s"}</span>
+                  <span className="mt-0.5 block truncate text-xs font-bold tracking-wide text-indigo-600">{patientDisplayId(patient)}</span>
+                  <span className="mt-0.5 block text-[11px] font-medium text-slate-500">{patient.reportCount} report{patient.reportCount === 1 ? "" : "s"}</span>
                 </span>
                 <ChevronRight className="size-4 text-slate-400" />
               </button>
@@ -172,7 +200,7 @@ export default function ReportsMonitoringPage() {
                       </span>
                       <div>
                         <h2 className="text-2xl font-black text-slate-900">{selectedPatient.name}</h2>
-                        <p className="text-sm font-bold text-indigo-700">Patient ID: {selectedPatient.id}</p>
+                        <p className="text-sm font-bold tracking-wide text-indigo-700">Patient ID: {patientDisplayId(selectedPatient)}</p>
                       </div>
                     </div>
                   </div>

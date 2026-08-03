@@ -94,6 +94,12 @@ export default function SuperAdminNotificationsPage() {
     }
   };
 
+  const notificationTarget = (notification: any) => {
+    const sourceType = String(notification.source_type || "").toLowerCase();
+    if (sourceType.startsWith("support_ticket")) return "/management/super-admin/support";
+    return notification.action_url || null;
+  };
+
   if (loading) {
     return (
       <div className="p-8 max-w-4xl mx-auto w-full">
@@ -170,9 +176,9 @@ export default function SuperAdminNotificationsPage() {
                   </p>
                   
                   <div className="flex items-center gap-3">
-                    {notification.action_url && (
+                    {notificationTarget(notification) && (
                       <Link 
-                        href={notification.action_url}
+                        href={notificationTarget(notification)}
                         className="text-xs font-medium text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-md transition-colors"
                       >
                         View Details

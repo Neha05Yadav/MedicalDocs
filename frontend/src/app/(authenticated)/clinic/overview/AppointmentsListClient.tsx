@@ -10,7 +10,7 @@ export default function AppointmentsListClient({ appointments, mode = "upcoming"
   
   return (
     <>
-      <div className="flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-[0_16px_38px_-30px_rgba(15,23,42,.4)]">
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-6">
           <div><p className="text-xs font-black uppercase tracking-[.16em] text-emerald-700">Consultation queue</p><h2 className="mt-1 text-2xl font-black text-slate-950">{mode === "recent" ? "Recent schedule" : "Upcoming schedule"}</h2></div>
           <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700">{appointments.length}</span>

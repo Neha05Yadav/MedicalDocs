@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { MysqlService } from '../mysql.service';
 import { v4 as uuidv4 } from 'uuid';
 import { RedisService } from '../redis/redis.service';
@@ -445,6 +445,95 @@ export class LaboratoryService {
       type: r.type,
       fileUrl: r.fileUrl
     }));
+  }
+
+  async getPatientDetails(userEmail: string | undefined, patientId: string) {
+    const hospital = await this.getHospitalContext(userEmail);
+    const patient = await this.db.queryOne<any>(
+      'SELECT * FROM patient WHERE id = ?',
+      [patientId],
+    );
+    if (!patient) throw new NotFoundException('Patient not found');
+
+    const access = await this.db.queryOne<any>(
+      `SELECT status FROM accessrequest
+       WHERE patientId = ? AND hospitalId = ?
+       ORDER BY updatedAt DESC LIMIT 1`,
+      [patientId, hospital.id],
+    );
+    const hasApprovedAccess =
+      String(access?.status || '').toUpperCase() === 'APPROVED';
+    const hasLabRelationship = await this.db.queryOne<any>(
+      'SELECT id FROM testrequest WHERE patientId = ? AND hospitalId = ? LIMIT 1',
+      [patientId, hospital.id],
+    );
+    if (
+      !hasApprovedAccess && !hasLabRelationship
+    ) {
+      throw new ForbiddenException('Approved patient access is required.');
+    }
+
+    const [requests, reports, activity] = await Promise.all([
+      this.db.query<any>(
+        `SELECT tr.id, tr.testType, tr.status, tr.priority, tr.createdAt, tr.updatedAt,
+                tr.assignedTo, tr.reportRecordId, tr.abnormalFlag, tr.sampleId,
+                s.id sampleRecordId, s.status sampleStatus, s.barcodeValue,
+                s.collectedAt, s.receivedAt, s.processedAt,
+                COALESCE(s.assignedTo, tr.assignedTo) technician
+         FROM testrequest tr
+         LEFT JOIN sample s ON s.testRequestId = tr.id
+         WHERE tr.patientId = ? AND tr.hospitalId = ?
+         ORDER BY tr.createdAt DESC`,
+        [patientId, hospital.id],
+      ),
+      this.db.query<any>(
+        `SELECT m.id, m.title, m.type, m.status, m.fileUrl, m.date, m.createdAt,
+                h.name facilityName
+         FROM medicalrecord m LEFT JOIN hospital h ON h.id = m.hospitalId
+         WHERE m.patientId = ?
+           AND (? = 1 OR m.hospitalId = ?)
+         ORDER BY COALESCE(m.date, m.createdAt) DESC`,
+        [patientId, hasApprovedAccess ? 1 : 0, hospital.id],
+      ),
+      this.db.query<any>(
+        `SELECT h.id, h.testRequestId, h.status, h.notes, h.updatedBy, h.createdAt,
+                tr.testType
+         FROM testrequest_status_history h
+         JOIN testrequest tr ON tr.id = h.testRequestId
+         WHERE tr.patientId = ? AND tr.hospitalId = ?
+         ORDER BY h.createdAt DESC`,
+        [patientId, hospital.id],
+      ),
+    ]);
+
+    const age = patient.dateOfBirth
+      ? Math.max(
+          0,
+          Math.floor(
+            (Date.now() - new Date(patient.dateOfBirth).getTime()) /
+              31557600000,
+          ),
+        )
+      : null;
+    return {
+      patient: {
+        id: patient.id,
+        name: patient.name,
+        age,
+        gender: patient.gender || 'Not specified',
+        mobile: patient.phone || 'Not available',
+        email: patient.email || 'Not available',
+      },
+      currentRequests: requests.filter(
+        (request) =>
+          !['COMPLETED', 'CANCELLED', 'REJECTED'].includes(
+            String(request.status || '').toUpperCase(),
+          ),
+      ),
+      testHistory: requests,
+      reports,
+      activity,
+    };
   }
 
   async getNotifications(userEmail?: string) {

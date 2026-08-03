@@ -126,6 +126,10 @@ export default function HospitalDashboard() {
     { label: "Reports Uploaded", value: data?.reportsUploaded || 0, icon: FileUp, color: "border-t-2 border-purple" },
     { label: "Total Departments", value: data?.totalDepartments || 0, icon: Building2, color: "border-t-2 border-amber" },
   ];
+  const weeklyReportTotal = (data?.reportStats || []).reduce(
+    (total: number, item: any) => total + (Number(item?.reports) || 0),
+    0,
+  );
 
   return (
     <div className="p-8 w-full">
@@ -144,11 +148,15 @@ export default function HospitalDashboard() {
       
       <div className="grid lg:grid-cols-2 gap-8 mb-8">
         {/* Reports Generated Chart */}
-        <div className="bg-card ring-1 ring-black/5 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-sm font-semibold">Reports Generated This Week</h2>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-brand" /> Reports</span>
+        <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm">
+          <div className="mb-3 flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Reports Generated This Week</h2>
+              <p className="mt-1 text-xs text-slate-400">Daily report activity</p>
+            </div>
+            <div className="flex items-center gap-2 rounded-full bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-700">
+              <span className="size-2 rounded-full bg-cyan-600" />
+              {weeklyReportTotal} total
             </div>
           </div>
           <HospitalOverviewChartWrapper data={data?.reportStats || []} />

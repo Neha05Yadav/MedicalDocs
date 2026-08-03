@@ -65,9 +65,12 @@ export default function SubscriptionsPage() {
         toast.success("New plan created successfully!");
         setIsCreatePlanModalOpen(false);
         setFormData({ name: "", price: "", target: "", features: "", popular: false });
-      } else throw new Error();
-    } catch (error) {
-      toast.error("Failed to create plan");
+      } else {
+        const error = await res.json().catch(() => null);
+        throw new Error(error?.message || "Failed to create plan");
+      }
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to create plan");
     } finally {
       setIsSubmitting(false);
     }

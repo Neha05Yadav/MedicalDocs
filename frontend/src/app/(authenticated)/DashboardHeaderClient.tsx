@@ -180,7 +180,7 @@ export default function DashboardHeaderClient() {
   return (
     <header className={styles.header}>
       <div>
-        <h1 className={styles.title}>
+        <h1 className={styles.title} data-dashboard-page-title>
           {headerInfo.title}
         </h1>
         <p className={styles.subtitle}>

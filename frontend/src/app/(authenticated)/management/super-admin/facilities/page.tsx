@@ -32,6 +32,7 @@ export default function FacilityManagementPage() {
   // Modal State
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState<any>(null);
+  const [facilityDetailsLoading, setFacilityDetailsLoading] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [hospitalForm, setHospitalForm] = useState({ name: '', email: '', phone: '', address: '', licenseNumber: '' });
@@ -56,6 +57,28 @@ export default function FacilityManagementPage() {
       toast.error("Failed to fetch facilities");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openFacilityProfile = async (facility: any) => {
+    setSelectedFacility(facility);
+    setIsProfileModalOpen(true);
+    setFacilityDetailsLoading(true);
+    try {
+      const response = await fetch(`/api/management/super-admin/facilities/${encodeURIComponent(facility.id)}`);
+      const details = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(details?.message || 'Facility details could not be loaded');
+      setSelectedFacility({
+        ...facility,
+        ...details,
+        type: facility.type,
+        location: details.address || facility.location,
+        joined: facility.joined,
+      });
+    } catch (error: any) {
+      toast.error(error?.message || 'Facility details could not be loaded');
+    } finally {
+      setFacilityDetailsLoading(false);
     }
   };
 
@@ -227,16 +250,16 @@ export default function FacilityManagementPage() {
 
       {/* Facilities Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto w-full">
-          <table className="w-full min-w-[800px] text-sm text-left">
+        <div className="w-full overflow-hidden">
+          <table className="w-full table-fixed text-left text-sm">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="px-6 py-4 whitespace-nowrap">Facility Name</th>
-                <th className="px-6 py-4 whitespace-nowrap">Type</th>
-                <th className="px-6 py-4 whitespace-nowrap">Location</th>
-                <th className="px-6 py-4 whitespace-nowrap">Registration Date</th>
-                <th className="px-6 py-4 whitespace-nowrap">Status</th>
-                <th className="px-6 py-4 text-right whitespace-nowrap">Actions</th>
+                <th className="w-[23%] px-4 py-4">Facility</th>
+                <th className="w-[10%] px-3 py-4">Type</th>
+                <th className="w-[29%] px-3 py-4">Location</th>
+                <th className="hidden w-[12%] px-3 py-4 xl:table-cell">Registered</th>
+                <th className="w-[11%] px-3 py-4">Status</th>
+                <th className="w-[17%] px-3 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -248,29 +271,30 @@ export default function FacilityManagementPage() {
                 </tr>
               ) : filteredFacilities.length > 0 ? filteredFacilities.map(facility => (
                 <tr key={facility.id} className={`hover:bg-slate-50/50 transition-colors group ${facility.status === 'Suspended' || facility.status === 'Inactive' ? 'opacity-70' : ''}`}>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${facility.type === 'Hospital' ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'}`}>
+                  <td className="px-4 py-4">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className={`shrink-0 p-2 rounded-lg ${facility.type === 'Hospital' ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'}`}>
                         {facility.type === 'Hospital' ? <HospitalIcon className="size-4" /> : <FlaskConical className="size-4" />}
                       </div>
-                      <div>
-                        <div className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{facility.name}</div>
-                        <div className="text-xs text-slate-500 font-medium">{facility.email} • {facility.id?.slice(0,8)}...</div>
+                      <div className="min-w-0">
+                        <div className="truncate font-bold text-slate-900 transition-colors group-hover:text-indigo-600">{facility.name}</div>
+                        <div className="truncate text-xs font-medium text-slate-500">{facility.email}</div>
+                        <div className="mt-0.5 truncate text-[10px] font-medium text-slate-400 xl:hidden">{facility.joined} • {facility.id?.slice(0,8)}...</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 py-4">
                     <span className="inline-flex px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-slate-100 text-slate-600 whitespace-nowrap border border-slate-200">
                       {facility.type}
                     </span>
                   </td>
-                  <td className="px-6 py-4 font-medium text-slate-600 whitespace-nowrap text-xs">
+                  <td className="px-3 py-4 text-xs font-medium leading-5 text-slate-600">
                     {facility.location}
                   </td>
-                  <td className="px-6 py-4 font-medium text-slate-600 whitespace-nowrap text-xs">
+                  <td className="hidden px-3 py-4 text-xs font-medium text-slate-600 xl:table-cell">
                     {facility.joined}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 py-4">
                     {facility.status === "Active" ? (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-100 whitespace-nowrap">
                         <CheckCircle2 className="size-3" /> Active
@@ -285,10 +309,11 @@ export default function FacilityManagementPage() {
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-right flex justify-end gap-1.5">
-                    <button 
-                      onClick={() => { setSelectedFacility(facility); setIsProfileModalOpen(true); }}
-                      className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors" 
+                  <td className="px-3 py-4">
+                    <div className="flex flex-wrap justify-end gap-1">
+                    <button
+                      onClick={() => void openFacilityProfile(facility)}
+                      className="grid size-8 shrink-0 place-items-center rounded-lg text-indigo-500 transition-colors hover:bg-indigo-50"
                       title="View Details"
                     >
                       <Eye className="size-4" />
@@ -297,14 +322,14 @@ export default function FacilityManagementPage() {
                       <>
                         <button 
                           onClick={() => handleApproveReject(facility.id, 'Active')}
-                          className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                          className="grid size-8 shrink-0 place-items-center rounded-lg text-emerald-600 transition-colors hover:bg-emerald-50"
                           title="Approve"
                         >
                           <Check className="size-4" />
                         </button>
                         <button 
                           onClick={() => handleApproveReject(facility.id, 'Rejected')}
-                          className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                          className="grid size-8 shrink-0 place-items-center rounded-lg text-rose-600 transition-colors hover:bg-rose-50"
                           title="Reject"
                         >
                           <X className="size-4" />
@@ -313,7 +338,7 @@ export default function FacilityManagementPage() {
                     ) : (
                       <button 
                         onClick={() => handleToggleStatus(facility.id, facility.status)}
-                        className={`p-2 rounded-lg transition-colors ${facility.status === 'Active' ? 'text-amber-500 hover:bg-amber-50' : 'text-emerald-500 hover:bg-emerald-50'}`}
+                        className={`grid size-8 shrink-0 place-items-center rounded-lg transition-colors ${facility.status === 'Active' ? 'text-amber-500 hover:bg-amber-50' : 'text-emerald-500 hover:bg-emerald-50'}`}
                         title={facility.status === 'Active' ? 'Suspend' : 'Activate'}
                       >
                         <Power className="size-4" />
@@ -321,11 +346,12 @@ export default function FacilityManagementPage() {
                     )}
                     <button 
                       onClick={() => handleDelete(facility.id)}
-                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors" 
+                      className="grid size-8 shrink-0 place-items-center rounded-lg text-rose-500 transition-colors hover:bg-rose-50"
                       title="Delete Facility"
                     >
                       <Trash2 className="size-4" />
                     </button>
+                    </div>
                   </td>
                 </tr>
               )) : (
@@ -379,8 +405,8 @@ export default function FacilityManagementPage() {
       {/* Profile & Verification Modal */}
       {isProfileModalOpen && selectedFacility && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+          <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-white px-7 py-6">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
                   {selectedFacility.type === 'Hospital' ? <HospitalIcon className="size-6" /> : <FlaskConical className="size-6" />}
@@ -398,9 +424,12 @@ export default function FacilityManagementPage() {
               </button>
             </div>
             
-            <div className="p-6 overflow-y-auto space-y-8">
+            <div className="grid gap-6 overflow-y-auto bg-slate-50/70 p-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
               {/* Contact & Legal */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:grid-cols-2 lg:col-start-1 lg:row-start-1 lg:grid-cols-1">
+                <h4 className="flex items-center gap-2 font-extrabold text-slate-900 md:col-span-2 lg:col-span-1">
+                  <HospitalIcon className="size-5 text-violet-600" /> Hospital Information
+                </h4>
                 <div className="space-y-4">
                   <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Contact Info</h4>
                   <div className="space-y-3">
@@ -430,8 +459,92 @@ export default function FacilityManagementPage() {
                 </div>
               </div>
 
+              {facilityDetailsLoading ? (
+                <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-8 text-center text-sm font-bold text-indigo-600 animate-pulse">
+                  Loading live facility operations...
+                </div>
+              ) : selectedFacility.metrics && (
+                <>
+                  <div className="grid grid-cols-2 gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-3 lg:col-start-1 lg:row-start-2 lg:grid-cols-2">
+                    <h4 className="col-span-full flex items-center gap-2 font-extrabold text-slate-900">
+                      <User className="size-5 text-emerald-600" /> Key Statistics
+                    </h4>
+                    {[
+                      ['Doctors', selectedFacility.metrics.doctors],
+                      ['Departments', selectedFacility.metrics.departments],
+                      ['Patients', selectedFacility.metrics.patients],
+                      ['Reports', selectedFacility.metrics.reports],
+                      ['Appointments', selectedFacility.metrics.appointments],
+                      ['Invoices', selectedFacility.metrics.invoices],
+                    ].map(([label, value]) => (
+                      <div key={String(label)} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <p className="text-2xl font-black text-slate-900">{String(value ?? 0)}</p>
+                        <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {String(selectedFacility.type).toUpperCase() === 'HOSPITAL' && (
+                    <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-start-2 lg:row-span-3 lg:row-start-1">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-sm font-bold uppercase tracking-wider text-slate-900">Hospital Doctors</h4>
+                          <p className="mt-1 text-xs text-slate-500">Doctors registered under this hospital in the database.</p>
+                        </div>
+                        <span className="rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-600">
+                          {selectedFacility.doctors?.length || 0} total
+                        </span>
+                      </div>
+
+                      {selectedFacility.doctors?.length ? (
+                        <div className="grid max-h-[420px] gap-3 overflow-y-auto pr-1">
+                          {selectedFacility.doctors.map((doctor: any) => (
+                            <div key={doctor.id} className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="flex min-w-0 items-center gap-3">
+                                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-cyan-50 font-black text-cyan-700">
+                                  {String(doctor.name || 'D').replace(/^Dr\.?\s*/i, '').charAt(0).toUpperCase()}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-bold text-slate-900">{doctor.name}</p>
+                                  <p className="truncate text-xs font-medium text-slate-500">
+                                    {doctor.specialization || 'General'} • {doctor.shift || 'Shift not set'}
+                                  </p>
+                                  <p className="mt-0.5 truncate text-[11px] text-slate-400">{doctor.email || doctor.phone || 'Contact not provided'}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 sm:justify-end">
+                                <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">
+                                  {doctor.patientsCount || 0} patients
+                                </span>
+                                <span className={`rounded-md px-2 py-1 text-[10px] font-bold ${String(doctor.status).toLowerCase() === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                                  {doctor.status || 'Active'}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm font-medium text-slate-500">
+                          No doctors are registered under this hospital.
+                        </div>
+                      )}
+
+                      {selectedFacility.departments?.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {selectedFacility.departments.map((department: any) => (
+                            <span key={department.name} className="rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1.5 text-xs font-bold text-cyan-700">
+                              {department.name} · {department.doctors} doctor{department.doctors === 1 ? '' : 's'}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+
               {/* KYC & Documents */}
-              <div className="space-y-4 pt-6 border-t border-slate-100">
+              <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-start-1 lg:row-start-3">
                 <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">KYC & Documents</h4>
                 {selectedFacility.documents && selectedFacility.documents.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

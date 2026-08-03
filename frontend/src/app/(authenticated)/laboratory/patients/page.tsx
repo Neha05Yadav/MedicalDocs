@@ -187,10 +187,10 @@ export default function LabPatientsPage() {
             <div className="p-4 bg-slate-50/50 mt-auto border-t border-slate-100 flex gap-3">
               {String(patient.accessStatus || "").toUpperCase() === "APPROVED" ? (
                 <button
-                  onClick={() => openReportsModal(patient)}
+                  onClick={() => router.push(`/laboratory/patients/${encodeURIComponent(patient.id)}`)}
                   className="flex-1 py-2 bg-white border border-slate-200 hover:border-[#0891b2] text-slate-700 hover:text-[#0891b2] rounded-lg text-sm font-semibold transition-all shadow-sm"
                 >
-                  View Records
+                  Open
                 </button>
               ) : String(patient.accessStatus || "").toUpperCase() === "PENDING" ? (
                 <button disabled className="flex-1 py-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg text-sm font-semibold">
