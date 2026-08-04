@@ -2,9 +2,9 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', '..', '..', '.env') });
 
-const uploadsDirectory = path.join(__dirname, 'uploads');
+const uploadsDirectory = path.join(__dirname, '..', '..', '..', 'uploads');
 
 function detectMimeType(buffer, fileName) {
   if (buffer.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47]))) {

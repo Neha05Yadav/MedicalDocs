@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { getNotificationTarget } from "@/lib/notification-navigation";
 
 const Bell = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>;
 const CheckCircle2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>;
@@ -129,6 +130,12 @@ export default function DoctorNotificationsPage() {
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
+  const openNotification = (notification: any) => {
+    if (!notification.isRead) void markAsRead(notification.id);
+    const patientId = notification.type?.startsWith("PATIENT_APPROVED|") ? notification.type.split("|")[1] : null;
+    router.push(patientId ? `/clinic/patients?viewPatientId=${patientId}` : getNotificationTarget(notification, "clinic"));
+  };
+
   return (
     <div className="p-8 max-w-4xl mx-auto w-full min-h-screen">
       <div className="flex justify-between items-center mb-6">
@@ -156,7 +163,7 @@ export default function DoctorNotificationsPage() {
               const colorClass = getColorForType(notif.type, notif.isRead);
 
               return (
-                <div key={notif.id} className={`p-5 flex gap-4 transition-colors hover:bg-slate-50/50 group ${notif.isRead ? "opacity-75" : "bg-cyan-50/10"}`}>
+                <div key={notif.id} onClick={() => openNotification(notif)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") openNotification(notif); }} className={`p-5 flex gap-4 transition-colors hover:bg-slate-50/50 group cursor-pointer ${notif.isRead ? "opacity-75" : "bg-cyan-50/10"}`}>
                   <div className={`size-10 rounded-full flex items-center justify-center shrink-0 ${colorClass}`}>
                     <Icon className="size-5" />
                   </div>
@@ -175,11 +182,7 @@ export default function DoctorNotificationsPage() {
                     <div className="mt-3 flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
                       {notif.type.startsWith('PATIENT_APPROVED|') && (
                         <button
-                          onClick={() => {
-                            const patientId = notif.type.split('|')[1];
-                            if (!notif.isRead) markAsRead(notif.id);
-                            router.push(`/clinic/patients?viewPatientId=${patientId}`);
-                          }}
+                          onClick={(event) => { event.stopPropagation(); openNotification(notif); }}
                           className="text-xs font-semibold text-[#0052cc] hover:underline flex items-center gap-1"
                         >
                           <FileText className="size-3.5" /> View Patient
@@ -187,14 +190,14 @@ export default function DoctorNotificationsPage() {
                       )}
                       {!notif.isRead && (
                         <button 
-                          onClick={() => markAsRead(notif.id)}
+                          onClick={(event) => { event.stopPropagation(); void markAsRead(notif.id); }}
                           className="text-xs font-semibold text-[#0891b2] hover:underline flex items-center gap-1"
                         >
                           <CheckCircle2 className="size-3.5" /> Mark as read
                         </button>
                       )}
                       <button 
-                        onClick={() => deleteNotification(notif.id)}
+                        onClick={(event) => { event.stopPropagation(); void deleteNotification(notif.id); }}
                         className="text-xs font-semibold text-red-500 hover:underline flex items-center gap-1"
                       >
                         <Trash2 className="size-3.5" /> Delete

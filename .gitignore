@@ -42,3 +42,9 @@ backend/uploads/
 *.sql
 !backend/migrations/
 !backend/migrations/*.sql
+!backend/seeds/
+!backend/seeds/*.sql
+!backend/scripts/data-fixes/
+!backend/scripts/data-fixes/*.sql
+!frontend/scripts/legacy/sql/
+!frontend/scripts/legacy/sql/*.sql

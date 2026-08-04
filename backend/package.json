@@ -19,8 +19,11 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "db:migrate": "node scripts/db-migrate.js",
-    "db:seed": "node scripts/db-seed.js"
+    "db:migrations:check": "node scripts/db-validate-migrations.js",
+    "db:migrate": "node scripts/db-validate-migrations.js && node scripts/db-migrate.js",
+    "db:seed": "node scripts/db-seed.js",
+    "db:seed:sql": "node scripts/db-run-sql.js --mode seeds",
+    "db:data-fix": "node scripts/db-run-sql.js --mode data-fix"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

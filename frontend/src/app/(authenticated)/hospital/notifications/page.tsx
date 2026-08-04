@@ -19,6 +19,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 import { useRouter } from "next/navigation";
+import { getNotificationTarget } from "@/lib/notification-navigation";
 
 export default function HospitalNotificationsPage() {
   const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem("token") || ""}` });
@@ -103,12 +104,9 @@ export default function HospitalNotificationsPage() {
   };
 
   const handleNotificationClick = (notif: any) => {
-    if (!notif.isRead) markAsRead(notif.id);
-    
-    if (notif.type && notif.type.startsWith('PATIENT_APPROVED|')) {
-      const patientId = notif.type.split('|')[1];
-      router.push(`/hospital/patients?patientId=${patientId}`);
-    }
+    if (!notif.isRead) void markAsRead(notif.id);
+    const patientId = notif.type?.startsWith("PATIENT_APPROVED|") ? notif.type.split("|")[1] : null;
+    router.push(patientId ? `/hospital/patients?patientId=${patientId}` : getNotificationTarget(notif, "hospital"));
   };
 
   const getIcon = (type: string) => {
@@ -168,8 +166,12 @@ export default function HospitalNotificationsPage() {
             {filteredNotifications.map((notif) => (
               <div 
                 key={notif.id} 
+                onClick={() => handleNotificationClick(notif)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") handleNotificationClick(notif); }}
                 className={`p-6 flex gap-4 transition-colors relative group ${
-                  !notif.isRead ? "bg-cyan-50/30" : "hover:bg-slate-50"
+                  !notif.isRead ? "bg-cyan-50/30 cursor-pointer" : "hover:bg-slate-50 cursor-pointer"
                 }`}
               >
                 {!notif.isRead && (

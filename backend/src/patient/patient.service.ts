@@ -375,6 +375,9 @@ export class PatientService {
 
   async updateAppointmentStatus(userEmail: string, id: string, status: string) {
     const normalizedStatus = String(status || '').toUpperCase();
+    if (!['APPROVED', 'REJECTED', 'REVOKED'].includes(normalizedStatus)) {
+      throw new BadRequestException('Invalid access request action.');
+    }
     if (normalizedStatus !== 'CANCELLED') {
       throw new BadRequestException(
         'Patients may only cancel scheduled appointments.',
@@ -788,7 +791,10 @@ export class PatientService {
       `UPDATE accessrequest
        SET status = 'EXPIRED'
        WHERE patientId = ? AND status = 'APPROVED'
-         AND (updatedAt IS NULL OR updatedAt <= DATE_SUB(NOW(), INTERVAL 24 HOUR))`,
+         AND (
+           ((duration IS NULL OR duration = '' OR duration = '24 Hours') AND (updatedAt IS NULL OR updatedAt <= DATE_SUB(NOW(), INTERVAL 24 HOUR)))
+           OR (duration = '7 Days' AND (updatedAt IS NULL OR updatedAt <= DATE_SUB(NOW(), INTERVAL 7 DAY)))
+         )`,
       [patient.id],
     );
 
@@ -804,20 +810,44 @@ export class PatientService {
       [patient.id],
     );
 
-    return requests.map((req) => ({
-      id: req.id,
-      hospital: req.hospitalName,
-      doctor: req.doctorName || 'Lab Admin',
-      purpose: req.reason || 'Routine Checkup',
-      reportTypes: req.reportTypes || 'All Reports',
-      priority: req.priority || 'Normal',
-      duration: '24 Hours',
-      date: new Date(req.requestDate).toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      }),
-      status: req.status,
+    return Promise.all(requests.map(async (req: any) => {
+      const requestedTypes = String(req.reportTypes || '')
+        .split(',').map(type => type.trim().toLowerCase()).filter(Boolean);
+      const allReports = requestedTypes.includes('all reports');
+      let eligibleReports = await this.db.query<any>(
+        `SELECT id, title, type, date, fileUrl FROM medicalrecord
+         WHERE patientId = ? ORDER BY COALESCE(date, createdAt) DESC`,
+        [patient.id],
+      );
+      if (!allReports) {
+        eligibleReports = eligibleReports.filter(report => requestedTypes.some(type =>
+          String(report.title || '').toLowerCase().includes(type)
+          || String(report.type || '').toLowerCase().includes(type),
+        ));
+      }
+      let sharedReportIds: string[] = [];
+      try {
+        const parsed = JSON.parse(req.authorizedReportIds || '[]');
+        if (Array.isArray(parsed)) sharedReportIds = parsed.map(String);
+      } catch {}
+      return {
+        id: req.id,
+        hospital: req.hospitalName,
+        doctor: req.doctorName || 'Lab Admin',
+        purpose: req.reason || 'Routine Checkup',
+        reportTypes: req.reportTypes || 'All Reports',
+        priority: req.priority || 'Normal',
+        duration: req.duration || '24 Hours',
+        date: new Date(req.requestDate).toLocaleDateString('en-GB', {
+          day: '2-digit', month: 'short', year: 'numeric',
+        }),
+        status: req.status,
+        eligibleReports: eligibleReports.map(report => ({
+          id: report.id, title: report.title, type: report.type,
+          date: report.date, hasFile: Boolean(report.fileUrl),
+        })),
+        sharedReportIds,
+      };
     }));
   }
 
@@ -825,6 +855,7 @@ export class PatientService {
     userEmail: string,
     id: string,
     status: string,
+    reportIds: string[] = [],
   ) {
     const patient = await this.db.queryOne(
       'SELECT id, name FROM patient WHERE email = ?',
@@ -840,6 +871,35 @@ export class PatientService {
       throw new NotFoundException('Request not found');
 
     const normalizedStatus = String(status || '').toUpperCase();
+    if (!['APPROVED', 'REJECTED', 'REVOKED'].includes(normalizedStatus)) {
+      throw new BadRequestException('Invalid access request action.');
+    }
+    if (normalizedStatus === 'APPROVED') {
+      const selectedIds = [...new Set((reportIds || []).map(String).filter(Boolean))];
+      if (!selectedIds.length) throw new BadRequestException('Select at least one requested report to share.');
+      const placeholders = selectedIds.map(() => '?').join(',');
+      const selectedReports = await this.db.query<any>(
+        `SELECT id, title, type FROM medicalrecord
+         WHERE patientId = ? AND id IN (${placeholders})`,
+        [patient.id, ...selectedIds],
+      );
+      if (selectedReports.length !== selectedIds.length) {
+        throw new BadRequestException('One or more selected reports do not belong to this patient.');
+      }
+      const requestedTypes = String(req.reportTypes || '')
+        .split(',').map(type => type.trim().toLowerCase()).filter(Boolean);
+      if (!requestedTypes.includes('all reports')) {
+        const invalidReport = selectedReports.some(report => !requestedTypes.some(type =>
+          String(report.title || '').toLowerCase().includes(type)
+          || String(report.type || '').toLowerCase().includes(type),
+        ));
+        if (invalidReport) throw new BadRequestException('Only reports matching the request can be shared.');
+      }
+      await this.db.query(
+        'UPDATE accessrequest SET authorizedReportIds = ? WHERE id = ?',
+        [JSON.stringify(selectedIds), id],
+      );
+    }
     await this.db.query(
       'UPDATE accessrequest SET status = ?, updatedAt = ? WHERE id = ?',
       [normalizedStatus, new Date(), id],
@@ -854,7 +914,7 @@ export class PatientService {
           req.hospitalId,
           `PATIENT_APPROVED|${patient.id}`,
           'Access Request Approved',
-          `${patient.name} has approved your request to access their medical records.`,
+          `${patient.name} approved access to the requested reports only: ${req.reportTypes || 'All Reports'}. Access duration: ${req.duration || '24 Hours'}.`,
           new Date(),
           new Date(),
         ],

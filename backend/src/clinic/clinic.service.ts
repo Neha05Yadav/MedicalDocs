@@ -601,6 +601,12 @@ export class ClinicService {
         );
       });
     }
+    try {
+      const authorizedIds = JSON.parse(access.authorizedReportIds || '[]');
+      if (Array.isArray(authorizedIds) && authorizedIds.length) {
+        reports = reports.filter((report: any) => authorizedIds.map(String).includes(String(report.id)));
+      }
+    } catch {}
 
     return reports.map(formatPrescriptionRecord);
   }

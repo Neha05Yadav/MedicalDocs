@@ -379,8 +379,20 @@ export class LaboratoryService {
     });
   }
 
-  async requestAccess(userEmail: string | undefined, patientId: string) {
+  async requestAccess(
+    userEmail: string | undefined,
+    data: { patientId: string; reportTypes?: string[]; reason?: string; priority?: string; duration?: string },
+  ) {
     const hospital = await this.getHospitalContext(userEmail);
+    const patientId = String(data.patientId || '').trim();
+    const reportTypes = (data.reportTypes || []).map(type => String(type).trim()).filter(Boolean);
+    if (!reportTypes.length) throw new BadRequestException('Select at least one report type.');
+    if (!String(data.reason || '').trim()) throw new BadRequestException('Reason for access is required.');
+    const normalizedTypes = reportTypes.join(', ');
+    const reason = String(data.reason).trim();
+    const priority = String(data.priority || 'Normal');
+    const allowedDurations = ['24 Hours', '7 Days', 'Until Patient Revokes'];
+    const duration = allowedDurations.includes(String(data.duration)) ? String(data.duration) : '24 Hours';
     const patient = await this.db.queryOne<any>('SELECT id, name, email FROM patient WHERE id = ?', [patientId]);
     if (!patient) throw new NotFoundException('Patient not found');
     const existing = await this.db.queryOne<any>(
@@ -391,14 +403,14 @@ export class LaboratoryService {
     if (existing) {
       await this.db.query(
         `UPDATE accessrequest
-         SET status = 'PENDING', requestDate = ?, updatedAt = ?
+         SET status = 'PENDING', requestDate = ?, updatedAt = ?, reportTypes = ?, reason = ?, priority = ?, duration = ?
          WHERE id = ?`,
-        [now, now, existing.id],
+        [now, now, normalizedTypes, reason, priority, duration, existing.id],
       );
     } else {
       await this.db.query(
-        'INSERT INTO accessrequest (id, patientId, hospitalId, status, updatedAt, requestDate, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [uuidv4(), patientId, hospital.id, 'PENDING', now, now, now],
+        'INSERT INTO accessrequest (id, patientId, hospitalId, status, updatedAt, requestDate, createdAt, reportTypes, reason, priority, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [uuidv4(), patientId, hospital.id, 'PENDING', now, now, now, normalizedTypes, reason, priority, duration],
       );
     }
     if (patient.email) {
@@ -411,24 +423,38 @@ export class LaboratoryService {
           `INSERT INTO notification
              (id, userId, type, title, message, isRead, actionRequired, severity, createdAt, updatedAt)
            VALUES (?, ?, 'ACCESS_REQUEST', 'New laboratory access request', ?, 0, 1, 'Medium', ?, ?)`,
-          [uuidv4(), patientUser.id, `${hospital.name} requested access to your medical records.`, now, now],
+          [uuidv4(), patientUser.id, `${hospital.name} requested access to your ${normalizedTypes === 'All Reports' ? 'medical reports' : normalizedTypes}. Reason: ${reason}. Access duration: ${duration}.`, now, now],
         );
       }
     }
     return { success: true };
   }
 
+  private async expireTimedPatientAccess(hospitalId: string, patientId: string) {
+    await this.db.query(
+      `UPDATE accessrequest
+       SET status = 'EXPIRED'
+       WHERE hospitalId = ? AND patientId = ? AND status = 'APPROVED'
+         AND (
+           ((duration IS NULL OR duration = '' OR duration = '24 Hours') AND (updatedAt IS NULL OR updatedAt <= DATE_SUB(NOW(), INTERVAL 24 HOUR)))
+           OR (duration = '7 Days' AND (updatedAt IS NULL OR updatedAt <= DATE_SUB(NOW(), INTERVAL 7 DAY)))
+         )`,
+      [hospitalId, patientId],
+    );
+  }
+
   async getPatientRecords(userEmail: string | undefined, patientId: string) {
     const hospital = await this.getHospitalContext(userEmail);
+    await this.expireTimedPatientAccess(hospital.id, patientId);
     const access = await this.db.queryOne<any>(
-      `SELECT status FROM accessrequest
+      `SELECT status, reportTypes, authorizedReportIds FROM accessrequest
        WHERE patientId = ? AND hospitalId = ?
        ORDER BY updatedAt DESC LIMIT 1`,
       [patientId, hospital.id],
     );
     const hasApprovedAccess = String(access?.status || '').toUpperCase() === 'APPROVED';
 
-    const records = await this.db.query(`
+    let records = await this.db.query<any>(`
       SELECT m.*, h.name as hospitalName 
       FROM medicalrecord m
       LEFT JOIN hospital h ON m.hospitalId = h.id
@@ -436,6 +462,27 @@ export class LaboratoryService {
         AND (? = 1 OR m.hospitalId = ?)
       ORDER BY m.date DESC
     `, [patientId, hasApprovedAccess ? 1 : 0, hospital.id]);
+
+    if (hasApprovedAccess) {
+      const requestedTypes = String(access?.reportTypes || '')
+        .split(',')
+        .map(type => type.trim())
+        .filter(Boolean);
+      const grantsAllReports = requestedTypes.some(type => type.toLowerCase() === 'all reports');
+      if (!grantsAllReports) {
+        records = records.filter(record => requestedTypes.some(type => {
+          const normalizedType = type.toLowerCase();
+          return String(record.title || '').toLowerCase().includes(normalizedType)
+            || String(record.type || '').toLowerCase().includes(normalizedType);
+        }));
+      }
+      try {
+        const authorizedIds = JSON.parse(access?.authorizedReportIds || '[]');
+        if (Array.isArray(authorizedIds) && authorizedIds.length) {
+          records = records.filter(record => authorizedIds.map(String).includes(String(record.id)));
+        }
+      } catch {}
+    }
 
     return records.map(r => ({
       id: r.id,
@@ -449,6 +496,7 @@ export class LaboratoryService {
 
   async getPatientDetails(userEmail: string | undefined, patientId: string) {
     const hospital = await this.getHospitalContext(userEmail);
+    await this.expireTimedPatientAccess(hospital.id, patientId);
     const patient = await this.db.queryOne<any>(
       'SELECT * FROM patient WHERE id = ?',
       [patientId],
@@ -456,7 +504,7 @@ export class LaboratoryService {
     if (!patient) throw new NotFoundException('Patient not found');
 
     const access = await this.db.queryOne<any>(
-      `SELECT status FROM accessrequest
+      `SELECT status, reportTypes, authorizedReportIds FROM accessrequest
        WHERE patientId = ? AND hospitalId = ?
        ORDER BY updatedAt DESC LIMIT 1`,
       [patientId, hospital.id],
@@ -515,6 +563,25 @@ export class LaboratoryService {
           ),
         )
       : null;
+    const requestedReportTypes = String(access?.reportTypes || '')
+      .split(',')
+      .map(type => type.trim().toLowerCase())
+      .filter(Boolean);
+    const visibleReports = !hasApprovedAccess || requestedReportTypes.includes('all reports')
+      ? reports
+      : reports.filter(report => requestedReportTypes.some(type =>
+          String(report.title || '').toLowerCase().includes(type)
+          || String(report.type || '').toLowerCase().includes(type),
+        ));
+    let selectedVisibleReports = visibleReports;
+    if (hasApprovedAccess) {
+      try {
+        const authorizedIds = JSON.parse(access?.authorizedReportIds || '[]');
+        if (Array.isArray(authorizedIds) && authorizedIds.length) {
+          selectedVisibleReports = visibleReports.filter(report => authorizedIds.map(String).includes(String(report.id)));
+        }
+      } catch {}
+    }
     return {
       patient: {
         id: patient.id,
@@ -531,7 +598,7 @@ export class LaboratoryService {
           ),
       ),
       testHistory: requests,
-      reports,
+      reports: selectedVisibleReports,
       activity,
     };
   }

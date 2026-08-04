@@ -1,0 +1,2 @@
+ALTER TABLE user
+  ADD COLUMN IF NOT EXISTS permissions JSON NULL AFTER status;

@@ -5,6 +5,10 @@ const mysql = require('mysql2/promise');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const migrationsDirectory = path.join(__dirname, '..', 'migrations');
+const aliasesPath = path.join(migrationsDirectory, 'legacy-aliases.json');
+const legacyAliases = fs.existsSync(aliasesPath)
+  ? JSON.parse(fs.readFileSync(aliasesPath, 'utf8'))
+  : {};
 
 function splitStatements(sql) {
   return sql
@@ -14,11 +18,15 @@ function splitStatements(sql) {
 }
 
 async function executeStatement(connection, statement) {
-  const conditionalColumn = statement.match(
+  const executable = statement
+    .replace(/^(?:\s*--[^\r\n]*(?:\r?\n|$))+/, '')
+    .trim();
+  if (!executable) return;
+  const conditionalColumn = executable.match(
     /^ALTER\s+TABLE\s+`?([a-zA-Z0-9_]+)`?\s+ADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\s+`?([a-zA-Z0-9_]+)`?\s+([\s\S]+)$/i,
   );
   if (!conditionalColumn) {
-    await connection.query(statement);
+    await connection.query(executable);
     return;
   }
   const [, tableName, columnName, definition] = conditionalColumn;
@@ -62,6 +70,20 @@ async function main() {
         throw new Error(`Applied migration was modified: ${file}`);
       console.log(`skip ${file}`);
       continue;
+    }
+
+    const legacy = legacyAliases[file];
+    if (legacy) {
+      const [legacyRows] = await connection.query(
+        'SELECT checksum FROM schema_migration WHERE version = ?',
+        [legacy.version],
+      );
+      if (legacyRows.length) {
+        if (legacyRows[0].checksum !== legacy.checksum)
+          throw new Error(`Applied legacy migration checksum mismatch: ${legacy.version}`);
+        console.log(`skip ${file} (covered by legacy ${legacy.version})`);
+        continue;
+      }
     }
 
     console.log(`apply ${file}`);

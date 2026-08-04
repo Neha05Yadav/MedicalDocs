@@ -8,6 +8,7 @@ MediDoc is a healthcare management application with a Next.js frontend and a Nes
 .
 |-- frontend/          # Next.js 16 application
 |   |-- public/        # Static assets
+|   |-- scripts/       # Preserved one-time frontend maintenance utilities
 |   `-- src/
 |       |-- app/       # App Router pages and layouts
 |       |-- components/
@@ -15,9 +16,14 @@ MediDoc is a healthcare management application with a Next.js frontend and a Nes
 |       |-- integrations/
 |       `-- lib/
 |-- backend/           # NestJS API
+|   |-- migrations/    # Versioned schema-only SQL migrations
+|   |-- seeds/         # Optional repeatable/demo seed data
+|   |-- scripts/       # Migration tooling, data fixes, and legacy utilities
 |   |-- src/           # Feature modules, controllers, and services
 |   |-- test/          # End-to-end tests
 |   `-- uploads/       # Local runtime uploads (git-ignored)
+|-- docs/
+|   `-- screenshots/   # UI review and documentation captures
 `-- package.json       # Commands for both applications
 ```
 

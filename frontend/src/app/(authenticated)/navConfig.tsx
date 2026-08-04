@@ -28,6 +28,7 @@ export const hospitalNav = [
   { title: "Dashboard", subtitle: "Overview of hospital operations and patient flow.", url: "/hospital/overview", iconName: "LayoutDashboard" },
   { title: "Doctors", subtitle: "Manage hospital doctors, their departments, and statuses.", url: "/hospital/doctors", iconName: "Stethoscope" },
   { title: "Appointments", subtitle: "Manage OPD schedules, check-ins and consultations.", url: "/hospital/appointments", iconName: "Calendar" },
+  { title: "Prescriptions", subtitle: "Issue and manage prescriptions for hospital patients.", url: "/hospital/prescriptions", iconName: "Pill" },
   { title: "Patient Search", subtitle: "Search and verify patients to access their medical records.", url: "/hospital/patients", iconName: "Search" },
   { title: "Reports", subtitle: "Manage and upload hospital medical reports.", url: "/hospital/reports", iconName: "ClipboardList" },
   { title: "Billing & Payments", subtitle: "Manage patient invoices, payments, and billing history.", url: "/hospital/billing", iconName: "CreditCard" },

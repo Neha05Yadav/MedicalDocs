@@ -102,9 +102,9 @@ export class PatientController {
   async updateAccessRequestStatus(
     @Request() req: any, 
     @Param('id') id: string,
-    @Body('status') status: string
+    @Body() data: { status: string; reportIds?: string[] },
   ) {
-    return this.patientService.updateAccessRequestStatus(req.user.email, id, status);
+    return this.patientService.updateAccessRequestStatus(req.user.email, id, data.status, data.reportIds || []);
   }
 
   @Get('notifications')

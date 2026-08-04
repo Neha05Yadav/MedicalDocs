@@ -1,4 +1,4 @@
-const { MysqlService } = require('./dist/mysql/mysql.service');
+const { MysqlService } = require('../../../dist/mysql/mysql.service');
 const mysql = new MysqlService();
 async function run() {
   await mysql.onModuleInit();

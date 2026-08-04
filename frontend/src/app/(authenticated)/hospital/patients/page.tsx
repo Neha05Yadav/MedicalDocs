@@ -34,6 +34,7 @@ interface Patient {
   verifiedBy: string;
   availableRecords: number;
   accessExpiresAt?: string | null;
+  accessDuration?: string | null;
 }
 
 interface Doctor {
@@ -79,6 +80,7 @@ export default function PatientSearchVerificationPage() {
   const [customReportType, setCustomReportType] = useState("");
   const [accessReason, setAccessReason] = useState("");
   const [accessPriority, setAccessPriority] = useState("Normal");
+  const [accessDuration, setAccessDuration] = useState("24 Hours");
   const [accessClock, setAccessClock] = useState(() => Date.now());
   const [isRequesting, setIsRequesting] = useState(false);
 
@@ -145,6 +147,7 @@ export default function PatientSearchVerificationPage() {
 
   const hasActiveAccess = (patient: Patient | null) => {
     if (!patient || patient.status !== "Access Approved") return false;
+    if (patient.accessDuration === "Until Patient Revokes") return true;
     if (!patient.accessExpiresAt) return false;
     return new Date(patient.accessExpiresAt).getTime() > accessClock;
   };
@@ -421,7 +424,7 @@ export default function PatientSearchVerificationPage() {
             .join(", "),
           reason: accessReason,
           priority: accessPriority,
-          duration: "24 Hours"
+          duration: accessDuration
         })
       });
 
@@ -434,6 +437,7 @@ export default function PatientSearchVerificationPage() {
       setCustomReportType("");
       setAccessReason("");
       setAccessPriority("Normal");
+      setAccessDuration("24 Hours");
       setSelectedPatient(current => current ? { ...current, status: "Pending", accessExpiresAt: null } : current);
       setSearchResults(current => current.map(patient => patient.id === selectedPatient.id ? { ...patient, status: "Pending", accessExpiresAt: null } : patient));
     } catch (err: any) {
@@ -862,8 +866,14 @@ export default function PatientSearchVerificationPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1.5">Access Duration</label>
-                    <div className="flex min-h-[42px] items-center gap-2 rounded-xl border border-cyan-100 bg-cyan-50 px-4 py-2.5 text-sm font-semibold text-cyan-800">
-                      <Clock className="size-4" /> 24 hours maximum
+                    <div className="relative">
+                      <Clock className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-cyan-700" />
+                      <select value={accessDuration} onChange={e => setAccessDuration(e.target.value)} className="min-h-[42px] w-full appearance-none rounded-xl border border-cyan-100 bg-cyan-50 py-2.5 pl-11 pr-9 text-sm font-semibold text-cyan-800 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20">
+                        <option value="24 Hours">24 Hours</option>
+                        <option value="7 Days">7 Days</option>
+                        <option value="Until Patient Revokes">Until Patient Revokes</option>
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-cyan-700" />
                     </div>
                   </div>
                 </div>

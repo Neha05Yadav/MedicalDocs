@@ -87,8 +87,11 @@ export class LaboratoryController {
   }
 
   @Post('patients/request-access')
-  async requestAccess(@Body() data: { patientId: string }, @Request() req: any) {
-    return this.laboratoryService.requestAccess(req.user.email, data.patientId);
+  async requestAccess(
+    @Body() data: { patientId: string; reportTypes?: string[]; reason?: string; priority?: string; duration?: string },
+    @Request() req: any,
+  ) {
+    return this.laboratoryService.requestAccess(req.user.email, data);
   }
 
   @Get('patients/:id/details')

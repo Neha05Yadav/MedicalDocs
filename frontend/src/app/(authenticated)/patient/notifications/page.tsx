@@ -4,8 +4,11 @@
 const Bell = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>;
 const Check = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>;
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { getNotificationTarget } from "@/lib/notification-navigation";
 
 export default function NotificationsPage() {
+  const router = useRouter();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -84,6 +87,11 @@ export default function NotificationsPage() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  const openNotification = (notification: any) => {
+    if (!notification.read) void markAsRead(notification.id);
+    router.push(getNotificationTarget(notification, "patient"));
+  };
+
   return (
     <div className="p-8">
       <div className="mb-6 flex items-center justify-between">
@@ -112,7 +120,7 @@ export default function NotificationsPage() {
           <div className="p-8 text-center text-slate-500">No notifications found.</div>
         ) : (
           notifications.map((n) => (
-            <div key={n.id} className={`px-6 py-4 flex items-start gap-4 hover:bg-slate-50 transition-colors ${!n.read ? "bg-cyan-50/30" : ""}`}>
+            <div key={n.id} onClick={() => openNotification(n)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") openNotification(n); }} className={`px-6 py-4 flex items-start gap-4 hover:bg-slate-50 transition-colors cursor-pointer ${!n.read ? "bg-cyan-50/30" : ""}`}>
               <div className={`size-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${!n.read ? "bg-cyan-100 text-[#0891b2]" : "bg-slate-100 text-slate-400"}`}>
                 <Bell className="size-4" />
               </div>
@@ -125,7 +133,7 @@ export default function NotificationsPage() {
                 <p className="text-xs text-slate-400 mt-1">{n.time}</p>
               </div>
               {!n.read && (
-                <button onClick={() => markAsRead(n.id)} className="text-xs text-[#0891b2] font-medium hover:underline flex items-center gap-1 shrink-0">
+                <button onClick={(event) => { event.stopPropagation(); void markAsRead(n.id); }} className="text-xs text-[#0891b2] font-medium hover:underline flex items-center gap-1 shrink-0">
                   <Check className="size-3" /> Mark read
                 </button>
               )}

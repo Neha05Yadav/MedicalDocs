@@ -284,4 +284,3 @@ CREATE TABLE IF NOT EXISTS prescription_id_sequence (
   updatedAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
 );
 
-INSERT IGNORE INTO prescription_id_sequence (sequenceName, nextValue) VALUES ('prescription', 1);

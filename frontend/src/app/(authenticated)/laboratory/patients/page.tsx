@@ -38,6 +38,15 @@ export default function LabPatientsPage() {
   const [labPatients, setLabPatients] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [requestPatient, setRequestPatient] = useState<any>(null);
+  const [requestReportTypes, setRequestReportTypes] = useState<string[]>([]);
+  const [requestReason, setRequestReason] = useState("");
+  const [requestPriority, setRequestPriority] = useState("Normal");
+  const [requestDuration, setRequestDuration] = useState("24 Hours");
+  const [customReportType, setCustomReportType] = useState("");
+  const [isRequesting, setIsRequesting] = useState(false);
+  const [laboratoryName, setLaboratoryName] = useState("Laboratory");
 
   // Modal state
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
@@ -46,6 +55,10 @@ export default function LabPatientsPage() {
   const [loadingRecords, setLoadingRecords] = useState(false);
 
   useEffect(() => {
+    try {
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+      setLaboratoryName(currentUser?.name || "Laboratory");
+    } catch {}
     fetchPatients();
   }, [router]);
 
@@ -62,34 +75,54 @@ export default function LabPatientsPage() {
   }, [searchTerm]);
 
   const fetchPatients = async () => {
+    setLoading(true);
+    setLoadError("");
     try {
       const token = localStorage.getItem("token");
       if (!token) {
         window.location.href = `/auth?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`;
         return;
       }
-      const res = await fetch("/api/laboratory/patients", { headers: { "Authorization": `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setLabPatients(data);
+      const res = await fetch("/api/laboratory/patients", {
+        cache: "no-store",
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => null);
+      if (res.status === 401) {
+        localStorage.removeItem("token");
+        window.location.href = `/auth?returnUrl=${encodeURIComponent(window.location.pathname)}`;
+        return;
       }
-    } catch (e) {
+      if (!res.ok) throw new Error(data?.message || "Unable to load laboratory patients");
+
+      const patients = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+      setLabPatients(patients);
+    } catch (e: any) {
       console.error(e);
+      setLabPatients([]);
+      setLoadError(e?.message || "Unable to load laboratory patients");
     } finally {
       setLoading(false);
     }
   };
 
   const searchPatients = async (query: string) => {
+    setLoading(true);
+    setLoadError("");
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`/api/laboratory/patients/search?q=${query}`, { headers: { "Authorization": `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setLabPatients(data);
-      }
-    } catch (e) {
+      const res = await fetch(`/api/laboratory/patients/search?q=${encodeURIComponent(query)}`, {
+        cache: "no-store",
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message || "Patient search failed");
+      setLabPatients(Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : []);
+    } catch (e: any) {
       console.error(e);
+      setLoadError(e?.message || "Patient search failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -119,7 +152,22 @@ export default function LabPatientsPage() {
     }
   };
 
-  const requestPatientAccess = async (patient: any) => {
+  const openAccessRequest = (patient: any) => {
+    setRequestPatient(patient);
+    setRequestReportTypes([]);
+    setRequestReason("");
+    setRequestPriority("Normal");
+    setRequestDuration("24 Hours");
+    setCustomReportType("");
+  };
+
+  const requestPatientAccess = async () => {
+    if (!requestPatient) return;
+    const selectedTypes = requestReportTypes.map(type => type === "Other" ? customReportType.trim() : type).filter(Boolean);
+    if (!selectedTypes.length) return toast.error("Select at least one report type");
+    if (requestReportTypes.includes("Other") && !customReportType.trim()) return toast.error("Enter the report name");
+    if (!requestReason.trim()) return toast.error("Enter the reason for access");
+    setIsRequesting(true);
     try {
       const token = localStorage.getItem("token");
       const response = await fetch("/api/laboratory/patients/request-access", {
@@ -128,17 +176,27 @@ export default function LabPatientsPage() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`,
         },
-        body: JSON.stringify({ patientId: patient.id }),
+        body: JSON.stringify({
+          patientId: requestPatient.id,
+          reportTypes: selectedTypes,
+          reason: requestReason.trim(),
+          priority: requestPriority,
+          duration: requestDuration,
+        }),
       });
-      if (!response.ok) throw new Error("Failed to request access");
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.message || "Failed to request access");
       setLabPatients((current) =>
         current.map((item) =>
-          item.id === patient.id ? { ...item, accessStatus: "PENDING" } : item,
+          item.id === requestPatient.id ? { ...item, accessStatus: "PENDING" } : item,
         ),
       );
+      setRequestPatient(null);
       toast.success("Access request sent to patient");
-    } catch {
-      toast.error("Failed to request patient access");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to request patient access");
+    } finally {
+      setIsRequesting(false);
     }
   };
   return (
@@ -156,7 +214,18 @@ export default function LabPatientsPage() {
         </div>
       </div>
       {/* Patients Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {loading && (
+        <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((item) => <div key={item} className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-white shadow-sm" />)}
+        </div>
+      )}
+      {!loading && loadError && (
+        <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
+          <p className="font-semibold text-red-700">{loadError}</p>
+          <button onClick={fetchPatients} className="mt-3 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">Try again</button>
+        </div>
+      )}
+      {!loading && !loadError && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredPatients.map(patient => (
           <div key={patient.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md hover:border-cyan-200 transition-all group flex flex-col">
             <div className="p-6 pb-4 border-b border-slate-50 relative flex-1">
@@ -187,10 +256,10 @@ export default function LabPatientsPage() {
             <div className="p-4 bg-slate-50/50 mt-auto border-t border-slate-100 flex gap-3">
               {String(patient.accessStatus || "").toUpperCase() === "APPROVED" ? (
                 <button
-                  onClick={() => router.push(`/laboratory/patients/${encodeURIComponent(patient.id)}`)}
+                  onClick={() => openReportsModal(patient)}
                   className="flex-1 py-2 bg-white border border-slate-200 hover:border-[#0891b2] text-slate-700 hover:text-[#0891b2] rounded-lg text-sm font-semibold transition-all shadow-sm"
                 >
-                  Open
+                  View Reports
                 </button>
               ) : String(patient.accessStatus || "").toUpperCase() === "PENDING" ? (
                 <button disabled className="flex-1 py-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg text-sm font-semibold">
@@ -198,7 +267,7 @@ export default function LabPatientsPage() {
                 </button>
               ) : (
                 <button
-                  onClick={() => requestPatientAccess(patient)}
+                  onClick={() => openAccessRequest(patient)}
                   className="flex-1 py-2 bg-[#0891b2] text-white rounded-lg text-sm font-semibold hover:bg-cyan-700 transition-colors"
                 >
                   Request Access
@@ -207,12 +276,53 @@ export default function LabPatientsPage() {
             </div>
           </div>
         ))}
-      </div>
-      {filteredPatients.length === 0 && (
+      </div>}
+      {!loading && !loadError && filteredPatients.length === 0 && (
         <div className="text-center py-20 bg-white rounded-2xl border border-slate-200 border-dashed">
           <Users className="size-12 text-slate-300 mx-auto mb-3" />
           <h3 className="text-lg font-bold text-slate-700 mb-1">No patients found</h3>
           <p className="text-slate-500 text-sm">Try adjusting your search or filters.</p>
+        </div>
+      )}
+
+      {requestPatient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[88vh] w-full max-w-xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-5">
+              <h2 className="text-xl font-bold text-slate-950">Request Report Access</h2>
+              <button onClick={() => setRequestPatient(null)} className="rounded-full bg-slate-100 p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-700"><X className="size-5" /></button>
+            </div>
+            <div className="space-y-6 overflow-y-auto p-6">
+              <div className="grid grid-cols-2 gap-4">
+                <label className="text-xs font-semibold text-slate-500">Patient Name<input readOnly value={requestPatient.name} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700" /></label>
+                <label className="text-xs font-semibold text-slate-500">Patient ID<input readOnly value={requestPatient.id} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700" /></label>
+              </div>
+              <label className="block text-sm font-semibold text-slate-700">Laboratory Requesting Access<input readOnly value={laboratoryName} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700" /></label>
+              <div>
+                <p className="mb-2 text-sm font-semibold text-slate-700">Report Type *</p>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  {["All Reports", "Blood Test", "CBC", "Lipid Profile", "Thyroid Test", "Urine Test", "Liver Function Test", "Kidney Function Test", "X-Ray", "MRI", "CT Scan", "ECG", "Prescription", "Discharge Summary", "Other"].map((type) => (
+                    <label key={type} className={`${type === "All Reports" ? "mb-3 flex border-b border-slate-200 pb-3" : "inline-flex w-1/2 py-1.5"} cursor-pointer items-center gap-2 text-sm font-medium text-slate-700`}>
+                      <input type="checkbox" className="size-4 rounded border-slate-300 accent-cyan-600" checked={requestReportTypes.includes(type)} disabled={type !== "All Reports" && requestReportTypes.includes("All Reports")} onChange={(event) => {
+                        if (type === "All Reports") setRequestReportTypes(event.target.checked ? ["All Reports"] : []);
+                        else setRequestReportTypes(current => event.target.checked ? [...current.filter(item => item !== "All Reports"), type] : current.filter(item => item !== type));
+                      }} />{type}
+                    </label>
+                  ))}
+                  {requestReportTypes.includes("Other") && <input value={customReportType} onChange={event => setCustomReportType(event.target.value)} placeholder="Enter exact report name" className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-500" />}
+                </div>
+              </div>
+              <label className="block text-sm font-semibold text-slate-700">Reason for Access *<textarea value={requestReason} onChange={event => setRequestReason(event.target.value)} rows={3} placeholder="Required for laboratory testing and report processing." className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-500" /></label>
+              <div className="grid grid-cols-2 gap-4">
+                <label className="text-sm font-semibold text-slate-700">Priority<select value={requestPriority} onChange={event => setRequestPriority(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm"><option>Normal</option><option>Urgent</option></select></label>
+                <label className="text-sm font-semibold text-slate-700">Access Duration<select value={requestDuration} onChange={event => setRequestDuration(event.target.value)} className="mt-2 w-full rounded-xl border border-cyan-100 bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-800 outline-none focus:border-cyan-500"><option value="24 Hours">24 Hours</option><option value="7 Days">7 Days</option><option value="Until Patient Revokes">Until Patient Revokes</option></select></label>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50 px-6 py-5">
+              <button onClick={() => setRequestPatient(null)} className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-600">Cancel</button>
+              <button onClick={requestPatientAccess} disabled={isRequesting} className="rounded-xl bg-cyan-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-600/20 hover:bg-cyan-700 disabled:opacity-50">{isRequesting ? "Sending..." : "Send Request"}</button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -226,7 +336,7 @@ export default function LabPatientsPage() {
                   <FileText className="size-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-lg">Past Reports</h3>
+                  <h3 className="font-bold text-slate-900 text-lg">Patient Records: {selectedPatientForReports.name}</h3>
                   <p className="text-xs text-slate-500">{selectedPatientForReports.name} • {selectedPatientForReports.id}</p>
                 </div>
               </div>

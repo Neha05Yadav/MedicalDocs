@@ -26,6 +26,8 @@ export default function AccessRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const XIcon = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>;
 
@@ -54,7 +56,8 @@ export default function AccessRequestsPage() {
     }
   };
 
-  const handleStatusChange = async (id: string, newStatus: string) => {
+  const handleStatusChange = async (id: string, newStatus: string, reportIds: string[] = []) => {
+    setIsSubmitting(true);
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(`/api/patient/access-requests/${id}`, {
@@ -63,18 +66,22 @@ export default function AccessRequestsPage() {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ status: newStatus, reportIds })
       });
 
-      if (!res.ok) throw new Error("Failed to update status");
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(payload?.message || "Failed to update status");
       
       setRequests((prev) => 
         prev.map((req) => req.id === id ? { ...req, status: newStatus } : req)
       );
       if (newStatus === "APPROVED") toast.success("Access request approved!");
       if (newStatus === "REJECTED") toast.error("Access request rejected!");
-    } catch (e) {
-      toast.error("Failed to process action");
+      setIsViewModalOpen(false);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to process action");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -138,7 +145,11 @@ export default function AccessRequestsPage() {
                       {request.status === "PENDING" ? (
                         <>
                           <button 
-                            onClick={() => handleStatusChange(request.id, "APPROVED")}
+                            onClick={() => {
+                              setSelectedRequest(request);
+                              setSelectedReportIds([]);
+                              setIsViewModalOpen(true);
+                            }}
                             className="px-3 py-1.5 bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm"
                           >
                             <CheckCircle2 className="size-3.5" /> Approve
@@ -183,8 +194,8 @@ export default function AccessRequestsPage() {
       {/* View Request Details Modal */}
       {isViewModalOpen && selectedRequest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+          <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-xl animate-in zoom-in-95 duration-200">
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-white p-5">
               <h3 className="text-lg font-bold text-slate-900">Request Details</h3>
               <button 
                 onClick={() => setIsViewModalOpen(false)}
@@ -194,12 +205,32 @@ export default function AccessRequestsPage() {
               </button>
             </div>
             
-            <div className="p-6 space-y-4">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-6">
               <div className="flex flex-col gap-1">
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Requested By</span>
                 <p className="text-sm font-medium text-slate-900">{selectedRequest.doctor}</p>
                 <p className="text-xs text-slate-600">{selectedRequest.hospital}</p>
               </div>
+
+              {selectedRequest.status === "PENDING" && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Select reports to send *</span>
+                  <p className="text-xs text-slate-500">Only reports matching the requested type are available.</p>
+                  <div className="max-h-56 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    {(selectedRequest.eligibleReports || []).length === 0 ? (
+                      <p className="p-3 text-center text-sm font-medium text-amber-700">No matching uploaded report is available. Upload the requested report before approving.</p>
+                    ) : (selectedRequest.eligibleReports || []).map((report: any) => (
+                      <label key={report.id} className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white p-3 hover:border-cyan-300">
+                        <input type="checkbox" className="mt-1 size-4 accent-cyan-600" checked={selectedReportIds.includes(report.id)} onChange={event => setSelectedReportIds(current => event.target.checked ? [...current, report.id] : current.filter(id => id !== report.id))} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-bold text-slate-800">{report.title}</span>
+                          <span className="text-xs text-slate-500">{report.type} · {report.date ? new Date(report.date).toLocaleDateString("en-IN") : "Date unavailable"}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               <div className="flex flex-col gap-1">
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Request Date</span>
@@ -248,13 +279,23 @@ export default function AccessRequestsPage() {
               </div>
             </div>
             
-            <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end">
+            <div className="flex shrink-0 items-center justify-end gap-3 border-t border-slate-200 bg-white p-4 shadow-[0_-8px_24px_rgba(15,23,42,0.08)]">
               <button 
                 onClick={() => setIsViewModalOpen(false)}
                 className="px-5 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-50 transition-colors shadow-sm"
               >
                 Close
               </button>
+              {selectedRequest.status === "PENDING" && (
+                <>
+                  <button disabled={isSubmitting} onClick={() => handleStatusChange(selectedRequest.id, "REJECTED")} className="rounded-xl border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-bold text-red-700 hover:bg-red-100 disabled:opacity-50">
+                    Reject
+                  </button>
+                  <button disabled={isSubmitting || selectedReportIds.length === 0} onClick={() => handleStatusChange(selectedRequest.id, "APPROVED", selectedReportIds)} className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
+                    {isSubmitting ? "Sending..." : `Accept & Send${selectedReportIds.length ? ` (${selectedReportIds.length})` : ""}`}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

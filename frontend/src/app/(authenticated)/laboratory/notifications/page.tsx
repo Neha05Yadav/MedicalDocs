@@ -17,6 +17,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from 'date-fns';
+import { getNotificationTarget } from "@/lib/notification-navigation";
 
 export default function LabNotificationsPage() {
   const router = useRouter();
@@ -119,6 +120,11 @@ export default function LabNotificationsPage() {
     }
   };
 
+  const openNotification = (notification: any) => {
+    if (!notification.isRead) void markAsRead(notification.id);
+    router.push(getNotificationTarget(notification, "laboratory"));
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
       case "Request": return <Activity className="size-5 text-cyan-600" />;
@@ -173,7 +179,10 @@ export default function LabNotificationsPage() {
             {filteredNotifications.map((notif) => (
               <div 
                 key={notif.id} 
-                onClick={() => !notif.isRead && markAsRead(notif.id)}
+                onClick={() => openNotification(notif)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") openNotification(notif); }}
                 className={`p-6 flex gap-4 transition-colors relative group cursor-pointer ${
                   !notif.isRead ? "bg-cyan-50/30" : "hover:bg-slate-50"
                 }`}
@@ -198,10 +207,10 @@ export default function LabNotificationsPage() {
                   </p>
                   {notif.actionRequired && (
                     <div className="flex gap-3">
-                      <button className="px-4 py-1.5 bg-[#0891b2] text-white text-xs font-bold rounded-lg hover:bg-cyan-700 transition-colors shadow-sm">
+                       <button onClick={(event) => { event.stopPropagation(); openNotification(notif); }} className="px-4 py-1.5 bg-[#0891b2] text-white text-xs font-bold rounded-lg hover:bg-cyan-700 transition-colors shadow-sm">
                         Accept Request
                       </button>
-                      <button className="px-4 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
+                       <button onClick={(event) => { event.stopPropagation(); openNotification(notif); }} className="px-4 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
                         View Details
                       </button>
                     </div>
@@ -209,7 +218,7 @@ export default function LabNotificationsPage() {
                 </div>
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-start">
                   <button 
-                    onClick={() => deleteNotification(notif.id)}
+                    onClick={(event) => { event.stopPropagation(); void deleteNotification(notif.id); }}
                     className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                     title="Delete Notification"
                   >

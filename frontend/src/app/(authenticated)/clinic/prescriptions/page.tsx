@@ -17,7 +17,7 @@ const Pencil = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg
 const Trash2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>;
 const ImageIcon = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"></path></svg>;
 
-export default function DoctorPrescriptionsPage() {
+export default function DoctorPrescriptionsPage({ apiBase = "/api/clinic", showLabTest = true, requireDoctor = false }: { apiBase?: string; showLabTest?: boolean; requireDoctor?: boolean } = {}) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("view"); // "view" | "upload"
   const [searchTerm, setSearchTerm] = useState("");
@@ -28,6 +28,8 @@ export default function DoctorPrescriptionsPage() {
 
   // Upload/Create state
   const [patientId, setPatientId] = useState("");
+  const [doctors, setDoctors] = useState<any[]>([]);
+  const [doctorId, setDoctorId] = useState("");
   const [medicines, setMedicines] = useState([
     { name: "", duration: "", days: "", instruction: "" }
   ]);
@@ -46,12 +48,27 @@ export default function DoctorPrescriptionsPage() {
 
   useEffect(() => {
     fetchPrescriptions();
-    fetchLabs();
+    if (showLabTest) fetchLabs();
+    if (requireDoctor) fetchDoctors();
   }, []);
+
+  const fetchDoctors = async () => {
+    try {
+      const res = await fetch(`${apiBase}/doctors`, { headers: authHeaders() });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data)) {
+        const available = data.filter((doctor: any) => String(doctor.status || "Active").toLowerCase() === "active");
+        setDoctors(available);
+        setDoctorId(available[0]?.id || "");
+      }
+    } catch (error) {
+      console.error("Failed to load doctors", error);
+    }
+  };
 
   const fetchLabs = async () => {
     try {
-      const res = await fetch("/api/clinic/labs", { headers: authHeaders() });
+      const res = await fetch(`${apiBase}/labs`, { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         setLabs(data);
@@ -66,7 +83,7 @@ export default function DoctorPrescriptionsPage() {
 
   const fetchPrescriptions = async () => {
     try {
-      const res = await fetch("/api/clinic/prescriptions", { headers: authHeaders() });
+      const res = await fetch(`${apiBase}/prescriptions`, { headers: authHeaders() });
       const data = await res.json();
       if (Array.isArray(data)) {
         setPrescriptions(data);
@@ -80,6 +97,10 @@ export default function DoctorPrescriptionsPage() {
 
   const handleCreatePrescription = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (requireDoctor && !doctorId) {
+      toast.error("Please select a hospital doctor.");
+      return;
+    }
     if (labTestName && !selectedLabId) {
       toast.error("Please select a Destination Laboratory for the lab test.");
       return;
@@ -94,16 +115,13 @@ export default function DoctorPrescriptionsPage() {
       }).join("\n");
       const finalDuration = medicines.map((m, i) => isSingle ? `${m.days} Days` : `${i+1}. ${m.days} Days`).join("\n");
 
+      const prescriptionPayload = { patientId, doctorId, medicine: finalMedicine, dosage: finalDosage, duration: finalDuration, status };
       const formData = new FormData();
-      formData.append("patientId", patientId);
-      formData.append("medicine", finalMedicine);
-      formData.append("dosage", finalDosage);
-      formData.append("duration", finalDuration);
-      formData.append("status", status);
-      const res = await fetch("/api/clinic/prescriptions", {
+      Object.entries(prescriptionPayload).forEach(([key, value]) => value && formData.append(key, value));
+      const res = await fetch(`${apiBase}/prescriptions`, {
         method: "POST",
-        headers: authHeaders(),
-        body: formData,
+        headers: requireDoctor ? authHeaders(true) : authHeaders(),
+        body: requireDoctor ? JSON.stringify(prescriptionPayload) : formData,
       });
       if (res.ok) {
         toast.success("Prescription Created!");
@@ -190,7 +208,7 @@ export default function DoctorPrescriptionsPage() {
   const handleDelete = async (recordId: string) => {
     if (!confirm("Are you sure you want to delete this prescription?")) return;
     try {
-      const res = await fetch(`/api/clinic/prescriptions/${encodeURIComponent(recordId)}`, { method: "DELETE", headers: authHeaders() });
+      const res = await fetch(`${apiBase}/prescriptions/${encodeURIComponent(recordId)}`, { method: "DELETE", headers: authHeaders() });
       if (res.ok) {
         toast.success("Prescription Deleted");
         fetchPrescriptions();
@@ -212,7 +230,7 @@ export default function DoctorPrescriptionsPage() {
     if (!selectedPrescription) return;
     try {
       const recordId = selectedPrescription.recordId || selectedPrescription.id;
-      const res = await fetch(`/api/clinic/prescriptions/${encodeURIComponent(recordId)}`, {
+      const res = await fetch(`${apiBase}/prescriptions/${encodeURIComponent(recordId)}`, {
         method: "PUT",
         headers: authHeaders(true),
         body: JSON.stringify({
@@ -261,12 +279,12 @@ export default function DoctorPrescriptionsPage() {
         >
           Create Prescription
         </button>
-        <button 
+        {showLabTest && <button 
           onClick={() => setActiveTab("lab_test")}
           className={`px-6 py-2 rounded-lg font-bold text-sm transition-colors ${activeTab === "lab_test" ? "bg-[#0891b2] text-white shadow-md" : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"}`}
         >
           Suggest Lab Test
-        </button>
+        </button>}
       </div>
 
       {/* VIEW PRESCRIPTIONS SECTION */}
@@ -425,6 +443,15 @@ export default function DoctorPrescriptionsPage() {
                 </div>
                 <p className="text-xs text-slate-500 mt-1">Make sure to enter the exact Patient ID from the Patients module.</p>
               </div>
+              {requireDoctor && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Prescribing Doctor</label>
+                  <select required value={doctorId} onChange={(event) => setDoctorId(event.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0891b2]/20 focus:border-[#0891b2]">
+                    <option value="">Select hospital doctor</option>
+                    {doctors.map((doctor) => <option key={doctor.id} value={doctor.id}>{doctor.name}{doctor.department ? ` - ${doctor.department}` : ""}</option>)}
+                  </select>
+                </div>
+              )}
               
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-6">
                 <div className="flex justify-between items-center mb-4">
@@ -531,7 +558,7 @@ export default function DoctorPrescriptionsPage() {
       )}
 
       {/* SUGGEST LAB TEST SECTION */}
-      {activeTab === "lab_test" && (
+      {showLabTest && activeTab === "lab_test" && (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-3xl mx-auto">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
             <h2 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-100 pb-4">Suggest Lab Test</h2>

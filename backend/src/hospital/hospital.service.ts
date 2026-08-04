@@ -39,6 +39,110 @@ export class HospitalService {
     return `${initials}${last3Phone}${last2Year}`;
   }
 
+  async getPrescriptions(userEmail: string) {
+    const hospital = await this.getHospitalByEmail(userEmail);
+    const rows = await this.db.query(
+      `SELECT rx.*, patient.name AS patientName, doctor.name AS doctorName
+       FROM prescription rx
+       LEFT JOIN patient ON patient.id = rx.patientId
+       LEFT JOIN doctor ON doctor.id = rx.doctorId
+       WHERE rx.hospitalId = ?
+       ORDER BY rx.createdAt DESC`,
+      [hospital.id],
+    );
+    return rows.map((rx: any) => ({
+      id: formatPrescriptionId(rx.id),
+      recordId: rx.id,
+      patientId: rx.patientId,
+      patientName: rx.patientName,
+      doctorName: rx.doctorName,
+      medicine: rx.medicine,
+      dosage: rx.dosage,
+      duration: rx.duration,
+      status: rx.status,
+      date: new Date(rx.createdAt).toLocaleDateString(),
+      hasImage: false,
+      imageUrl: null,
+    }));
+  }
+
+  async createPrescription(userEmail: string, data: any) {
+    const hospital = await this.getHospitalByEmail(userEmail);
+    const doctor = await this.db.queryOne('SELECT id, name FROM doctor WHERE id = ? AND hospitalId = ?', [data.doctorId, hospital.id]);
+    if (!doctor) throw new BadRequestException('Selected doctor is not part of this hospital.');
+    const patient = await this.db.queryOne('SELECT * FROM patient WHERE id = ? LIMIT 1', [data.patientId]);
+    if (!patient) throw new BadRequestException('Patient not found. Enter a valid patient ID.');
+    if (!String(data.medicine || '').trim()) throw new BadRequestException('At least one medicine is required.');
+
+    const connection = await this.db.getPool().getConnection();
+    let prescriptionId = '';
+    try {
+      await connection.beginTransaction();
+      const [sequenceRows]: any = await connection.execute(
+        `SELECT nextValue FROM prescription_id_sequence WHERE sequenceName = 'prescription' FOR UPDATE`,
+      );
+      if (!sequenceRows.length) throw new Error('Prescription ID sequence is not initialized.');
+      let nextValue = Number(sequenceRows[0].nextValue);
+      while (nextValue <= 99999) {
+        prescriptionId = `RX${String(nextValue).padStart(5, '0')}`;
+        try {
+          await connection.execute(
+            `INSERT INTO prescription (id, patientId, doctorId, hospitalId, medicine, dosage, duration, status, createdAt, updatedAt)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [prescriptionId, patient.id, doctor.id, hospital.id, data.medicine, data.dosage, data.duration, data.status || 'Active', new Date(), new Date()],
+          );
+          await connection.execute(
+            `UPDATE prescription_id_sequence SET nextValue = ?, updatedAt = ? WHERE sequenceName = 'prescription'`,
+            [nextValue + 1, new Date()],
+          );
+          break;
+        } catch (error: any) {
+          if (error?.code !== 'ER_DUP_ENTRY') throw error;
+          nextValue += 1;
+        }
+      }
+      if (!prescriptionId || nextValue > 99999) throw new Error('The five-digit prescription ID range is exhausted.');
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+
+    const patientUser = patient.email
+      ? await this.db.queryOne('SELECT id FROM user WHERE LOWER(email) = LOWER(?) LIMIT 1', [patient.email])
+      : patient.phone ? await this.db.queryOne('SELECT id FROM user WHERE phone = ? LIMIT 1', [patient.phone]) : null;
+    if (patientUser) {
+      await this.db.query(
+        `INSERT INTO notification (id, userId, type, title, message, isRead, actionRequired, actionUrl, createdAt, updatedAt)
+         VALUES (?, ?, 'PRESCRIPTION', 'New Hospital Prescription', ?, false, false, '/patient/prescriptions', ?, ?)`,
+        [uuidv4(), patientUser.id, `${doctor.name} from ${hospital.name} has issued a new prescription.`, new Date(), new Date()],
+      );
+    }
+    await this.redisService.del(`hospital:overview:${userEmail}`);
+    return { id: prescriptionId };
+  }
+
+  async updatePrescription(userEmail: string, id: string, data: any) {
+    const hospital = await this.getHospitalByEmail(userEmail);
+    const prescription = await this.db.queryOne('SELECT id FROM prescription WHERE id = ? AND hospitalId = ?', [id, hospital.id]);
+    if (!prescription) throw new NotFoundException('Prescription not found.');
+    await this.db.query(
+      'UPDATE prescription SET medicine = ?, dosage = ?, duration = ?, status = ?, updatedAt = ? WHERE id = ? AND hospitalId = ?',
+      [data.medicine, data.dosage, data.duration, data.status, new Date(), id, hospital.id],
+    );
+    return { success: true };
+  }
+
+  async deletePrescription(userEmail: string, id: string) {
+    const hospital = await this.getHospitalByEmail(userEmail);
+    const prescription = await this.db.queryOne('SELECT id FROM prescription WHERE id = ? AND hospitalId = ?', [id, hospital.id]);
+    if (!prescription) throw new NotFoundException('Prescription not found.');
+    await this.db.query('DELETE FROM prescription WHERE id = ? AND hospitalId = ?', [id, hospital.id]);
+    return { success: true };
+  }
+
   async getOverview(userEmail: string) {
     const cacheKey = `hospital:overview:${userEmail}`;
     const cached = await this.redisService.get(cacheKey);
@@ -224,6 +328,24 @@ export class HospitalService {
     return { success: true, message: "Doctor deleted successfully" };
   }
 
+  private accessExpiry(access: any): Date | null {
+    if (String(access?.duration || '').toLowerCase() === 'until patient revokes') return null;
+    const approvedAt = access?.updatedAt ? new Date(access.updatedAt).getTime() : 0;
+    const durationMs = String(access?.duration || '') === '7 Days'
+      ? 7 * 24 * 60 * 60 * 1000
+      : 24 * 60 * 60 * 1000;
+    return new Date(approvedAt + durationMs);
+  }
+
+  private parseAuthorizedReportIds(value: unknown): string[] {
+    try {
+      const parsed = JSON.parse(String(value || '[]'));
+      return Array.isArray(parsed) ? parsed.map(String) : [];
+    } catch {
+      return [];
+    }
+  }
+
   async searchPatients(userEmail: string, query: string) {
     if (!query || query.length < 2) return [];
     const hospital = await this.getHospitalByEmail(userEmail);
@@ -243,17 +365,18 @@ export class HospitalService {
       const accessReq = await this.db.queryOne('SELECT id, status, duration, updatedAt FROM accessrequest WHERE hospitalId = ? AND patientId = ? ORDER BY updatedAt DESC LIMIT 1', [hospital.id, p.id]);
       if (accessReq) {
         if (accessReq.status === 'APPROVED') {
-          const approvedAt = accessReq.updatedAt ? new Date(accessReq.updatedAt).getTime() : 0;
-          const expiryDate = new Date(approvedAt + 24 * 60 * 60 * 1000);
-          const isExpired = !approvedAt || Date.now() >= expiryDate.getTime();
+          const expiryDate = this.accessExpiry(accessReq);
+          const isExpired = expiryDate !== null && Date.now() >= expiryDate.getTime();
 
           if (isExpired) {
             await this.db.query('UPDATE accessrequest SET status = ? WHERE id = ?', ['EXPIRED', accessReq.id]);
             status = 'Expired';
           } else {
             status = 'Access Approved';
-            accessExpiresAt = expiryDate.toISOString();
-            validTill = expiryDate.toLocaleDateString() + ' ' + expiryDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            accessExpiresAt = expiryDate ? expiryDate.toISOString() : null;
+            validTill = expiryDate
+              ? expiryDate.toLocaleDateString() + ' ' + expiryDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : 'Until patient revokes';
           }
         }
         else if (accessReq.status === 'PENDING') status = 'Pending';
@@ -274,6 +397,7 @@ export class HospitalService {
         availableRecords: recordsCountRow ? Number(recordsCountRow.c) : 0,
         accessValidTill: validTill,
         accessExpiresAt,
+        accessDuration: accessReq?.duration || null,
         department: 'General',
         verifiedOn: p.updatedAt ? new Date(p.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A',
         verifiedBy: 'System'
@@ -285,7 +409,8 @@ export class HospitalService {
 
   async createAccessRequest(userEmail: string, patientId: string, doctorId: string, reportTypes: string, reason: string, priority: string, duration: string) {
     const hospital = await this.getHospitalByEmail(userEmail);
-    const accessDuration = '24 Hours';
+    const allowedDurations = ['24 Hours', '7 Days', 'Until Patient Revokes'];
+    const accessDuration = allowedDurations.includes(String(duration)) ? String(duration) : '24 Hours';
     const requestedTypes = String(reportTypes || '').split(',').map(type => type.trim()).filter(Boolean);
     if (!requestedTypes.length) throw new BadRequestException('Select at least one report type.');
     if (requestedTypes.some(type => type.toLowerCase() === 'other')) {
@@ -337,10 +462,10 @@ export class HospitalService {
     
     if (!access || access.status !== 'APPROVED') throw new ForbiddenException("You do not have an active approved request to view this patient's records.");
 
-    const approvedAt = access.updatedAt ? new Date(access.updatedAt).getTime() : 0;
-    if (!approvedAt || Date.now() >= approvedAt + 24 * 60 * 60 * 1000) {
+    const expiryDate = this.accessExpiry(access);
+    if (expiryDate && Date.now() >= expiryDate.getTime()) {
       await this.db.query('UPDATE accessrequest SET status = ? WHERE id = ?', ['EXPIRED', access.id]);
-      throw new ForbiddenException('Your 24-hour access has expired. Please request access again.');
+      throw new ForbiddenException(`Your ${access.duration || '24 Hours'} access has expired. Please request access again.`);
     }
 
     let reports = await this.db.query('SELECT * FROM medicalrecord WHERE patientId = ? ORDER BY date DESC', [patientId]);
@@ -355,6 +480,8 @@ export class HospitalService {
         );
       });
     }
+    const authorizedIds = this.parseAuthorizedReportIds(access.authorizedReportIds);
+    if (authorizedIds.length) reports = reports.filter((report: any) => authorizedIds.includes(String(report.id)));
 
     return reports.map(formatPrescriptionRecord);
   }
@@ -456,10 +583,10 @@ export class HospitalService {
     if (reports.length === 0) {
       const access = await this.db.queryOne('SELECT * FROM accessrequest WHERE hospitalId = ? AND patientId = ? ORDER BY updatedAt DESC LIMIT 1', [hospital.id, patientId]);
       if (!access || access.status !== 'APPROVED') throw new ForbiddenException("No hospital-owned reports were found, and there is no active patient approval.");
-      const approvedAt = access.updatedAt ? new Date(access.updatedAt).getTime() : 0;
-      if (!approvedAt || Date.now() >= approvedAt + 24 * 60 * 60 * 1000) {
+      const expiryDate = this.accessExpiry(access);
+      if (expiryDate && Date.now() >= expiryDate.getTime()) {
         await this.db.query('UPDATE accessrequest SET status = ? WHERE id = ?', ['EXPIRED', access.id]);
-        throw new ForbiddenException('Your 24-hour access has expired. Please request access again.');
+        throw new ForbiddenException(`Your ${access.duration || '24 Hours'} access has expired. Please request access again.`);
       }
       reports = await this.db.query('SELECT * FROM medicalrecord WHERE patientId = ? ORDER BY date DESC', [patientId]);
       const approvedTypes: string[] = access.reportTypes ? access.reportTypes.split(',').map((type: string) => type.trim()) : [];
@@ -469,6 +596,8 @@ export class HospitalService {
           String(record.type || '').toLowerCase().includes(type.toLowerCase()),
         ));
       }
+      const authorizedIds = this.parseAuthorizedReportIds(access.authorizedReportIds);
+      if (authorizedIds.length) reports = reports.filter((report: any) => authorizedIds.includes(String(report.id)));
     }
 
     const formatted = reports.map((r: any) => ({

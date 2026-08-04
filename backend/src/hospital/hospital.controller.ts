@@ -53,6 +53,28 @@ export class HospitalController {
     return this.hospitalService.deleteDoctor(req.user.email, id);
   }
 
+  // --- Prescriptions Module APIs ---
+
+  @Get('prescriptions')
+  async getPrescriptions(@Request() req: any) {
+    return this.hospitalService.getPrescriptions(req.user.email);
+  }
+
+  @Post('prescriptions')
+  async createPrescription(@Request() req: any, @Body() data: any) {
+    return this.hospitalService.createPrescription(req.user.email, data);
+  }
+
+  @Put('prescriptions/:id')
+  async updatePrescription(@Request() req: any, @Param('id') id: string, @Body() data: any) {
+    return this.hospitalService.updatePrescription(req.user.email, id, data);
+  }
+
+  @Delete('prescriptions/:id')
+  async deletePrescription(@Request() req: any, @Param('id') id: string) {
+    return this.hospitalService.deletePrescription(req.user.email, id);
+  }
+
   @Get('search-patients')
   async searchPatients(@Request() req: any, @Query('q') q: string) {
     return this.hospitalService.searchPatients(req.user.email, q);
