@@ -28,6 +28,8 @@ export class SupportTicketService {
       const facilityType = String(user.type || '').toUpperCase();
       const role = facilityType.includes('LAB')
         ? 'Laboratory'
+        : facilityType.includes('PHARMACY')
+          ? 'Pharmacy'
         : facilityType.includes('CLINIC')
           ? 'Clinic'
           : 'Hospital';

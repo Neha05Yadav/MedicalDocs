@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { usePathname } from "next/navigation";
 import DashboardSidebar from "./DashboardSidebar";
 import DashboardHeaderClient from "./DashboardHeaderClient";
+import DashboardSearchAutocomplete from "./DashboardSearchAutocomplete";
 import styles from "./dashboard-theme.module.css";
 import { useEffect } from "react";
 
@@ -34,6 +35,7 @@ const themes = {
   clinic: ["#2563eb", "#38bdf8", "37 99 235"],
   hospital: ["#4f46e5", "#818cf8", "79 70 229"],
   laboratory: ["#7c3aed", "#c084fc", "124 58 237"],
+  pharmacy: ["#059669", "#22d3ee", "5 150 105"],
   management: ["#0b5f59", "#14b8a6", "11 95 89"],
 } as const;
 
@@ -45,9 +47,11 @@ export default function DashboardWrapper({ children }: { children: React.ReactNo
       ? "hospital"
       : pathname.startsWith("/laboratory")
         ? "laboratory"
-        : pathname.startsWith("/management")
-          ? "management"
-          : "patient";
+        : pathname.startsWith("/pharmacy")
+          ? "pharmacy"
+          : pathname.startsWith("/management")
+            ? "management"
+            : "patient";
   const [accent, accent2, accentRgb] = themes[themeName];
   const themeVariables = {
     "--dash-accent": accent,
@@ -74,17 +78,18 @@ export default function DashboardWrapper({ children }: { children: React.ReactNo
       });
     };
 
+    // Run only after React has hydrated the current route. A document-wide
+    // MutationObserver can mutate the next route's server HTML before React
+    // hydrates it, which produces an attribute mismatch in development.
     const frame = window.requestAnimationFrame(removeDuplicatePageHeading);
-    const observer = new MutationObserver(removeDuplicatePageHeading);
-    observer.observe(document.body, { childList: true, subtree: true });
     return () => {
       window.cancelAnimationFrame(frame);
-      observer.disconnect();
     };
   }, [pathname]);
 
   return (
     <div className={styles.shell} style={themeVariables} data-dashboard-theme={themeName}>
+      <DashboardSearchAutocomplete />
       <DashboardSidebar />
 
       {/* Main Content */}

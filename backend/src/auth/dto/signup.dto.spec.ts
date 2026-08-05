@@ -20,7 +20,7 @@ describe('SignupDto', () => {
     },
   );
 
-  it.each(['PATIENT', 'HOSPITAL', 'LAB', 'CLINIC', 'DOCTOR'])(
+  it.each(['PATIENT', 'HOSPITAL', 'LAB', 'CLINIC', 'DOCTOR', 'PHARMACY'])(
     'allows the public role %s',
     async (role) => {
       const errors = await validate(createSignupDto(role));

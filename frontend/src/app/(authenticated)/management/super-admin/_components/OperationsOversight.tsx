@@ -88,9 +88,13 @@ export default function OperationsOversight({ area }: { area: Area }) {
 
   useEffect(() => {
     void load();
-    if (area !== "support") return;
-    const refreshTimer = window.setInterval(() => void load(true), 10000);
-    return () => window.clearInterval(refreshTimer);
+    const refreshTimer = window.setInterval(() => void load(true), area === "support" ? 10000 : 20000);
+    const refreshOnFocus = () => void load(true);
+    window.addEventListener("focus", refreshOnFocus);
+    return () => {
+      window.clearInterval(refreshTimer);
+      window.removeEventListener("focus", refreshOnFocus);
+    };
   }, [area, load]);
 
   const meta = areaMeta[area];

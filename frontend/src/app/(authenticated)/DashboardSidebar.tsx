@@ -45,7 +45,8 @@ export default function DashboardSidebar() {
     path.includes("/management/support") ? "support" : 
     path.startsWith("/hospital") ? "hospital" : 
     path.startsWith("/clinic") ? "clinic" : 
-    path.startsWith("/laboratory") ? "laboratory" : "patient";
+    path.startsWith("/laboratory") ? "laboratory" :
+    path.startsWith("/pharmacy") ? "pharmacy" : "patient";
     
   const title = 
     activeGroup === "superAdmin" ? "Super Admin Dashboard" : 
@@ -55,7 +56,8 @@ export default function DashboardSidebar() {
     activeGroup === "support" ? "Support Dashboard" : 
     activeGroup === "hospital" ? "Hospital Dashboard" : 
     activeGroup === "clinic" ? "Clinic Dashboard" : 
-    activeGroup === "laboratory" ? "Laboratory Dashboard" : "Patient Dashboard";
+    activeGroup === "laboratory" ? "Laboratory Dashboard" :
+    activeGroup === "pharmacy" ? "Pharmacy Dashboard" : "Patient Dashboard";
 
   return (
     <aside

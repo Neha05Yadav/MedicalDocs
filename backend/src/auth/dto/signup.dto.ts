@@ -6,6 +6,7 @@ export const PUBLIC_SIGNUP_ROLES = [
   'LAB',
   'CLINIC',
   'DOCTOR',
+  'PHARMACY',
 ] as const;
 
 export class SignupDto {

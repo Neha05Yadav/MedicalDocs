@@ -99,7 +99,8 @@ function SupportNotificationsContent() {
         {items.map((notif) => (
           <div 
             key={notif.id} 
-            className={`group relative flex items-start p-5 rounded-xl border transition-all duration-200 ${notif.read ? 'bg-white hover:bg-slate-50 border-slate-200' : 'bg-blue-50/30 border-blue-100 shadow-sm'}`}
+            onClick={() => router.push('/management/support/tickets')}
+            className={`group relative flex cursor-pointer items-start p-5 rounded-xl border transition-all duration-200 ${notif.read ? 'bg-white hover:bg-slate-50 border-slate-200' : 'bg-blue-50/30 border-blue-100 shadow-sm'}`}
           >
             {/* Unread dot */}
             {!notif.read && (
@@ -122,7 +123,7 @@ function SupportNotificationsContent() {
                   {notif.time}
                 </span>
                 {!notif.read && (
-                  <button onClick={() => markAsRead(notif.id)} className="text-xs font-semibold text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={(event) => { event.stopPropagation(); markAsRead(notif.id); }} className="text-xs font-semibold text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity">
                     Mark as read
                   </button>
                 )}

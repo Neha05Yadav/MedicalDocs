@@ -23,6 +23,7 @@ export default function DashboardHeaderClient() {
   const isHospital = path.startsWith("/hospital");
   const isClinic = path.startsWith("/clinic");
   const isLaboratory = path.startsWith("/laboratory");
+  const isPharmacy = path.startsWith("/pharmacy");
   const isPatient = path.startsWith("/patient");
 
   useEffect(() => {
@@ -105,7 +106,7 @@ export default function DashboardHeaderClient() {
         else if (isSales) endpoint = "/api/management/sales/notifications";
         else if (isAccounts) endpoint = "/api/management/accounts/notifications";
         else if (isAdmin) endpoint = "/api/management/admin/notifications";
-        else {
+        else if (!isPharmacy) {
           endpoint = "/api/patient/notifications";
         }
 
@@ -149,12 +150,12 @@ export default function DashboardHeaderClient() {
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener('notificationsRead', fetchNotifications);
     };
-  }, [isHospital, isSuperAdmin, isSales, isAccounts, isAdmin, isSupport, isClinic, isLaboratory, isPatient]);
+  }, [isHospital, isSuperAdmin, isSales, isAccounts, isAdmin, isSupport, isClinic, isLaboratory, isPatient, isPharmacy]);
   const getHeaderInfo = () => {
     // Collect all navigation items
     const allRoutes = [
       ...allNavs.superAdmin, ...allNavs.admin, ...allNavs.sales, ...allNavs.accounts, 
-      ...allNavs.support, ...allNavs.hospital, ...allNavs.laboratory, ...allNavs.clinic, ...allNavs.patient
+      ...allNavs.support, ...allNavs.hospital, ...allNavs.laboratory, ...allNavs.pharmacy, ...allNavs.clinic, ...allNavs.patient
     ];
 
     // Find the exact active route
@@ -173,6 +174,7 @@ export default function DashboardHeaderClient() {
     if (isHospital) return { title: "Hospital Dashboard", subtitle: "Overview of hospital operations and patient flow." };
     if (isLaboratory) return { title: "Laboratory Dashboard", subtitle: "Monitor your live testing queue and reports." };
     if (isClinic) return { title: "Clinic Dashboard", subtitle: "Welcome to the clinic dashboard." };
+    if (isPharmacy) return { title: "Pharmacy Dashboard", subtitle: "Manage prescriptions, orders, inventory and delivery." };
     return { title: "Patient Dashboard", subtitle: "Your comprehensive health overview at a glance." };
   };
   const headerInfo = getHeaderInfo();
@@ -205,6 +207,7 @@ export default function DashboardHeaderClient() {
           isHospital ? "/hospital/notifications" :
           isClinic ? "/clinic/notifications" :
           isLaboratory ? "/laboratory/notifications" :
+          isPharmacy ? "/pharmacy/notifications" :
           "/patient/notifications"
         } prefetch={false}>
           <div className={styles.iconButton}>
@@ -245,7 +248,7 @@ export default function DashboardHeaderClient() {
             </div>
             {!isHospital && (
               <div className={styles.profilePortal}>
-                {isSuperAdmin ? "Management" : isAccounts ? "Management" : isSales ? "Management" : isSupport ? "Management" : isAdmin ? "Management" : isLaboratory ? "Laboratory" : isClinic ? "Clinic" : "Patient Portal"}
+                {isSuperAdmin ? "Management" : isAccounts ? "Management" : isSales ? "Management" : isSupport ? "Management" : isAdmin ? "Management" : isLaboratory ? "Laboratory" : isPharmacy ? "Pharmacy" : isClinic ? "Clinic" : "Patient Portal"}
               </div>
             )}
             {isHospital && (

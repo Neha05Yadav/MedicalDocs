@@ -13,7 +13,9 @@ const ChevronRight = (props: any) => <svg {...props} xmlns="http://www.w3.org/20
 
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 export default function SalesNotificationsPage() {
+  const router = useRouter();
   const tabs = ["All Notifications", "Subscription Expiry Alerts", "Payment Due Alerts"];
   const [activeTab, setActiveTab] = useState("All Notifications");
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -52,6 +54,13 @@ export default function SalesNotificationsPage() {
     if (activeTab === "Payment Due Alerts") return notif.type === "payment";
     return true;
   });
+  const openNotification = (notification: any) => {
+    router.push(
+      notification.type === 'payment'
+        ? '/management/sales/payments'
+        : '/management/sales/subscriptions',
+    );
+  };
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans">
       {/* Header removed to avoid redundancy */}
@@ -80,7 +89,7 @@ export default function SalesNotificationsPage() {
             </div>
           ) : (
             filteredNotifications.map((notif, idx) => (
-              <div key={notif.id || idx} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex gap-4 hover:border-indigo-200 transition-colors cursor-pointer group">
+              <button type="button" onClick={() => openNotification(notif)} key={notif.id || idx} className="w-full bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex gap-4 hover:border-indigo-200 transition-colors cursor-pointer group text-left">
                 <div className="shrink-0 mt-1">
                   {notif.type === 'expiry' ? (
                     <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center border border-amber-100"><Clock className="size-5" /></div>
@@ -103,7 +112,7 @@ export default function SalesNotificationsPage() {
                 <div className="shrink-0 flex items-center pl-4 border-l border-slate-100 opacity-0 group-hover:opacity-100 transition-opacity">
                   <ChevronRight className="size-5 text-indigo-400" />
                 </div>
-              </div>
+              </button>
             ))
           )}
         </div>

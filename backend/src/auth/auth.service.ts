@@ -48,6 +48,8 @@ export class AuthService {
     // User create karo
     const userId = uuidv4();
     const now = new Date();
+    const normalizedRole = userRole.toUpperCase();
+    let linkedFacilityId: string | null = null;
     
     const connection = await this.db.getPool().getConnection();
     try {
@@ -57,18 +59,30 @@ export class AuthService {
         [userId, email, hashedPassword, userRole, name, 'Active', now],
       );
 
-      const normalizedRole = userRole.toUpperCase();
       if (normalizedRole === 'PATIENT') {
         const patientId = await allocatePatientId(connection, name, now);
         await connection.execute(
           'INSERT INTO patient (id, name, email, phone, updatedAt) VALUES (?, ?, ?, ?, ?)',
           [patientId, name, email, '', now],
         );
-      } else if (['HOSPITAL', 'LAB', 'CLINIC', 'DOCTOR'].includes(normalizedRole)) {
-        const facilityType = normalizedRole === 'LAB' ? 'LAB' : normalizedRole === 'HOSPITAL' ? 'HOSPITAL' : 'CLINIC';
+      } else if (['HOSPITAL', 'LAB', 'CLINIC', 'DOCTOR', 'PHARMACY'].includes(normalizedRole)) {
+        const facilityType = normalizedRole === 'LAB' ? 'LAB' : normalizedRole === 'HOSPITAL' ? 'HOSPITAL' : normalizedRole === 'PHARMACY' ? 'PHARMACY' : 'CLINIC';
         let facilityId = uuidv4();
         
-        if (facilityType === 'LAB') {
+        if (facilityType === 'PHARMACY') {
+          const [rows] = await connection.execute(
+            `SELECT id FROM hospital
+             WHERE type = 'PHARMACY' AND id REGEXP '^PHM[0-9]{5}$'
+             ORDER BY CAST(SUBSTRING(id, 4) AS UNSIGNED) DESC
+             LIMIT 1 FOR UPDATE`,
+          );
+          const latestId = (rows as any[])[0]?.id as string | undefined;
+          const nextNumber = latestId ? Number(latestId.slice(3)) + 1 : 1;
+          if (nextNumber > 99999) {
+            throw new ConflictException('Pharmacy ID capacity has been reached');
+          }
+          facilityId = `PHM${String(nextNumber).padStart(5, '0')}`;
+        } else if (facilityType === 'LAB') {
           let prefix = (name || 'LA').replace(/[^a-zA-Z]/g, '').substring(0, 2).toUpperCase();
           if (prefix.length < 2) prefix = (prefix + 'LA').substring(0, 2);
           
@@ -91,10 +105,11 @@ export class AuthService {
         }
 
         await connection.execute(
-          'INSERT INTO hospital (id, name, email, phone, type, status, isVerified, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-          [facilityId, name, email, '', facilityType, 'Pending', false, now],
+          'INSERT INTO hospital (id, name, email, phone, address, type, status, isVerified, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [facilityId, name, email, '', '', facilityType, 'Pending', false, now],
         );
         await connection.execute('UPDATE user SET hospitalId = ? WHERE id = ?', [facilityId, userId]);
+        linkedFacilityId = facilityId;
 
         if (normalizedRole === 'CLINIC' || normalizedRole === 'DOCTOR') {
           await connection.execute(
@@ -104,6 +119,11 @@ export class AuthService {
         }
       }
       await connection.commit();
+
+      return this.createLoginResponse(
+        { id: userId, email, name, role: userRole, status: 'Active', hospitalId: linkedFacilityId },
+        'Your account has been created successfully.',
+      );
     } catch (error) {
       await connection.rollback();
       throw error;
@@ -111,10 +131,6 @@ export class AuthService {
       connection.release();
     }
     
-    return this.createLoginResponse(
-      { id: userId, email, name, role: userRole, status: 'Active' },
-      'Your account has been created successfully.',
-    );
   }
 
   async login(loginDto: LoginDto) {
@@ -164,6 +180,9 @@ export class AuthService {
     }
     if (facilityType === 'CLINIC') {
       return 'CLINIC';
+    }
+    if (facilityType === 'PHARMACY') {
+      return 'PHARMACY';
     }
 
     return user.role;
@@ -226,6 +245,7 @@ export class AuthService {
         name: user.name,
         role: user.role,
         status: user.status,
+        hospitalId: user.hospitalId || null,
       },
     };
   }

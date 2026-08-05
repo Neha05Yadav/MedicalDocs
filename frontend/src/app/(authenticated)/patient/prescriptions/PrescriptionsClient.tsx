@@ -10,9 +10,11 @@ const Search = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg
 const X = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>;
 const Building = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></svg>;
 const Stethoscope = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 12 0V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3M8 15v1a6 6 0 0 0 12 0v-4"/><circle cx="20" cy="10" r="2"/></svg>;
-const Flask = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 2v7.31M14 9.3V2M8.5 2h7M14 9.3a6.5 6.5 0 1 1-4 0M5.52 16h12.96"/></svg>;
 const User = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
 const Upload = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12m5-7-5-5-5 5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>;
+const MapPin = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>;
+const Pill = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m10.5 20.5 10-10a4.95 4.95 0 0 0-7-7l-10 10a4.95 4.95 0 0 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>;
+const Check = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m20 6-11 11-5-5"/></svg>;
 
 export default function PrescriptionsClient() {
   const router = useRouter();
@@ -26,12 +28,52 @@ export default function PrescriptionsClient() {
   const [uploadPreview, setUploadPreview] = useState("");
   const [isPending, setIsPending] = useState(false);
   const [selectedPrescriptionDetails, setSelectedPrescriptionDetails] = useState<any | null>(null);
+  const [requestNote, setRequestNote] = useState("");
+  const [requestSent, setRequestSent] = useState(false);
+  const [deliveryLocation, setDeliveryLocation] = useState("");
+  const [locationConfirmed, setLocationConfirmed] = useState(false);
+  const [selectedPharmacyIds, setSelectedPharmacyIds] = useState<string[]>([]);
+  const [nearbyPharmacies, setNearbyPharmacies] = useState<any[]>([]);
+  const [pharmacyRequestId, setPharmacyRequestId] = useState("");
+  const [sendingRequest, setSendingRequest] = useState(false);
   const [activeSource, setActiveSource] = useState("All Providers");
   const [searchQuery, setSearchQuery] = useState("");
+  const [pharmacyQuotations, setPharmacyQuotations] = useState<any[]>([]);
+  const [pharmacyOrders, setPharmacyOrders] = useState<any[]>([]);
+  const [confirmingQuotation, setConfirmingQuotation] = useState("");
 
   useEffect(() => {
     fetchPrescriptions();
+    fetchPharmacyCommerce();
   }, []);
+
+  const fetchPharmacyCommerce = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    const headers = { Authorization: `Bearer ${token}` };
+    const [quotationResponse, orderResponse] = await Promise.all([
+      fetch("/api/patient/pharmacy-quotations", { headers }),
+      fetch("/api/patient/pharmacy-orders", { headers }),
+    ]);
+    if (quotationResponse.ok) setPharmacyQuotations(await quotationResponse.json());
+    if (orderResponse.ok) setPharmacyOrders(await orderResponse.json());
+  };
+
+  const confirmQuotation = async (id: string) => {
+    setConfirmingQuotation(id);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/patient/pharmacy-quotations/${encodeURIComponent(id)}/confirm`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.message || "Quotation could not be confirmed.");
+      toast.success(`Order ${data.orderId} confirmed successfully.`);
+      await fetchPharmacyCommerce();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Quotation could not be confirmed.");
+    } finally {
+      setConfirmingQuotation("");
+    }
+  };
 
   const fetchPrescriptions = async () => {
     setLoading(true);
@@ -109,6 +151,44 @@ export default function PrescriptionsClient() {
     reader.readAsDataURL(file);
   };
 
+  const searchNearbyPharmacies = async (location = deliveryLocation) => {
+    if (!location.trim()) return;
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/patient/pharmacies?location=${encodeURIComponent(location)}`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await response.json().catch(() => []);
+      if (!response.ok) throw new Error(data?.message || "Could not find pharmacies.");
+      const pharmacies = Array.isArray(data) ? data : [];
+      setNearbyPharmacies(pharmacies);
+      setSelectedPharmacyIds(pharmacies.filter((pharmacy) => pharmacy.openStatus === "Open").map((pharmacy) => pharmacy.id));
+      setLocationConfirmed(true);
+      if (!pharmacies.length) toast.info("No registered pharmacy serves this location yet.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not find pharmacies.");
+    }
+  };
+
+  const sendPrescriptionRequest = async () => {
+    setSendingRequest(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/patient/prescription-pharmacy-requests", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ prescriptionReference: selectedPrescriptionDetails.rawId || selectedPrescriptionDetails.id, pharmacyIds: selectedPharmacyIds, deliveryAddress: deliveryLocation, requestNote }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(Array.isArray(data?.message) ? data.message[0] : data?.message || "Request could not be sent.");
+      setPharmacyRequestId(data.requestGroupId);
+      setRequestSent(true);
+      toast.success(`Prescription request sent to ${data.recipients} pharmacies.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Request could not be sent.");
+    } finally {
+      setSendingRequest(false);
+    }
+  };
+
   if (loading) {
     return <div className="p-8 flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0891b2]"></div></div>;
   }
@@ -133,16 +213,13 @@ export default function PrescriptionsClient() {
 
   const facilityType = (prescription: any) => String(prescription.hospitalType || "").toUpperCase();
   const selfPrescriptions = prescriptions.filter((prescription) => !prescription.hospitalType);
-  const providerPrescriptions = prescriptions.filter((prescription) => Boolean(prescription.hospitalType));
   const visiblePrescriptions = prescriptions.filter((prescription) => {
     const type = facilityType(prescription);
     const matchesSource = activeSource === "Self"
       ? !prescription.hospitalType
       : activeSource === "All Providers"
-        ? Boolean(prescription.hospitalType)
-        : activeSource === "Laboratory"
-          ? type === "LAB" || type === "LABORATORY"
-          : type === activeSource.toUpperCase();
+        ? ["HOSPITAL", "CLINIC"].includes(type)
+        : type === activeSource.toUpperCase();
     const searchableText = [prescription.id, prescription.doctor, prescription.hospitalName, prescription.medicine]
       .filter(Boolean)
       .join(" ")
@@ -241,15 +318,14 @@ export default function PrescriptionsClient() {
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(300px,0.8fr)]">
           <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5">
-            <button onClick={() => setActiveSource("All Providers")} className="mb-4 flex w-full items-center justify-between text-left">
+            <button onClick={() => setActiveSource("All Providers")} className="mb-4 flex w-full items-center text-left">
               <span>
-                <span className="block text-lg font-extrabold text-slate-900">Hospital, Clinic & Lab Prescriptions</span>
+                <span className="block text-lg font-extrabold text-slate-900">Hospital & Clinic Prescriptions</span>
                 <span className="mt-1 block text-sm font-medium text-slate-500">Prescriptions issued by your healthcare providers</span>
               </span>
-              <span className="rounded-full bg-white px-3 py-1.5 text-sm font-extrabold text-slate-700 shadow-sm">{providerPrescriptions.length}</span>
             </button>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <button onClick={() => setActiveSource("Hospital")} className={`flex items-center rounded-2xl border p-5 text-left transition-all ${activeSource === "Hospital" ? "border-emerald-500 bg-emerald-50/40 shadow-md" : "border-slate-200 bg-white hover:border-emerald-300 hover:shadow-sm"}`}>
                 <span className={`mr-4 rounded-xl p-3 ${activeSource === "Hospital" ? "bg-emerald-500 text-white" : "bg-emerald-50 text-emerald-600"}`}><Building className="size-8" /></span>
                 <span><span className="block text-lg font-bold text-slate-900">Hospitals</span><span className="text-sm font-medium text-slate-500">{prescriptions.filter((p) => facilityType(p) === "HOSPITAL").length} Prescriptions</span></span>
@@ -260,10 +336,6 @@ export default function PrescriptionsClient() {
                 <span><span className="block text-lg font-bold text-slate-900">Clinics</span><span className="text-sm font-medium text-slate-500">{prescriptions.filter((p) => facilityType(p) === "CLINIC").length} Prescriptions</span></span>
               </button>
 
-              <button onClick={() => setActiveSource("Laboratory")} className={`flex items-center rounded-2xl border p-5 text-left transition-all ${activeSource === "Laboratory" ? "border-purple-500 bg-purple-50/40 shadow-md" : "border-slate-200 bg-white hover:border-purple-300 hover:shadow-sm"}`}>
-                <span className={`mr-4 rounded-xl p-3 ${activeSource === "Laboratory" ? "bg-purple-500 text-white" : "bg-purple-50 text-purple-600"}`}><Flask className="size-8" /></span>
-                <span><span className="block text-lg font-bold text-slate-900">Laboratories</span><span className="text-sm font-medium text-slate-500">{prescriptions.filter((p) => ["LAB", "LABORATORY"].includes(facilityType(p))).length} Prescriptions</span></span>
-              </button>
             </div>
           </div>
 
@@ -338,7 +410,7 @@ export default function PrescriptionsClient() {
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-center gap-3">
                       <button 
-                        onClick={() => setSelectedPrescriptionDetails(prescription)}
+                        onClick={() => { setSelectedPrescriptionDetails(prescription); setRequestNote(""); setRequestSent(false); setPharmacyRequestId(""); setDeliveryLocation(""); setLocationConfirmed(false); setNearbyPharmacies([]); setSelectedPharmacyIds([]); }}
                         className="p-1.5 text-[#0891b2] border border-[#0891b2]/20 rounded-md hover:bg-cyan-50 transition-colors inline-flex items-center justify-center"
                         title="View Prescription"
                       >
@@ -352,14 +424,21 @@ export default function PrescriptionsClient() {
           </table>
         </div>
       </div>
-      {/* PRESCRIPTION DETAILS MODAL */}
+      {(pharmacyQuotations.length > 0 || pharmacyOrders.length > 0) && <section className="mt-7 space-y-5">
+        {pharmacyQuotations.length > 0 && <div className="rounded-2xl border border-cyan-100 bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-5"><h2 className="text-xl font-extrabold text-slate-900">Pharmacy Quotations</h2><p className="mt-1 text-sm text-slate-500">Compare prices and confirm one pharmacy. Other quotations will close automatically.</p></div>
+          <div className="grid gap-4 lg:grid-cols-2">{pharmacyQuotations.map((quotation) => <article key={quotation.id} className="rounded-2xl border border-slate-200 p-5 transition hover:border-cyan-300 hover:shadow-sm"><div className="flex items-start justify-between gap-4"><div><p className="font-extrabold text-slate-900">{quotation.pharmacyName}</p><p className="mt-1 text-xs font-bold text-cyan-700">{quotation.pharmacyId} · {quotation.id}</p></div><p className="text-xl font-black text-slate-900">₹{Number(quotation.totalAmount).toLocaleString("en-IN")}</p></div><p className="mt-4 text-sm text-slate-500">Prescription: <b className="text-slate-700">{quotation.prescriptionReference}</b></p><div className="mt-4 flex items-center justify-between"><span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">{quotation.status === "SENT" ? "Awaiting confirmation" : quotation.status}</span>{quotation.status === "SENT" && <button disabled={confirmingQuotation === quotation.id} onClick={() => confirmQuotation(quotation.id)} className="rounded-xl bg-cyan-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{confirmingQuotation === quotation.id ? "Confirming..." : "Select & Confirm"}</button>}</div></article>)}</div>
+        </div>}
+        {pharmacyOrders.length > 0 && <div className="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6"><h2 className="text-xl font-extrabold text-slate-900">Medicine Orders</h2><div className="mt-4 space-y-3">{pharmacyOrders.map((order) => <div key={order.id} className="flex flex-col justify-between gap-3 rounded-xl bg-emerald-50/60 p-4 sm:flex-row sm:items-center"><div><p className="font-bold text-slate-900">{order.pharmacyName}</p><p className="text-xs text-slate-500">{order.id}</p></div><div className="text-sm"><b className="text-emerald-700">{String(order.status).replaceAll("_", " ")}</b><span className="ml-4 font-black text-slate-900">₹{Number(order.totalAmount).toLocaleString("en-IN")}</span></div></div>)}</div></div>}
+      </section>}
+      {/* SEND PRESCRIPTION TO PHARMACY MODAL */}
       {selectedPrescriptionDetails && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm border border-slate-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-              <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                <FileText className="size-5 text-[#0891b2]" />
-                Prescription Details
+          <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-cyan-50 to-white px-6 py-5 sm:px-8">
+              <h3 className="flex items-center gap-3 text-lg font-extrabold text-slate-900 sm:text-xl">
+                <span className="grid size-10 place-items-center rounded-xl bg-cyan-600 text-white shadow-sm"><Pill className="size-5" /></span>
+                Send Prescription to Pharmacy
               </h3>
               <button 
                 onClick={() => setSelectedPrescriptionDetails(null)}
@@ -368,85 +447,93 @@ export default function PrescriptionsClient() {
                 <X className="size-5" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              {selectedPrescriptionDetails.rawId && (
-                <a
-                  href={`/api/care/documents/PRESCRIPTION/${encodeURIComponent(selectedPrescriptionDetails.rawId)}/pdf`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex w-full items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-bold text-cyan-700"
-                >
-                  Download signed prescription PDF
-                </a>
-              )}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Prescription ID</p>
-                  <p className="text-sm font-semibold text-[#0891b2]">{selectedPrescriptionDetails.id}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Date</p>
-                  <p className="text-sm font-semibold text-slate-800">{selectedPrescriptionDetails.date}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Doctor Name</p>
-                <p className="text-base font-semibold text-slate-900">{selectedPrescriptionDetails.doctor}</p>
-              </div>
-
-              {(selectedPrescriptionDetails.medicine || selectedPrescriptionDetails.dosage || selectedPrescriptionDetails.duration) && (
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-3">
-                  {selectedPrescriptionDetails.medicine && (
-                    <div>
-                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Medicine / Diagnosis</p>
-                      <p className="text-sm font-semibold text-slate-900">{selectedPrescriptionDetails.medicine}</p>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-2 gap-4">
-                    {selectedPrescriptionDetails.dosage && (
-                      <div>
-                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Dosage</p>
-                        <p className="text-sm font-medium text-slate-800">{selectedPrescriptionDetails.dosage}</p>
-                      </div>
-                    )}
-                    {selectedPrescriptionDetails.duration && (
-                      <div>
-                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Duration</p>
-                        <p className="text-sm font-medium text-slate-800">{selectedPrescriptionDetails.duration}</p>
-                      </div>
-                    )}
+            <div className="overflow-y-auto p-6 sm:p-8">
+              {requestSent ? (
+                <div className="mx-auto flex max-w-lg flex-col items-center py-8 text-center">
+                  <span className="grid size-20 place-items-center rounded-full bg-emerald-100 text-emerald-600 ring-8 ring-emerald-50"><Check className="size-10" /></span>
+                  <h4 className="mt-7 text-2xl font-extrabold text-slate-900">Prescription request sent successfully.</h4>
+                  <p className="mt-2 text-sm text-slate-500">The pharmacy will review availability and respond shortly.</p>
+                  <div className="mt-7 w-full rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5 text-left">
+                    <InfoRow label="Request ID" value={pharmacyRequestId} />
+                    <InfoRow label="Pharmacies" value={nearbyPharmacies.filter((pharmacy) => selectedPharmacyIds.includes(pharmacy.id)).map((pharmacy) => pharmacy.name).join(", ") || "Selected Pharmacies"} />
+                    <InfoRow label="Status" value="Pending Acceptance" accent />
+                    <InfoRow label="Estimated Response Time" value="10–15 minutes" />
                   </div>
+                  <button onClick={() => setSelectedPrescriptionDetails(null)} className="mt-7 rounded-xl bg-cyan-700 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-cyan-800">Done</button>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <section>
+                    <SectionTitle>Delivery Location</SectionTitle>
+                    <div className="rounded-2xl border border-slate-200 p-4 sm:p-5">
+                      <div className="flex flex-col gap-3 sm:flex-row">
+                        <label className="relative flex-1">
+                          <MapPin className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-cyan-600" />
+                          <input value={deliveryLocation} onChange={(event) => { setDeliveryLocation(event.target.value); setLocationConfirmed(false); setSelectedPharmacyIds([]); }} placeholder="Enter area, landmark or delivery address" className="w-full rounded-xl border border-slate-200 py-3.5 pl-12 pr-4 text-sm font-medium text-slate-800 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" />
+                        </label>
+                        <button type="button" onClick={() => searchNearbyPharmacies()} disabled={!deliveryLocation.trim()} className="rounded-xl bg-cyan-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-40">Search</button>
+                      </div>
+                      <button type="button" onClick={() => { const location="Current location · Sector 62, Noida"; setDeliveryLocation(location); searchNearbyPharmacies(location); }} className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-cyan-700 hover:text-cyan-900"><MapPin className="size-4" /> Use my current location</button>
+                    </div>
+                  </section>
+                  {locationConfirmed && <section className="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="mb-3 flex items-end justify-between gap-4"><div><SectionTitle>Nearby Pharmacies</SectionTitle><p className="-mt-2 text-xs font-semibold text-cyan-700">Request will be sent automatically to every available pharmacy.</p></div><span className="mb-3 text-xs font-semibold text-slate-400">{selectedPharmacyIds.length} available · {nearbyPharmacies.length} found</span></div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {nearbyPharmacies.map((pharmacy) => {
+                        const closed = pharmacy.openStatus === "Closed";
+                        return <article key={pharmacy.id} className={`relative rounded-2xl border p-4 text-left ${closed ? "border-slate-200 bg-slate-50 opacity-60" : "border-cyan-200 bg-cyan-50/50 shadow-sm"}`}>
+                          {!closed && <span className="absolute right-4 top-4 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-700">Included</span>}
+                          <div className="pr-20"><p className="font-extrabold text-slate-900">{pharmacy.name}</p><p className="mt-1 text-xs font-bold text-cyan-700">{pharmacy.id}</p></div>
+                          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-semibold"><span className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-700">{pharmacy.distance}</span><span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-700">★ {pharmacy.rating}</span><span className={`rounded-full px-2.5 py-1 ${closed ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-700"}`}>{pharmacy.openStatus}</span></div>
+                          <p className="mt-3 flex gap-2 text-xs font-medium leading-5 text-slate-500"><MapPin className="mt-0.5 size-3.5 shrink-0" />{pharmacy.address}</p>
+                        </article>;
+                      })}
+                    </div>
+                  </section>}
+                  {selectedPharmacyIds.length > 0 && <section className="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <SectionTitle>Prescription Summary</SectionTitle>
+                    <div className="grid grid-cols-2 gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-5 sm:grid-cols-4">
+                      <SummaryItem label="Prescription ID" value={selectedPrescriptionDetails.id} />
+                      <SummaryItem label="Doctor Name" value={selectedPrescriptionDetails.doctor || "Not recorded"} />
+                      <SummaryItem label="Total Medicines" value={selectedPrescriptionDetails.medicine ? "1" : "0"} />
+                      <SummaryItem label="Prescription Date" value={selectedPrescriptionDetails.date || "Not recorded"} />
+                      <SummaryItem label="Pharmacy ID" value={selectedPharmacyIds.join(", ")} />
+                    </div>
+                  </section>}
+                  {selectedPharmacyIds.length > 0 && <section>
+                    <SectionTitle>Medicine List</SectionTitle>
+                    <div className="overflow-hidden rounded-2xl border border-slate-200">
+                      <div className="grid grid-cols-[1.5fr_1fr_.7fr_1fr] gap-3 bg-slate-50 px-4 py-3 text-[11px] font-extrabold uppercase tracking-wider text-slate-500"><span>Medicine Name</span><span>Dosage</span><span>Quantity</span><span>Duration</span></div>
+                      <div className="grid grid-cols-[1.5fr_1fr_.7fr_1fr] gap-3 px-4 py-4 text-sm font-semibold text-slate-800"><span>{selectedPrescriptionDetails.medicine || "Prescription medicine"}</span><span>{selectedPrescriptionDetails.dosage || "As directed"}</span><span>1</span><span>{selectedPrescriptionDetails.duration || "As advised"}</span></div>
+                    </div>
+                  </section>}
+                  {selectedPharmacyIds.length > 0 && <section>
+                    <SectionTitle>Request Note <span className="font-medium normal-case tracking-normal text-slate-400">(Optional)</span></SectionTitle>
+                    <textarea value={requestNote} onChange={(event) => setRequestNote(event.target.value)} rows={3} placeholder="Add delivery preferences or instructions for the pharmacy..." className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100" />
+                  </section>}
                 </div>
               )}
-              {selectedPrescriptionDetails.fileUrl && (
-                <div>
-                  <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">Prescription Image</p>
-                  <a href={String(selectedPrescriptionDetails.fileUrl).startsWith('/') ? selectedPrescriptionDetails.fileUrl : `/uploads/${selectedPrescriptionDetails.fileUrl}`} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-                    <img src={String(selectedPrescriptionDetails.fileUrl).startsWith('/') ? selectedPrescriptionDetails.fileUrl : `/uploads/${selectedPrescriptionDetails.fileUrl}`} alt={`Prescription ${selectedPrescriptionDetails.id}`} className="max-h-64 w-full object-contain" />
-                  </a>
-                  <p className="mt-2 text-xs font-medium text-cyan-700">Click the image to open full size.</p>
-                </div>
-              )}
-              <div>
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Status</p>
-                <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold ${
-                  selectedPrescriptionDetails.status === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"
-                }`}>
-                  {selectedPrescriptionDetails.status}
-                </span>
-              </div>
             </div>
-            <div className="px-6 py-4 border-t border-slate-100 flex justify-end bg-slate-50">
-              <button 
-                onClick={() => setSelectedPrescriptionDetails(null)}
-                className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
-              >
-                Close
-              </button>
+            {!requestSent && <div className="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4 sm:flex-row sm:justify-end sm:px-8">
+              <button onClick={() => setSelectedPrescriptionDetails(null)} className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-100">Cancel</button>
+              <button disabled={!locationConfirmed || selectedPharmacyIds.length === 0 || sendingRequest} onClick={sendPrescriptionRequest} className="rounded-xl bg-cyan-700 px-6 py-3 text-sm font-bold text-white shadow-[0_10px_25px_-12px_rgba(8,145,178,.8)] transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-40">{sendingRequest ? "Sending Request..." : `Send Request to All ${selectedPharmacyIds.length || 0} Pharmacies`}</button>
             </div>
+            }
           </div>
         </div>
       )}
     </>
   );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <h4 className="mb-3 text-xs font-extrabold uppercase tracking-[.14em] text-slate-500">{children}</h4>;
+}
+
+function SummaryItem({ label, value }: { label: string; value: React.ReactNode }) {
+  return <div><p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">{label}</p><p className="mt-1.5 break-words text-sm font-bold text-slate-800">{value}</p></div>;
+}
+
+function InfoRow({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  return <div className="flex items-start justify-between gap-5 border-b border-emerald-100 py-3 last:border-0"><span className="text-sm font-medium text-slate-500">{label}</span><span className={`text-right text-sm font-bold ${accent ? "text-amber-600" : "text-slate-900"}`}>{value}</span></div>;
 }

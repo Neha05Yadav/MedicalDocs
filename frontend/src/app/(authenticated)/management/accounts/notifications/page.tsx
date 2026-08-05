@@ -61,6 +61,14 @@ function AccountsNotificationsContent() {
   const filteredNotifications = activeTab === "All Notifications" 
     ? notifications 
     : notifications.filter(n => n.tab === activeTab);
+  const openNotification = (notification: any) => {
+    const target = notification.type === 'refund'
+      ? '/management/accounts/refunds'
+      : notification.type === 'payment'
+        ? '/management/accounts/pending-payments'
+        : '/management/accounts/invoicing-system';
+    router.push(target);
+  };
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans">
       <div className="flex items-center justify-between mb-8">
@@ -90,7 +98,7 @@ function AccountsNotificationsContent() {
             </div>
           ) : filteredNotifications.length > 0 ? (
             filteredNotifications.map((notif, idx) => (
-              <div key={idx} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex gap-4 hover:border-indigo-200 transition-colors cursor-pointer group">
+              <button type="button" onClick={() => openNotification(notif)} key={notif.id || idx} className="w-full bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex gap-4 hover:border-indigo-200 transition-colors cursor-pointer group text-left">
                 <div className="shrink-0 mt-1">
                   {notif.type === 'payment' ? (
                     <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center border border-rose-100"><AlertTriangle className="size-5" /></div>
@@ -113,7 +121,7 @@ function AccountsNotificationsContent() {
                 <div className="shrink-0 flex items-center pl-4 border-l border-slate-100 opacity-0 group-hover:opacity-100 transition-opacity">
                   <ChevronRight className="size-5 text-indigo-400" />
                 </div>
-              </div>
+              </button>
             ))
           ) : (
             <div className="p-8 text-center text-slate-500 bg-white rounded-2xl border border-slate-200">

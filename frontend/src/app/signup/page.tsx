@@ -14,6 +14,7 @@ import {
   HeartPulse,
   LockKeyhole,
   Mail,
+  Pill,
   ShieldCheck,
   Stethoscope,
   UserRound,
@@ -31,6 +32,9 @@ const ROLE_DASHBOARD: Record<string, string> = {
   TECHNICIAN: "/laboratory/overview",
   CLINIC: "/clinic/overview",
   DOCTOR: "/clinic/overview",
+  PHARMACY: "/pharmacy/overview",
+  PHARMACIST: "/pharmacy/overview",
+  PHARMACY_MANAGER: "/pharmacy/overview",
   ADMIN: "/management/admin/overview",
   SUPER_ADMIN: "/management/super-admin/overview",
   "SUPER ADMIN": "/management/super-admin/overview",
@@ -48,6 +52,7 @@ const ROLE_OPTIONS = [
   { value: "HOSPITAL", label: "Hospital", icon: Building2 },
   { value: "LAB", label: "Laboratory", icon: FlaskConical },
   { value: "CLINIC", label: "Clinic", icon: Stethoscope },
+  { value: "PHARMACY", label: "Pharmacy", icon: Pill },
 ] as const;
 
 function SignupForm() {
@@ -140,7 +145,7 @@ function SignupForm() {
           <form onSubmit={handleSignup} className="space-y-5">
             <fieldset>
               <legend className="mb-2.5 text-sm font-semibold text-slate-300">I am joining as</legend>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 {ROLE_OPTIONS.map((option) => {
                   const Icon = option.icon;
                   const selected = role === option.value;

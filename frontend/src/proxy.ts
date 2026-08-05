@@ -73,6 +73,8 @@ export function proxy(request: NextRequest) {
       allowedPath = '/hospital';
     } else if (rawRole.includes("LAB")) {
       allowedPath = '/laboratory';
+    } else if (rawRole.includes("PHARMACY") || rawRole.includes("PHARMACIST")) {
+      allowedPath = '/pharmacy';
     } else if (rawRole.includes("CLINIC") || rawRole.includes("DOCTOR")) {
       allowedPath = '/clinic';
     }
@@ -113,6 +115,7 @@ export const config = {
     '/hospital/:path*',
     '/laboratory/:path*',
     '/clinic/:path*',
+    '/pharmacy/:path*',
     '/management/:path*',
   ],
 };

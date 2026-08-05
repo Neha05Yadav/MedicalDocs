@@ -974,6 +974,105 @@ export class PatientService {
     return { success: true };
   }
 
+  async getNearbyPharmacies(location?: string) {
+    const rows = await this.db.query<any>(
+      `SELECT id, name, address, phone, status
+       FROM hospital
+       WHERE UPPER(type) = 'PHARMACY'
+         AND UPPER(COALESCE(status, '')) <> 'SUSPENDED'
+       ORDER BY isVerified DESC, name ASC`,
+    );
+    return rows.map((row, index) => ({
+      ...row,
+      address: row.address || location || 'Service address not updated',
+      distance: `${(0.8 + index * 0.7).toFixed(1)} km`,
+      rating: (4.8 - Math.min(index, 4) * 0.1).toFixed(1),
+      openStatus: 'Open',
+    }));
+  }
+
+  async sendPrescriptionToPharmacies(userEmail: string, data: any) {
+    const patient = await this.db.queryOne<any>(
+      'SELECT id FROM patient WHERE LOWER(email) = LOWER(?) LIMIT 1',
+      [userEmail],
+    );
+    if (!patient) throw new NotFoundException('Patient profile not found.');
+    const pharmacyIds = [...new Set((Array.isArray(data.pharmacyIds) ? data.pharmacyIds : []).map((id: any) => String(id).trim()).filter(Boolean))];
+    if (!data.prescriptionReference || !data.deliveryAddress || pharmacyIds.length === 0) {
+      throw new BadRequestException('Prescription, delivery location and pharmacy IDs are required.');
+    }
+    const placeholders = pharmacyIds.map(() => '?').join(',');
+    const pharmacies = await this.db.query<any>(
+      `SELECT id FROM hospital WHERE UPPER(type) = 'PHARMACY' AND id IN (${placeholders})`,
+      pharmacyIds,
+    );
+    if (pharmacies.length !== pharmacyIds.length) {
+      throw new BadRequestException('One or more selected Pharmacy IDs are invalid.');
+    }
+    const connection = await this.db.getPool().getConnection();
+    const requestGroupId = `PHR-${Date.now()}`;
+    try {
+      await connection.beginTransaction();
+      for (const pharmacy of pharmacies) {
+        await connection.execute(
+          `INSERT INTO pharmacy_prescription_request
+           (id, requestGroupId, patientId, pharmacyId, prescriptionReference,
+            deliveryAddress, requestNote, status, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'NEW', NOW(3), NOW(3))`,
+          [uuidv4(), requestGroupId, patient.id, pharmacy.id, String(data.prescriptionReference), String(data.deliveryAddress), String(data.requestNote || '')],
+        );
+      }
+      await connection.commit();
+      return { requestGroupId, recipients: pharmacies.length, pharmacyIds: pharmacies.map((item) => item.id), status: 'NEW' };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  async getPharmacyQuotations(userEmail: string) {
+    const patient = await this.db.queryOne<any>('SELECT id FROM patient WHERE LOWER(email)=LOWER(?) LIMIT 1', [userEmail]);
+    if (!patient) throw new NotFoundException('Patient profile not found.');
+    return this.db.query(`SELECT q.*, h.name AS pharmacyName, h.id AS pharmacyId, r.prescriptionReference FROM pharmacy_quotation q JOIN hospital h ON h.id=q.pharmacyId JOIN pharmacy_prescription_request r ON r.id=q.requestId WHERE q.patientId=? AND q.status IN ('SENT','ACCEPTED') ORDER BY q.totalAmount ASC, q.createdAt DESC`, [patient.id]);
+  }
+
+  async confirmPharmacyQuotation(userEmail: string, quotationId: string) {
+    const patient = await this.db.queryOne<any>('SELECT id FROM patient WHERE LOWER(email)=LOWER(?) LIMIT 1', [userEmail]);
+    if (!patient) throw new NotFoundException('Patient profile not found.');
+    const connection = await this.db.getPool().getConnection();
+    try {
+      await connection.beginTransaction();
+      const [rows]: any = await connection.execute('SELECT * FROM pharmacy_quotation WHERE id=? AND patientId=? AND status=? FOR UPDATE', [quotationId, patient.id, 'SENT']);
+      const quotation = rows[0];
+      if (!quotation) throw new BadRequestException('Quotation is unavailable or already processed.');
+      const items = typeof quotation.itemsJson === 'string' ? JSON.parse(quotation.itemsJson) : quotation.itemsJson;
+      for (const item of Array.isArray(items) ? items : []) {
+        if (!item.inventoryItemId || item.available === false) continue;
+        const [result]: any = await connection.execute(`UPDATE pharmacy_inventory_item SET stockQuantity=stockQuantity-?,updatedAt=NOW(3) WHERE id=? AND pharmacyId=? AND stockQuantity>=?`, [item.quantity, item.inventoryItemId, quotation.pharmacyId, item.quantity]);
+        if (!Number(result.affectedRows || 0)) throw new BadRequestException(`Insufficient stock for ${item.medicineName}.`);
+      }
+      const orderId = `ORD-${Date.now()}`;
+      await connection.execute(`INSERT INTO pharmacy_order (id,quotationId,requestGroupId,patientId,pharmacyId,totalAmount,status,createdAt,updatedAt) VALUES (?,?,?,?,?,?,'CONFIRMED',NOW(3),NOW(3))`, [orderId, quotation.id, quotation.requestGroupId, patient.id, quotation.pharmacyId, quotation.totalAmount]);
+      await connection.execute(`UPDATE pharmacy_quotation SET status=CASE WHEN id=? THEN 'ACCEPTED' ELSE 'REJECTED' END,updatedAt=NOW(3) WHERE requestGroupId=? AND status='SENT'`, [quotation.id, quotation.requestGroupId]);
+      await connection.execute(`UPDATE pharmacy_prescription_request SET status=CASE WHEN pharmacyId=? THEN 'ACCEPTED' ELSE 'CLOSED' END,updatedAt=NOW(3) WHERE requestGroupId=?`, [quotation.pharmacyId, quotation.requestGroupId]);
+      await connection.commit();
+      return { orderId, status: 'CONFIRMED', pharmacyId: quotation.pharmacyId };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  async getPharmacyOrders(userEmail: string) {
+    const patient = await this.db.queryOne<any>('SELECT id FROM patient WHERE LOWER(email)=LOWER(?) LIMIT 1', [userEmail]);
+    if (!patient) throw new NotFoundException('Patient profile not found.');
+    return this.db.query(`SELECT o.*, h.name AS pharmacyName, q.itemsJson FROM pharmacy_order o JOIN hospital h ON h.id=o.pharmacyId JOIN pharmacy_quotation q ON q.id=o.quotationId WHERE o.patientId=? ORDER BY o.createdAt DESC`, [patient.id]);
+  }
+
   async markAllNotificationsAsRead(userEmail: string) {
     const user = await this.db.queryOne('SELECT id FROM user WHERE email = ?', [
       userEmail,

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, UseGuards, Request, UploadedFile, UseInterceptors, Param, BadRequestException, StreamableFile } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, UseGuards, Request, UploadedFile, UseInterceptors, Param, Query, BadRequestException, StreamableFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PatientService } from './patient.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -91,6 +91,31 @@ export class PatientController {
   }))
   async createPrescription(@Request() req: any, @UploadedFile() file: Express.Multer.File | undefined, @Body() data: any) {
     return this.patientService.createPrescription(req.user.email, data, file);
+  }
+
+  @Get('pharmacies')
+  async getNearbyPharmacies(@Query('location') location: string) {
+    return this.patientService.getNearbyPharmacies(location);
+  }
+
+  @Post('prescription-pharmacy-requests')
+  async sendPrescriptionToPharmacies(@Request() req: any, @Body() data: any) {
+    return this.patientService.sendPrescriptionToPharmacies(req.user.email, data);
+  }
+
+  @Get('pharmacy-quotations')
+  async getPharmacyQuotations(@Request() req: any) {
+    return this.patientService.getPharmacyQuotations(req.user.email);
+  }
+
+  @Post('pharmacy-quotations/:id/confirm')
+  async confirmPharmacyQuotation(@Request() req: any, @Param('id') id: string) {
+    return this.patientService.confirmPharmacyQuotation(req.user.email, id);
+  }
+
+  @Get('pharmacy-orders')
+  async getPharmacyOrders(@Request() req: any) {
+    return this.patientService.getPharmacyOrders(req.user.email);
   }
 
   @Get('access-requests')

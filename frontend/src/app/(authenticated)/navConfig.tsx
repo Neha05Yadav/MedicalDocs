@@ -53,6 +53,22 @@ export const laboratoryNav = [
   { title: "Profile", subtitle: "Manage your facility's details, licenses, and contact information.", url: "/laboratory/profile", iconName: "Settings" },
 ];
 
+export const pharmacyNav = [
+  { title: "Dashboard", subtitle: "Monitor prescription demand, active orders, stock and revenue.", url: "/pharmacy/overview", iconName: "LayoutDashboard" },
+  { title: "Prescription Requests", subtitle: "Review prescriptions shared by patients for medicine ordering.", url: "/pharmacy/prescription-requests", iconName: "ClipboardList" },
+  { title: "Quotations", subtitle: "Prepare and track medicine quotations sent to patients.", url: "/pharmacy/quotations", iconName: "FileText" },
+  { title: "Orders", subtitle: "Manage confirmed medicine orders from preparation to completion.", url: "/pharmacy/orders", iconName: "Pill" },
+  { title: "Inventory", subtitle: "Maintain medicine stock, batches, prices and expiry dates.", url: "/pharmacy/inventory", iconName: "BookOpen" },
+  { title: "Alternative Medicines", subtitle: "Manage substitution suggestions requiring patient approval.", url: "/pharmacy/alternatives", iconName: "RefreshCw" },
+  { title: "Delivery Management", subtitle: "Track pickup and home-delivery fulfilment.", url: "/pharmacy/deliveries", iconName: "Activity" },
+  { title: "Payments & Billing", subtitle: "Review invoices, transactions and payment status.", url: "/pharmacy/billing", iconName: "CreditCard" },
+  { title: "Patients", subtitle: "View only patients who shared prescriptions with this pharmacy.", url: "/pharmacy/patients", iconName: "Users" },
+  { title: "Notifications", subtitle: "View order, quotation, stock and delivery alerts.", url: "/pharmacy/notifications", iconName: "Bell" },
+  { title: "Reports & Analytics", subtitle: "Analyze sales, orders, acceptance and inventory health.", url: "/pharmacy/analytics", iconName: "BarChart3" },
+  { title: "Pharmacy Profile", subtitle: "Manage pharmacy identity, license, service area and timings.", url: "/pharmacy/profile", iconName: "Settings" },
+  { title: "Help & Support", subtitle: "Raise complaints and track support tickets.", url: "/pharmacy/support", iconName: "HelpCircle" },
+];
+
 export const adminNav = [
   { title: "Dashboard", subtitle: "System overview, KPIs, and recent activities.", url: "/management/admin/overview", iconName: "LayoutDashboard" },
   { title: "Access Management", subtitle: "Manage patients, doctors, and staff accounts.", url: "/management/admin/access", iconName: "ShieldCheck" },
@@ -116,6 +132,7 @@ export const allNavs = {
   clinic: clinicNav,
   hospital: hospitalNav,
   laboratory: laboratoryNav,
+  pharmacy: pharmacyNav,
   admin: adminNav,
   superAdmin: superAdminNav,
   sales: salesNav,
