@@ -188,10 +188,6 @@ export default function UserManagementPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans space-y-6">
-      <div>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">User Management</h1>
-        <p className="text-sm text-slate-500 mt-1 font-medium">Manage individual platform users including patients and doctors.</p>
-      </div>
 
       {/* Filters Bar */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col xl:flex-row gap-4 justify-between items-center">

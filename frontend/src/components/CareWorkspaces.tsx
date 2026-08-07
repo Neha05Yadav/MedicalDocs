@@ -30,14 +30,16 @@ async function api(path: string, options: RequestInit = {}) {
   return payload;
 }
 
-function Shell({ eyebrow, title, description, children }: { eyebrow: string; title: string; description: string; children: React.ReactNode }) {
+function Shell({ eyebrow, title, description, children }: { eyebrow?: string; title?: string; description?: string; children: React.ReactNode }) {
   return (
     <div className="mx-auto w-full max-w-[1500px] p-5 md:p-8">
-      <div className="mb-7">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-600">{eyebrow}</p>
-        <h1 className="mt-2 text-2xl font-black text-slate-950">{title}</h1>
-        <p className="mt-1 max-w-3xl text-sm text-slate-500">{description}</p>
-      </div>
+      {(eyebrow || title || description) && (
+        <div className="mb-7">
+          {eyebrow && <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-600">{eyebrow}</p>}
+          {title && <h1 className="mt-2 text-2xl font-black text-slate-950">{title}</h1>}
+          {description && <p className="mt-1 max-w-3xl text-sm text-slate-500">{description}</p>}
+        </div>
+      )}
       {children}
       <style jsx global>{`
         .care-input {
@@ -200,7 +202,7 @@ export function AppointmentWorkspace({ patientMode = false }: { patientMode?: bo
   };
 
   return (
-    <Shell eyebrow="Connected care calendar" title={patientMode ? "Book & manage appointments" : "Doctor calendar"} description={patientMode ? "Choose a facility and doctor, see genuine available slots, then reschedule or cancel when needed." : "Move every visit from confirmation and check-in through consultation and completion. Completion automatically creates the consultation bill."}>
+    <Shell>
       {patientMode && (
         <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
@@ -489,7 +491,7 @@ export function LaboratoryWorkflow() {
   };
 
   return (
-    <Shell eyebrow="Diagnostics operations" title="Laboratory catalogue & sample workflow" description="Own your complete test catalogue, packages and pricing; print QR sample labels; track collection-to-report; flag abnormal results and automatically bill the patient.">
+    <Shell>
       <div className="mb-6 flex flex-wrap gap-2">
         {(
           [
@@ -733,7 +735,7 @@ export function PatientLabBooking() {
     }
   };
   return (
-    <Shell eyebrow="Diagnostics marketplace" title="Book laboratory tests" description="Compare your laboratory’s published tests and packages, see preparation instructions and pricing, and request home sample collection.">
+    <Shell>
       <div className="grid gap-6 xl:grid-cols-[1.35fr_.65fr]">
         <section className="rounded-[1.5rem] border border-slate-200/80 bg-white p-5 shadow-[0_16px_45px_-32px_rgba(15,23,42,.35)] md:p-6">
           <Field label="Choose laboratory">
@@ -976,7 +978,7 @@ export function InpatientWorkspace() {
     }
   };
   return (
-    <Shell eyebrow="Hospital revenue cycle" title="IPD admissions, charges & discharge" description="Manage beds, deposits and daily room/nursing charges; capture medicines, consumables, procedures and doctor visits; then generate the final insurance-adjusted bill and discharge summary.">
+    <Shell>
       <div className="mb-6 flex gap-2">
         <button onClick={() => setTab("admissions")} className={`rounded-xl px-4 py-2 text-sm font-bold ${tab === "admissions" ? "bg-slate-950 text-white" : "border bg-white"}`}>
           Admissions
@@ -1221,7 +1223,7 @@ export function InsuranceWorkspace({ patientMode = false }: { patientMode?: bool
   };
   const patientPolicies = useMemo(() => data.policies.filter((item: any) => !claim.patientId || item.patientId === claim.patientId), [data.policies, claim.patientId]);
   return (
-    <Shell eyebrow="Cashless & reimbursement" title="Insurance and TPA claims" description={patientMode ? "Keep policy details in one place and track requested, approved, rejected and patient-payable amounts." : "Handle cashless pre-authorization, claim decisions, TPA deductions and the final patient balance."}>
+    <Shell>
       <div className={`grid gap-6 ${patientMode ? "grid-cols-1" : "xl:grid-cols-3"}`}>
         {!patientMode && (
           <section className="rounded-2xl border bg-white p-5 shadow-sm">

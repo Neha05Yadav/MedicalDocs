@@ -53,7 +53,7 @@ export default function PatientProfileClient() {
           email: data.email || "",
           phone: data.phone || "",
           emergencyContact: "",
-          address: "",
+          address: data.address || "",
           logoUrl: data.logoUrl || ""
         });
       } catch (error) {
@@ -101,16 +101,21 @@ export default function PatientProfileClient() {
           phone: profile.phone,
           bloodGroup: profile.bloodGroup,
           gender: profile.gender,
-          dateOfBirth: profile.dob
+          dateOfBirth: profile.dob,
+          address: profile.address
         })
       });
 
-      if (!res.ok) throw new Error("Update failed");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(Array.isArray(data?.message) ? data.message[0] : data?.message || "Failed to update profile.");
       
+      if (profile.address) {
+        localStorage.setItem("updatedPatientAddress", profile.address);
+      }
       setIsEditing(false);
       toast.success("Profile updated successfully!");
-    } catch (e) {
-      toast.error("Failed to update profile");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to update profile");
     }
   };
 
@@ -118,9 +123,9 @@ export default function PatientProfileClient() {
     return <div className="p-8 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div></div>;
   }
 
-  const completedFields = [profile.name, profile.dob, profile.gender, profile.bloodGroup, profile.email, profile.phone, profile.logoUrl]
+  const completedFields = [profile.name, profile.dob, profile.gender, profile.bloodGroup, profile.email, profile.phone, profile.address, profile.logoUrl]
     .filter((value) => Boolean(String(value || "").trim())).length;
-  const profileCompletion = Math.round((completedFields / 7) * 100);
+  const profileCompletion = Math.round((completedFields / 8) * 100);
 
   return (
     <div className="space-y-6 pb-8">
@@ -223,6 +228,24 @@ export default function PatientProfileClient() {
             <div className="sm:col-span-2">
               <label className="mb-2 block text-xs font-extrabold uppercase tracking-wider text-slate-500">Email address</label>
               <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3.5"><Mail className="size-5 text-violet-600" /><span className="break-all font-bold text-slate-800">{profile.email || "Not provided"}</span><span className="ml-auto hidden rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 sm:inline">Account email</span></div>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="mb-2 block text-xs font-extrabold uppercase tracking-wider text-slate-500">Residential Address / Location</label>
+              {isEditing ? (
+                <input
+                  name="address"
+                  value={profile.address}
+                  onChange={handleChange}
+                  placeholder="Enter your complete home/residential address (e.g. Sector 18, Noida)"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base font-bold text-slate-900 outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-4 focus:ring-cyan-500/10"
+                />
+              ) : (
+                <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3.5">
+                  <MapPin className="size-5 shrink-0 text-cyan-600" />
+                  <span className="font-bold text-slate-800">{profile.address || "Not provided"}</span>
+                </div>
+              )}
             </div>
           </div>
 

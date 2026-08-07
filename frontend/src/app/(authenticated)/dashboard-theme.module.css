@@ -82,8 +82,11 @@
   scrollbar-width: thin;
 }
 
-.content :global([data-duplicate-dashboard-heading="true"]),
-.content :global([data-duplicate-dashboard-subtitle="true"]) {
+/* Hide the page-level heading that duplicates the dashboard header title.
+   Page components render: div > header:first-child > div > [p, h1, p]
+   Element selectors are NOT transformed by CSS Modules, so no :global() needed. */
+.content > div > div > header:first-child > div:first-child > h1,
+.content > div > div > header:first-child > div:first-child > h1 + p {
   display: none !important;
 }
 

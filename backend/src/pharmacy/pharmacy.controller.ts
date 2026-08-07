@@ -46,4 +46,9 @@ export class PharmacyController {
   addInventoryItem(@Request() request: any, @Body() data: any) {
     return this.pharmacyService.addInventoryItem(request.user.email, data);
   }
+
+  @Get('notifications')
+  getNotifications(@Request() request: any) {
+    return this.pharmacyService.getNotifications(request.user.email);
+  }
 }

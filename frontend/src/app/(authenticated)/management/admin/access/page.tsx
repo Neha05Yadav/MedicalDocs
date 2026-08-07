@@ -141,12 +141,8 @@ export default function AccessManagementPage() {
   return (
     <div className="p-8 max-w-[1600px] mx-auto w-full min-h-screen font-sans space-y-8 bg-[#F8FAFC]">
       
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Access Management</h1>
-          <p className="text-sm text-slate-500 mt-1 font-medium">Manage organization and staff accounts securely.</p>
-        </div>
+      {/* Header Actions */}
+      <div className="flex flex-col md:flex-row md:items-center justify-end gap-4">
         <button 
           onClick={() => setIsAddModalOpen(true)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center gap-2"

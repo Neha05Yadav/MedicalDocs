@@ -6,7 +6,6 @@ import DashboardSidebar from "./DashboardSidebar";
 import DashboardHeaderClient from "./DashboardHeaderClient";
 import DashboardSearchAutocomplete from "./DashboardSearchAutocomplete";
 import styles from "./dashboard-theme.module.css";
-import { useEffect } from "react";
 
 if (typeof window !== "undefined") {
   const guardedWindow = window as typeof window & { __medicalDocsFetchWrapped?: boolean };
@@ -58,34 +57,6 @@ export default function DashboardWrapper({ children }: { children: React.ReactNo
     "--dash-accent-2": accent2,
     "--dash-accent-rgb": accentRgb,
   } as CSSProperties;
-
-  useEffect(() => {
-    const normalize = (value: string | null | undefined) =>
-      String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
-
-    const removeDuplicatePageHeading = () => {
-      const canonicalHeading = document.querySelector<HTMLElement>("[data-dashboard-page-title]");
-      const content = document.querySelector<HTMLElement>("[data-dashboard-content]");
-      const canonicalTitle = normalize(canonicalHeading?.textContent);
-      if (!canonicalTitle || !content) return;
-
-      content.querySelectorAll<HTMLElement>("h1, h2").forEach(heading => {
-        const isDuplicate = normalize(heading.textContent) === canonicalTitle;
-        if (!isDuplicate) return;
-        heading.dataset.duplicateDashboardHeading = "true";
-        const subtitle = heading.nextElementSibling as HTMLElement | null;
-        if (subtitle?.tagName === "P") subtitle.dataset.duplicateDashboardSubtitle = "true";
-      });
-    };
-
-    // Run only after React has hydrated the current route. A document-wide
-    // MutationObserver can mutate the next route's server HTML before React
-    // hydrates it, which produces an attribute mismatch in development.
-    const frame = window.requestAnimationFrame(removeDuplicatePageHeading);
-    return () => {
-      window.cancelAnimationFrame(frame);
-    };
-  }, [pathname]);
 
   return (
     <div className={styles.shell} style={themeVariables} data-dashboard-theme={themeName}>

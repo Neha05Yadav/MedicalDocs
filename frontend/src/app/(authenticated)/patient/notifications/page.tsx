@@ -96,7 +96,6 @@ export default function NotificationsPage() {
     <div className="p-8">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-slate-800">Notifications</h1>
           {unreadCount > 0 && (
             <span className="bg-[#0891b2] text-white px-3 py-1 rounded-full text-sm font-medium">
               {unreadCount} new
@@ -130,6 +129,17 @@ export default function NotificationsPage() {
                   {!n.read && <span className="size-1.5 rounded-full bg-[#0891b2]" />}
                 </div>
                 <p className="text-sm text-slate-600 mt-0.5 whitespace-pre-wrap">{n.message}</p>
+                {(n.type === "PHARMACY_QUOTATION" || n.title?.includes("Quotation")) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openNotification(n);
+                    }}
+                    className="mt-2.5 inline-flex items-center gap-1.5 rounded-xl bg-[#0891b2] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-cyan-700"
+                  >
+                    View Quotation &rarr;
+                  </button>
+                )}
                 <p className="text-xs text-slate-400 mt-1">{n.time}</p>
               </div>
               {!n.read && (

@@ -47,14 +47,6 @@ export default function HospitalSubscriptionPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans">
-      
-      {/* Header */}
-      <div className="text-center max-w-2xl mx-auto mb-12 space-y-4">
-        <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Upgrade Your Plan</h1>
-        <p className="text-lg text-slate-600 font-medium">
-          Choose the right plan for your hospital. Unlock advanced features, increase limits, and provide better care.
-        </p>
-      </div>
 
       {/* Pricing Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

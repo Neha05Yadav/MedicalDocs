@@ -63,15 +63,6 @@ export default function AuditLogsPage() {
 
   return (
     <div className="p-8 w-full font-sans space-y-6">
-      
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <FileText className="size-6 text-slate-400" />
-          System Audit Logs
-        </h1>
-        <p className="text-sm text-slate-500 mt-1">Track and monitor all administrative and system activities for security compliance.</p>
-      </div>
 
       {/* Controls */}
       <div className="flex flex-col sm:flex-row gap-4">

@@ -43,12 +43,6 @@ export default function PlatformAnalyticsPage() {
 
   return (
     <div className="p-8 w-full font-sans space-y-6">
-      
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Platform Analytics</h1>
-        <p className="text-sm text-slate-500 mt-1">Monitor system health, revenue growth, and usage metrics.</p>
-      </div>
 
       {/* KPI Cards (Simple & Clean) */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

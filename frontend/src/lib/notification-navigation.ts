@@ -21,6 +21,7 @@ const routeRules: Record<Portal, Array<[RegExp, string]>> = {
     [/APPOINTMENT|CONSULTATION|RESCHEDULE/, "/patient/appointments"],
     [/REPORT|MEDICAL RECORD|RECORD READY/, "/patient/records"],
     [/LAB|SAMPLE|TEST REQUEST|TEST BOOK/, "/patient/lab-tests"],
+    [/QUOTATION/, "/patient/prescriptions?viewQuotation=true"],
     [/PRESCRIPTION|MEDICINE/, "/patient/prescriptions"],
     [/INSURANCE|CLAIM|TPA/, "/patient/insurance"],
     [/INVOICE|BILLING|PAYMENT/, "/patient/billing"],

@@ -19,11 +19,12 @@ describe('AuthService role boundaries', () => {
     set: jest.fn(),
     del: jest.fn(),
   };
+  const mailService = { sendMail: jest.fn() };
   let service: AuthService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new AuthService(db as any, jwtService as any, redisService as any);
+    service = new AuthService(db as any, jwtService as any, redisService as any, mailService as any);
   });
 
   it.each(['ADMIN', 'SUPER_ADMIN', 'STAFF', 'SUPPORT_AGENT'])(

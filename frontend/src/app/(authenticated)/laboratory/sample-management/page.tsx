@@ -168,10 +168,6 @@ export default function SampleManagementPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen">
-      <div className="flex flex-col mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Sample Management</h1>
-        <p className="text-slate-500 mt-1">Track and update the status of patient test samples.</p>
-      </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center">

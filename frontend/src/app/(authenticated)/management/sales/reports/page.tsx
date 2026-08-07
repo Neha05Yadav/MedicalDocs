@@ -61,12 +61,7 @@ export default function SalesReportsPage() {
 
   return (
     <div className="min-h-screen space-y-7 p-6 md:p-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[.18em] text-indigo-600">MySQL invoice ledger</p>
-          <h1 className="mt-1 text-3xl font-black text-slate-900">Sales report</h1>
-          <p className="mt-1 text-sm text-slate-500">Collected revenue calculated from paid invoices.</p>
-        </div>
+      <div className="flex flex-wrap items-end justify-end gap-4">
         <button onClick={downloadCsv} className="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700">
           Download CSV
         </button>

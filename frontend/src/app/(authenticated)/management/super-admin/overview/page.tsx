@@ -80,11 +80,7 @@ export default function SuperAdminDashboard() {
       {/* Decorative Background Blob */}
       <div className="absolute top-0 left-0 w-full h-[400px] bg-gradient-to-b from-brand/5 to-transparent pointer-events-none -z-10" />
       
-      <header className="mb-7 flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Platform Overview</h1>
-          <p className="text-sm text-slate-500 mt-1 font-medium">Welcome to the Super Admin Dashboard. Monitor system health and key metrics.</p>
-        </div>
+      <header className="mb-7 flex flex-col md:flex-row md:items-end justify-end gap-4">
         <div className="flex gap-3">
           <Link href="/management/super-admin/settings" className="px-4 py-2.5 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand/90 transition-all shadow-sm shadow-brand/20">
             System Settings

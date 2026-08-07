@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { toast } from "sonner";
 import { 
   Search, UserPlus, MoreVertical, CheckCircle2, Clock, 
@@ -9,7 +9,7 @@ import {
 import { authHeaders } from "@/lib/auth-fetch";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function DoctorPatientsPage() {
+function DoctorPatientsContent() {
   const [activeTab, setActiveTab] = useState("my_patients"); // "my_patients" | "search_patient"
   const [activeFilter, setActiveFilter] = useState("All Patients");
   const [searchTerm, setSearchTerm] = useState("");
@@ -1031,5 +1031,13 @@ export default function DoctorPatientsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function DoctorPatientsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading patients...</div>}>
+      <DoctorPatientsContent />
+    </Suspense>
   );
 }

@@ -140,8 +140,7 @@ export default function DoctorNotificationsPage() {
     <div className="p-8 max-w-4xl mx-auto w-full min-h-screen">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Notifications</h1>
-          <p className="text-sm text-slate-500 mt-1">You have {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}</p>
+          <p className="text-sm text-slate-500">You have {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}</p>
         </div>
         {unreadCount > 0 && (
           <button 

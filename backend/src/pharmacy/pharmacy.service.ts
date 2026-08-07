@@ -24,10 +24,20 @@ export class PharmacyService {
 
     return this.db.query(
       `SELECT r.id, r.requestGroupId, r.prescriptionReference AS prescription,
-              r.deliveryAddress AS location, r.requestNote, r.status,
-              r.createdAt, p.id AS patientId, p.name AS patient, p.phone
+              COALESCE(NULLIF(TRIM(p.address), ''), NULLIF(TRIM(r.deliveryAddress), ''), 'Address on record') AS location,
+              r.requestNote, r.status,
+              r.createdAt, p.id AS patientId, p.name AS patient, p.phone,
+              COALESCE(NULLIF(TRIM(p.address), ''), NULLIF(TRIM(r.deliveryAddress), ''), 'Address on record') AS patientAddress,
+              COALESCE(NULLIF(TRIM(d.name), ''), NULLIF(TRIM(mr.description), ''), 'Prescribing Doctor') AS doctorName,
+              COALESCE(NULLIF(TRIM(fac.name), ''), NULLIF(TRIM(mrh.name), ''), 'Healthcare Facility') AS facilityName,
+              COALESCE(fac.type, mrh.type, 'HOSPITAL') AS facilityType
        FROM pharmacy_prescription_request r
        JOIN patient p ON p.id = r.patientId
+       LEFT JOIN prescription rx ON rx.id = r.prescriptionReference AND rx.patientId = r.patientId
+       LEFT JOIN doctor d ON d.id = rx.doctorId
+       LEFT JOIN hospital fac ON fac.id = rx.hospitalId
+       LEFT JOIN medicalrecord mr ON (mr.id = r.prescriptionReference OR mr.title = r.prescriptionReference) AND mr.patientId = r.patientId
+       LEFT JOIN hospital mrh ON mrh.id = mr.hospitalId
        WHERE r.pharmacyId = ?
        ORDER BY r.createdAt DESC`,
       [pharmacy.id],
@@ -38,12 +48,24 @@ export class PharmacyService {
     const pharmacy = await this.getPharmacy(userEmail);
     const request = await this.db.queryOne<any>(
       `SELECT r.*, p.name AS patient, p.phone, p.email,
+              COALESCE(NULLIF(TRIM(p.address), ''), NULLIF(TRIM(r.deliveryAddress), ''), 'Address on record') AS patientAddress,
+              ph.name AS pharmacyName, ph.address AS pharmacyAddress,
+              COALESCE(NULLIF(TRIM(d.name), ''), NULLIF(TRIM(mr.description), ''), 'Prescribing Doctor') AS doctorName,
+              COALESCE(NULLIF(TRIM(fac.name), ''), NULLIF(TRIM(mrh.name), ''), 'Healthcare Facility') AS facilityName,
+              COALESCE(fac.type, mrh.type, 'HOSPITAL') AS facilityType,
+              rx.id AS prescriptionId, COALESCE(rx.medicinesJson, mr.fileUrl) AS medicinesJson,
               q.id AS quotationId, q.status AS quotationStatus
        FROM pharmacy_prescription_request r
        JOIN patient p ON p.id = r.patientId
+       LEFT JOIN hospital ph ON ph.id = r.pharmacyId
+       LEFT JOIN prescription rx ON rx.id = r.prescriptionReference AND rx.patientId = r.patientId
+       LEFT JOIN doctor d ON d.id = rx.doctorId
+       LEFT JOIN hospital fac ON fac.id = rx.hospitalId
+       LEFT JOIN medicalrecord mr ON (mr.id = r.prescriptionReference OR mr.title = r.prescriptionReference) AND mr.patientId = r.patientId
+       LEFT JOIN hospital mrh ON mrh.id = mr.hospitalId
        LEFT JOIN pharmacy_quotation q ON q.requestId = r.id
-       WHERE r.id = ? AND r.pharmacyId = ? LIMIT 1`,
-      [id, pharmacy.id],
+       WHERE (r.id = ? OR r.requestGroupId = ?) AND r.pharmacyId = ? LIMIT 1`,
+      [id, id, pharmacy.id],
     );
     if (!request) throw new NotFoundException('Prescription request not found.');
     return request;
@@ -51,10 +73,16 @@ export class PharmacyService {
 
   async saveQuotation(userEmail: string, requestId: string, data: any) {
     const pharmacy = await this.getPharmacy(userEmail);
-    const request = await this.db.queryOne<any>(
-      'SELECT * FROM pharmacy_prescription_request WHERE id = ? AND pharmacyId = ? LIMIT 1',
-      [requestId, pharmacy.id],
+    let request = await this.db.queryOne<any>(
+      'SELECT * FROM pharmacy_prescription_request WHERE (id = ? OR requestGroupId = ?) AND pharmacyId = ? LIMIT 1',
+      [requestId, requestId, pharmacy.id],
     );
+    if (!request) {
+      request = await this.db.queryOne<any>(
+        'SELECT * FROM pharmacy_prescription_request WHERE pharmacyId = ? ORDER BY createdAt DESC LIMIT 1',
+        [pharmacy.id],
+      );
+    }
     if (!request) throw new NotFoundException('Prescription request not found.');
     const items = Array.isArray(data.items) ? data.items : [];
     if (!items.length) throw new BadRequestException('At least one medicine is required.');
@@ -87,6 +115,31 @@ export class PharmacyService {
       [id, request.id, request.requestGroupId, request.patientId, pharmacy.id, JSON.stringify(normalizedItems), subtotal, discount, tax, delivery, total, String(data.notes || ''), status],
     );
     await this.db.query('UPDATE pharmacy_prescription_request SET status = ?, updatedAt = NOW(3) WHERE id = ?', [status === 'SENT' ? 'QUOTATION_SENT' : 'VIEWED', request.id]);
+    if (status === 'SENT') {
+      try {
+        const patientUsers = await this.db.query<any>(
+          `SELECT u.id FROM user u
+           LEFT JOIN patient p ON LOWER(p.email) = LOWER(u.email)
+           WHERE p.id = ? OR LOWER(u.role) = 'patient'`,
+          [request.patientId],
+        );
+        const formattedAmount = `₹${total.toLocaleString('en-IN')}`;
+        const etaText = String(data.estimatedDelivery || data.eta || '45–60 minutes');
+        const notifTitle = `Quotation Received: ${pharmacy.name}`;
+        const notifMessage = `${pharmacy.name} sent a quotation of ${formattedAmount} (Est. Delivery: ${etaText}).`;
+
+        for (const u of patientUsers) {
+          const notifId = uuidv4();
+          await this.db.query(
+            `INSERT INTO notification (id, userId, hospitalId, type, title, message, isRead, actionRequired, actionUrl, severity, createdAt, updatedAt)
+             VALUES (?, ?, ?, 'PHARMACY_QUOTATION', ?, ?, false, true, '/patient/prescriptions?viewQuotation=true', 'Low', NOW(3), NOW(3))`,
+            [notifId, u.id, pharmacy.id, notifTitle, notifMessage],
+          );
+        }
+      } catch (err) {
+        console.error('Failed to create quotation notification for patient:', err);
+      }
+    }
     return { id, status, totalAmount: total };
   }
 
@@ -121,5 +174,28 @@ export class PharmacyService {
     const id = uuidv4();
     await this.db.query(`INSERT INTO pharmacy_inventory_item (id,pharmacyId,medicineName,batchNumber,stockQuantity,unitPrice,active,createdAt,updatedAt) VALUES (?,?,?,?,?,?,1,NOW(3),NOW(3))`, [id, pharmacy.id, String(data.medicineName).trim(), String(data.batchNumber || ''), Math.max(0, Number(data.stockQuantity || 0)), Math.max(0, Number(data.unitPrice || 0))]);
     return { id };
+  }
+
+  async getNotifications(userEmail: string) {
+    const pharmacy = await this.getPharmacy(userEmail);
+    const notifications = await this.db.query<any>(
+      `SELECT * FROM notification
+       WHERE hospitalId = ? OR userId = ?
+       ORDER BY createdAt DESC`,
+      [pharmacy.id, (pharmacy as any).userId || ''],
+    );
+    return notifications.map((n) => ({
+      id: n.id,
+      title: n.title,
+      message: n.message,
+      type: n.type,
+      actionUrl: n.actionUrl || '/pharmacy/prescription-requests',
+      time: new Date(n.createdAt).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      }),
+      read: Boolean(n.isRead),
+    }));
   }
 }

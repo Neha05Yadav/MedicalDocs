@@ -1,8 +1,8 @@
 export const requests = [
-  { id: "RXR-260804-018", patient: "Neha Yadav", prescription: "RX-874521", doctor: "Dr. Tarun Pal", facility: "City Hospital", date: "04 Aug 2026", location: "Sector 18, Noida", distance: "2.4 km", delivery: "Home delivery", status: "New" },
-  { id: "RXR-260804-017", patient: "Aarav Sharma", prescription: "RX-874498", doctor: "Dr. P. Sharma", facility: "Green Valley Clinic", date: "04 Aug 2026", location: "Sector 22, Noida", distance: "4.1 km", delivery: "Store pickup", status: "Viewed" },
-  { id: "RXR-260803-014", patient: "Sneha Verma", prescription: "RX-874203", doctor: "Dr. A. Gupta", facility: "City Hospital", date: "03 Aug 2026", location: "Sector 15, Noida", distance: "1.8 km", delivery: "Home delivery", status: "Quotation Sent" },
-  { id: "RXR-260803-011", patient: "Rohan Mehta", prescription: "RX-874102", doctor: "Dr. P.S. Pandey", facility: "City Hospital", date: "03 Aug 2026", location: "Sector 27, Noida", distance: "5.6 km", delivery: "Home delivery", status: "Accepted" },
+  { id: "RXR-260804-018", patient: "Neha Yadav", prescription: "RX-874521", doctor: "Dr. Santosh", facility: "City Hospital", date: "04 Aug 2026", patientAddress: "n heritage bisrakh Greater Noida", location: "Sector 18, Noida", distance: "2.4 km", delivery: "Home delivery", status: "New" },
+  { id: "RXR-260804-017", patient: "Aarav Sharma", prescription: "RX-874498", doctor: "Dr. P. Sharma", facility: "Green Valley Clinic", date: "04 Aug 2026", patientAddress: "Flat 402, Sector 22, Noida", location: "Sector 22, Noida", distance: "4.1 km", delivery: "Store pickup", status: "Viewed" },
+  { id: "RXR-260803-014", patient: "Sneha Verma", prescription: "RX-874203", doctor: "Dr. A. Gupta", facility: "City Hospital", date: "03 Aug 2026", patientAddress: "Sector 15, Noida", location: "Sector 15, Noida", distance: "1.8 km", delivery: "Home delivery", status: "Quotation Sent" },
+  { id: "RXR-260803-011", patient: "Rohan Mehta", prescription: "RX-874102", doctor: "Dr. R.K. Verma", facility: "Metro Care Hospital", date: "03 Aug 2026", patientAddress: "Tower B, Sector 27, Noida", location: "Sector 27, Noida", distance: "5.6 km", delivery: "Home delivery", status: "Accepted" },
 ];
 
 export const orders = [
@@ -44,4 +44,13 @@ export const notifications = [
   { title: "Quotation accepted", message: "Rohan Mehta accepted quotation QUO-260803-028.", time: "42 minutes ago", tone: "green" },
   { title: "Low stock alert", message: "Metformin SR 500 mg is below minimum stock level.", time: "1 hour ago", tone: "amber" },
   { title: "Patient approval pending", message: "Alternative for Pantoprazole DSR requires patient approval.", time: "2 hours ago", tone: "purple" },
+];
+
+export const alternativeCatalog = [
+  { prescribed: "Metformin SR 500 mg", alternative: "Glimet 500 SR", brand: "USV Pharma", composition: "Metformin Hydrochloride 500 mg", stock: 140, price: "₹7.50/tab", status: "In Stock" },
+  { prescribed: "Metformin SR 500 mg", alternative: "Obimet 500 SR", brand: "Abbott Healthcare", composition: "Metformin 500 mg", stock: 85, price: "₹6.80/tab", status: "In Stock" },
+  { prescribed: "Amoxicillin CV 625 mg", alternative: "Moxikind-CV 625 mg", brand: "Mankind Pharma", composition: "Amoxicillin + Clavulanic Acid 625 mg", stock: 110, price: "₹19.50/tab", status: "In Stock" },
+  { prescribed: "Amoxicillin CV 625 mg", alternative: "Clavam 625 mg", brand: "Alkem Labs", composition: "Amoxicillin + Clavulanic Acid 625 mg", stock: 65, price: "₹20.50/tab", status: "In Stock" },
+  { prescribed: "Pantoprazole DSR", alternative: "Pan-D Capsule", brand: "Alkem Labs", composition: "Pantoprazole 40mg + Domperidone 30mg", stock: 120, price: "₹17.50/cap", status: "In Stock" },
+  { prescribed: "Pantoprazole DSR", alternative: "Pantocid DSR Capsule", brand: "Sun Pharma", composition: "Pantoprazole 40mg + Domperidone 30mg", stock: 95, price: "₹18.50/cap", status: "In Stock" }
 ];

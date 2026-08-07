@@ -37,7 +37,7 @@ export default function FacilityManagementPage() {
   const [saving, setSaving] = useState(false);
   const [hospitalForm, setHospitalForm] = useState({ name: '', email: '', phone: '', address: '', licenseNumber: '' });
 
-  const tabs = ["All Facilities", "Hospitals", "Labs", "Pending Approvals", "Suspended"];
+  const tabs = ["All Facilities", "Hospitals", "Labs", "Pharmacies", "Pending Approvals", "Suspended"];
 
   useEffect(() => {
     fetchFacilities();
@@ -195,6 +195,7 @@ export default function FacilityManagementPage() {
     let matchesTab = true;
     if (activeTab === "Hospitals") matchesTab = facility.type === "Hospital";
     else if (activeTab === "Labs") matchesTab = facility.type === "Labs";
+    else if (activeTab === "Pharmacies") matchesTab = facility.type === "Pharmacy" || facility.type === "PHARMACY";
     else if (activeTab === "Pending Approvals") matchesTab = facility.status === "Pending";
     else if (activeTab === "Suspended") matchesTab = facility.status === "Suspended" || facility.status === "Inactive";
     
@@ -206,11 +207,7 @@ export default function FacilityManagementPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Facility Management</h1>
-          <p className="text-sm text-slate-500 mt-1 font-medium">Manage and verify hospitals, clinics, and laboratories on the platform.</p>
-        </div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end">
         <button onClick={() => setIsAddModalOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-700">
           <Plus className="size-4" /> Add Hospital
         </button>

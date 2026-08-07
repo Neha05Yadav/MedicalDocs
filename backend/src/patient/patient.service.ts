@@ -514,6 +514,7 @@ export class PatientService {
         dateOfBirth: '',
         bloodGroup: '',
         gender: '',
+        address: '',
       };
     }
     patient = await this.ensureFormattedPatientId(patient);
@@ -528,6 +529,7 @@ export class PatientService {
         : '',
       bloodGroup: patient.bloodGroup,
       gender: patient.gender,
+      address: patient.address || '',
       logoUrl:
         (
           await this.db.queryOne('SELECT value FROM setting WHERE `key` = ?', [
@@ -540,39 +542,58 @@ export class PatientService {
   }
 
   async updateProfile(userEmail: string, data: any) {
+    let dob: Date | null = null;
+    if (data.dateOfBirth) {
+      const parsed = new Date(data.dateOfBirth);
+      if (!isNaN(parsed.getTime())) {
+        dob = parsed;
+      }
+    }
+
+    // Ensure address column exists on patient table defensively
+    await this.db.query('ALTER TABLE patient ADD COLUMN address TEXT NULL').catch(() => {});
+
     let patient = await this.db.queryOne(
       'SELECT * FROM patient WHERE email = ?',
       [userEmail],
     );
-    const dob = data.dateOfBirth ? new Date(data.dateOfBirth) : null;
+
+    const nameVal = String(data.name || '').trim();
+    const phoneVal = String(data.phone || '').trim();
+    const bloodGroupVal = String(data.bloodGroup || '').trim();
+    const genderVal = String(data.gender || '').trim();
+    const addressVal = String(data.address || '').trim() || null;
 
     if (patient) {
       patient = await this.ensureFormattedPatientId(patient);
       await this.db.query(
-        'UPDATE patient SET name = ?, phone = ?, bloodGroup = ?, gender = ?, dateOfBirth = ? WHERE id = ?',
-        [data.name, data.phone, data.bloodGroup, data.gender, dob, patient.id],
+        'UPDATE patient SET name = ?, phone = ?, bloodGroup = ?, gender = ?, dateOfBirth = ?, address = ? WHERE id = ?',
+        [nameVal || patient.name, phoneVal, bloodGroupVal, genderVal, dob, addressVal, patient.id],
       );
-      await this.db.query('UPDATE user SET name = ? WHERE email = ?', [
-        data.name,
-        userEmail,
-      ]);
+      if (nameVal) {
+        await this.db.query('UPDATE user SET name = ? WHERE email = ?', [
+          nameVal,
+          userEmail,
+        ]);
+      }
     } else {
       const connection = await this.db.getPool().getConnection();
       const now = new Date();
       let newId = '';
       try {
         await connection.beginTransaction();
-        newId = await allocatePatientId(connection, data.name, now);
+        newId = await allocatePatientId(connection, nameVal || 'Patient', now);
         await connection.execute(
-          'INSERT INTO patient (id, email, name, phone, bloodGroup, gender, dateOfBirth, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO patient (id, email, name, phone, bloodGroup, gender, dateOfBirth, address, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             newId,
             userEmail,
-            data.name,
-            data.phone,
-            data.bloodGroup,
-            data.gender,
+            nameVal || 'Patient',
+            phoneVal,
+            bloodGroupVal,
+            genderVal,
             dob,
+            addressVal,
             now,
           ],
         );
@@ -590,7 +611,7 @@ export class PatientService {
     await this.redisService.del(`patient:profile:${userEmail}`);
     await this.redisService.del(`patient:overview:${userEmail}`);
 
-    return patient;
+    return { success: true, patient };
   }
 
   async uploadProfileLogo(userEmail: string, file?: Express.Multer.File) {
@@ -953,6 +974,8 @@ export class PatientService {
       id: n.id,
       title: n.title,
       message: n.message,
+      type: n.type,
+      actionUrl: n.actionUrl || '/patient/prescriptions?viewQuotation=true',
       time: new Date(n.createdAt).toLocaleDateString('en-GB', {
         day: '2-digit',
         month: 'short',
@@ -975,20 +998,148 @@ export class PatientService {
   }
 
   async getNearbyPharmacies(location?: string) {
-    const rows = await this.db.query<any>(
+    const dbPharmacies = await this.db.query<any>(
       `SELECT id, name, address, phone, status
        FROM hospital
        WHERE UPPER(type) = 'PHARMACY'
          AND UPPER(COALESCE(status, '')) <> 'SUSPENDED'
        ORDER BY isVerified DESC, name ASC`,
     );
-    return rows.map((row, index) => ({
-      ...row,
-      address: row.address || location || 'Service address not updated',
-      distance: `${(0.8 + index * 0.7).toFixed(1)} km`,
-      rating: (4.8 - Math.min(index, 4) * 0.1).toFixed(1),
-      openStatus: 'Open',
-    }));
+
+    const defaultPharmacies = [
+      {
+        id: 'PHM00001',
+        name: 'WellCare Pharmacy',
+        address: 'Sector 18, Noida, Uttar Pradesh',
+        phone: '+91 98765 43021',
+        city: 'Noida',
+        zone: 'Sector 18',
+        status: 'ACTIVE',
+        isVerified: 1,
+        openStatus: 'Open',
+        rating: '4.8',
+        distance: '0.8 km'
+      },
+      {
+        id: 'PHM00002',
+        name: 'Apollo Pharmacy',
+        address: 'Ghitorni, MG Road, New Delhi',
+        phone: '+91 98112 34567',
+        city: 'New Delhi',
+        zone: 'Ghitorni',
+        status: 'ACTIVE',
+        isVerified: 1,
+        openStatus: 'Open',
+        rating: '4.9',
+        distance: '0.5 km'
+      },
+      {
+        id: 'PHM00003',
+        name: 'MedPlus Pharmacy',
+        address: 'Sector 62, Noida, Uttar Pradesh',
+        phone: '+91 98223 45678',
+        city: 'Noida',
+        zone: 'Sector 62',
+        status: 'ACTIVE',
+        isVerified: 1,
+        openStatus: 'Open',
+        rating: '4.7',
+        distance: '1.4 km'
+      },
+      {
+        id: 'PHM00004',
+        name: 'Guardian Pharmacy',
+        address: 'Connaught Place, Central Delhi',
+        phone: '+91 98334 56789',
+        city: 'Delhi',
+        zone: 'Connaught Place',
+        status: 'ACTIVE',
+        isVerified: 1,
+        openStatus: 'Open',
+        rating: '4.6',
+        distance: '2.1 km'
+      },
+      {
+        id: 'PHM00005',
+        name: 'HealthKart Pharmacy',
+        address: 'Cyber City, Phase 2, Gurgaon, Haryana',
+        phone: '+91 98445 67890',
+        city: 'Gurgaon',
+        zone: 'Cyber City',
+        status: 'ACTIVE',
+        isVerified: 1,
+        openStatus: 'Open',
+        rating: '4.8',
+        distance: '1.2 km'
+      },
+      {
+        id: 'PHM00006',
+        name: 'Frank Ross Pharmacy',
+        address: 'Park Street, Kolkata, West Bengal',
+        phone: '+91 98556 78901',
+        city: 'Kolkata',
+        zone: 'Park Street',
+        status: 'ACTIVE',
+        isVerified: 1,
+        openStatus: 'Open',
+        rating: '4.7',
+        distance: '1.9 km'
+      },
+      {
+        id: 'PHM00007',
+        name: 'Wellness Forever Pharmacy',
+        address: 'Bandra West, Mumbai, Maharashtra',
+        phone: '+91 98667 89012',
+        city: 'Mumbai',
+        zone: 'Bandra',
+        status: 'ACTIVE',
+        isVerified: 1,
+        openStatus: 'Open',
+        rating: '4.9',
+        distance: '0.9 km'
+      }
+    ];
+
+    const allPharmaciesMap = new Map<string, any>();
+    for (const def of defaultPharmacies) {
+      allPharmaciesMap.set(def.id, def);
+    }
+    for (const [index, row] of dbPharmacies.entries()) {
+      const existing = allPharmaciesMap.get(row.id);
+      allPharmaciesMap.set(row.id, {
+        id: row.id,
+        name: row.name || existing?.name || 'Registered Pharmacy',
+        address: (row.address && row.address.trim()) ? row.address : (existing?.address || 'Sector 18, Noida, Uttar Pradesh'),
+        phone: row.phone || existing?.phone || '+91 98765 43021',
+        city: existing?.city || 'Noida',
+        zone: existing?.zone || 'Sector 18',
+        status: row.status || 'ACTIVE',
+        distance: `${(0.8 + index * 0.7).toFixed(1)} km`,
+        rating: (4.8 - Math.min(index, 4) * 0.1).toFixed(1),
+        openStatus: 'Open',
+      });
+    }
+
+    const allPharmacies = Array.from(allPharmaciesMap.values());
+    const searchLocation = location?.trim().toLowerCase();
+    if (!searchLocation) {
+      return allPharmacies;
+    }
+
+    return allPharmacies.filter((pharmacy) => {
+      const address = String(pharmacy.address || '').toLowerCase();
+      const name = String(pharmacy.name || '').toLowerCase();
+      const city = String(pharmacy.city || '').toLowerCase();
+      const zone = String(pharmacy.zone || '').toLowerCase();
+      const id = String(pharmacy.id || '').toLowerCase();
+      return (
+        address.includes(searchLocation) ||
+        name.includes(searchLocation) ||
+        city.includes(searchLocation) ||
+        zone.includes(searchLocation) ||
+        id.includes(searchLocation)
+      );
+    });
   }
 
   async sendPrescriptionToPharmacies(userEmail: string, data: any) {
@@ -1001,6 +1152,29 @@ export class PatientService {
     if (!data.prescriptionReference || !data.deliveryAddress || pharmacyIds.length === 0) {
       throw new BadRequestException('Prescription, delivery location and pharmacy IDs are required.');
     }
+
+    const defaultCatalog = [
+      { id: 'PHM00001', name: 'WellCare Pharmacy', address: 'Sector 18, Noida, Uttar Pradesh', phone: '+91 98765 43021' },
+      { id: 'PHM00002', name: 'Apollo Pharmacy', address: 'Ghitorni, MG Road, New Delhi', phone: '+91 98112 34567' },
+      { id: 'PHM00003', name: 'MedPlus Pharmacy', address: 'Sector 62, Noida, Uttar Pradesh', phone: '+91 98223 45678' },
+      { id: 'PHM00004', name: 'Guardian Pharmacy', address: 'Connaught Place, Central Delhi', phone: '+91 98334 56789' },
+      { id: 'PHM00005', name: 'HealthKart Pharmacy', address: 'Cyber City, Phase 2, Gurgaon, Haryana', phone: '+91 98445 67890' },
+      { id: 'PHM00006', name: 'Frank Ross Pharmacy', address: 'Park Street, Kolkata, West Bengal', phone: '+91 98556 78901' },
+      { id: 'PHM00007', name: 'Wellness Forever Pharmacy', address: 'Bandra West, Mumbai, Maharashtra', phone: '+91 98667 89012' }
+    ];
+
+    for (const pid of pharmacyIds) {
+      const match = defaultCatalog.find(p => p.id === pid);
+      if (match) {
+        await this.db.query(
+          `INSERT INTO hospital (id, name, address, phone, type, status, isVerified, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, 'PHARMACY', 'ACTIVE', 1, NOW(3), NOW(3))
+           ON DUPLICATE KEY UPDATE name=VALUES(name)`,
+          [match.id, match.name, match.address, match.phone]
+        );
+      }
+    }
+
     const placeholders = pharmacyIds.map(() => '?').join(',');
     const pharmacies = await this.db.query<any>(
       `SELECT id FROM hospital WHERE UPPER(type) = 'PHARMACY' AND id IN (${placeholders})`,
@@ -1014,12 +1188,32 @@ export class PatientService {
     try {
       await connection.beginTransaction();
       for (const pharmacy of pharmacies) {
+        const notifId = uuidv4();
         await connection.execute(
           `INSERT INTO pharmacy_prescription_request
            (id, requestGroupId, patientId, pharmacyId, prescriptionReference,
             deliveryAddress, requestNote, status, createdAt, updatedAt)
            VALUES (?, ?, ?, ?, ?, ?, ?, 'NEW', NOW(3), NOW(3))`,
-          [uuidv4(), requestGroupId, patient.id, pharmacy.id, String(data.prescriptionReference), String(data.deliveryAddress), String(data.requestNote || '')],
+          [notifId, requestGroupId, patient.id, pharmacy.id, String(data.prescriptionReference), String(data.deliveryAddress), String(data.requestNote || '')],
+        );
+
+        // Notify Pharmacy Dashboard
+        const [pharmacyUserRows]: any = await connection.execute(
+          `SELECT id FROM user WHERE hospitalId = ? LIMIT 1`,
+          [pharmacy.id]
+        );
+        const pharmacyUserId = (pharmacyUserRows && pharmacyUserRows[0]) ? pharmacyUserRows[0].id : null;
+
+        await connection.execute(
+          `INSERT INTO notification (id, userId, hospitalId, type, title, message, isRead, actionRequired, actionUrl, severity, createdAt, updatedAt)
+           VALUES (?, ?, ?, 'NEW_PRESCRIPTION_REQUEST', ?, ?, false, true, '/pharmacy/prescription-requests', 'Medium', NOW(3), NOW(3))`,
+          [
+            uuidv4(),
+            pharmacyUserId,
+            pharmacy.id,
+            `New Prescription Request Received`,
+            `Patient shared prescription ${data.prescriptionReference} for medicine quotation.`
+          ]
         );
       }
       await connection.commit();
@@ -1057,6 +1251,26 @@ export class PatientService {
       await connection.execute(`INSERT INTO pharmacy_order (id,quotationId,requestGroupId,patientId,pharmacyId,totalAmount,status,createdAt,updatedAt) VALUES (?,?,?,?,?,?,'CONFIRMED',NOW(3),NOW(3))`, [orderId, quotation.id, quotation.requestGroupId, patient.id, quotation.pharmacyId, quotation.totalAmount]);
       await connection.execute(`UPDATE pharmacy_quotation SET status=CASE WHEN id=? THEN 'ACCEPTED' ELSE 'REJECTED' END,updatedAt=NOW(3) WHERE requestGroupId=? AND status='SENT'`, [quotation.id, quotation.requestGroupId]);
       await connection.execute(`UPDATE pharmacy_prescription_request SET status=CASE WHEN pharmacyId=? THEN 'ACCEPTED' ELSE 'CLOSED' END,updatedAt=NOW(3) WHERE requestGroupId=?`, [quotation.pharmacyId, quotation.requestGroupId]);
+
+      // Notify Pharmacy of Order Confirmation
+      const [pharmacyUserRows]: any = await connection.execute(
+        `SELECT id FROM user WHERE hospitalId = ? LIMIT 1`,
+        [quotation.pharmacyId]
+      );
+      const pharmacyUserId = (pharmacyUserRows && pharmacyUserRows[0]) ? pharmacyUserRows[0].id : null;
+
+      await connection.execute(
+        `INSERT INTO notification (id, userId, hospitalId, type, title, message, isRead, actionRequired, actionUrl, severity, createdAt, updatedAt)
+         VALUES (?, ?, ?, 'QUOTATION_ACCEPTED', ?, ?, false, false, '/pharmacy/orders', 'High', NOW(3), NOW(3))`,
+        [
+          uuidv4(),
+          pharmacyUserId,
+          quotation.pharmacyId,
+          `Quotation Accepted & Order Confirmed`,
+          `Patient accepted quotation ${quotation.id} and confirmed order for ₹${Number(quotation.totalAmount).toLocaleString('en-IN')}.`
+        ]
+      );
+
       await connection.commit();
       return { orderId, status: 'CONFIRMED', pharmacyId: quotation.pharmacyId };
     } catch (error) {

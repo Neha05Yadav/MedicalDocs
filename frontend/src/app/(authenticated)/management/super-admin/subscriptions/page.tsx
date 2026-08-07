@@ -93,12 +93,8 @@ export default function SubscriptionsPage() {
   return (
     <div className="p-8 max-w-7xl mx-auto w-full min-h-screen font-sans space-y-8">
       
-      {/* Header & Actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Subscription Plans</h1>
-          <p className="text-sm text-slate-500 mt-1 font-medium">Manage pricing plans and view subscriber analytics.</p>
-        </div>
+      {/* Actions */}
+      <div className="flex flex-col md:flex-row md:items-center justify-end gap-4">
         <button 
           onClick={() => setIsCreatePlanModalOpen(true)}
           className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center justify-center gap-2"
