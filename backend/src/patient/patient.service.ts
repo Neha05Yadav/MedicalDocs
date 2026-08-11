@@ -1159,7 +1159,7 @@ export class PatientService {
        FROM pharmacy_quotation q
        JOIN hospital h ON h.id=q.pharmacyId
        JOIN pharmacy_prescription_request r ON r.id=q.requestId
-       WHERE q.patientId=? AND q.status IN ('SENT','ACCEPTED','REJECTED')
+       WHERE q.patientId=? AND q.status IN ('SENT','ACCEPTED')
        ORDER BY q.createdAt DESC, q.totalAmount ASC`,
       [patient.id],
     );

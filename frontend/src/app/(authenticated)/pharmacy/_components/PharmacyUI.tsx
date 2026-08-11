@@ -20,7 +20,7 @@ const badgeTone = (status: string) => {
 const Badge = ({ children }: { children: React.ReactNode }) => <span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-extrabold ring-1 ring-inset ${badgeTone(String(children))}`}>{children}</span>;
 
 const Page = ({ actions, children }: { title?: string; eyebrow?: string; description?: string; actions?: React.ReactNode; children: React.ReactNode }) => (
-  <div className="min-h-screen space-y-6 p-4 sm:p-6 lg:p-8">
+  <div className="min-h-0 space-y-6">
     {actions && <div className="flex flex-wrap justify-end gap-2">{actions}</div>}
     {children}
   </div>
@@ -753,7 +753,41 @@ const RefreshIcon=()=> <Activity className="size-4 text-emerald-600"/>;
 
 function Deliveries() { return <Page title="Delivery Management" eyebrow="Last-mile fulfilment" description="Coordinate store pickup and home delivery without exposing clinical information."><Card><EmptySafeTable columns={["Delivery","Order","Patient","Address / Contact","Partner","ETA","Charge","Status","Action"]} rows={deliveries.map(row=>[<b key="id">{row.id}</b>,row.order,row.patient,<span key="a">{row.address}<small className="block text-slate-400">{row.contact}</small></span>,row.partner,row.eta,row.charge,<Badge key="s">{row.status}</Badge>,<button key="x" className="text-xs font-bold text-emerald-700">Track</button>])}/></Card></Page>; }
 
-function Billing() { return <Page title="Payments & Billing" eyebrow="Transaction ledger" description="Review order invoices and payment settlement status."><Card><EmptySafeTable columns={["Invoice","Order","Patient","Amount","Mode","Transaction","Status","Payment date","Invoice"]} rows={orders.map((row,index)=>[`INV-PH-${2608040+index}`,row.id,row.patient,row.amount,row.payment,index===2?"COD":"TXN8A26"+(71+index),<Badge key="s">{row.payment}</Badge>,row.date,<button key="d" className="rounded-lg border p-2 text-emerald-700"><Download className="size-4"/></button>])}/></Card></Page>; }
+function Billing() {
+  const downloadInvoice = (row: (typeof orders)[number], index: number) => {
+    const invoiceId = `INV-PH-${2608040 + index}`;
+    const transactionId = index === 2 ? "COD" : `TXN8A26${71 + index}`;
+    const safe = (value: unknown) => String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;");
+    const invoiceHtml = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${safe(invoiceId)}</title><style>
+body{margin:0;background:#f1f5f9;color:#172033;font-family:Arial,sans-serif}.invoice{max-width:760px;margin:40px auto;background:#fff;border:1px solid #dbe4ea;border-radius:20px;overflow:hidden;box-shadow:0 18px 50px rgba(15,23,42,.1)}
+header{padding:28px 32px;background:linear-gradient(135deg,#047857,#0891b2);color:#fff}h1{margin:0;font-size:27px}header p{margin:7px 0 0;opacity:.85}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:30px 32px}.item{padding:15px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}.label{display:block;margin-bottom:7px;color:#64748b;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}.value{font-size:16px;font-weight:700}.total{margin:0 32px 32px;padding:20px;border-radius:14px;background:#ecfdf5;color:#065f46;font-size:22px;font-weight:800;text-align:right}footer{padding:18px 32px;border-top:1px solid #e2e8f0;color:#64748b;font-size:12px}@media print{body{background:#fff}.invoice{margin:0;box-shadow:none}}
+</style></head><body><main class="invoice"><header><h1>MedicalDocs Pharmacy Invoice</h1><p>${safe(invoiceId)}</p></header><section class="grid">
+<div class="item"><span class="label">Order ID</span><span class="value">${safe(row.id)}</span></div>
+<div class="item"><span class="label">Patient</span><span class="value">${safe(row.patient)}</span></div>
+<div class="item"><span class="label">Prescription</span><span class="value">${safe(row.prescription)}</span></div>
+<div class="item"><span class="label">Payment date</span><span class="value">${safe(row.date)}</span></div>
+<div class="item"><span class="label">Payment mode</span><span class="value">${safe(row.payment)}</span></div>
+<div class="item"><span class="label">Transaction</span><span class="value">${safe(transactionId)}</span></div>
+</section><div class="total">Total paid: ${safe(row.amount)}</div><footer>Computer-generated invoice from MedicalDocs Pharmacy Portal.</footer></main></body></html>`;
+    const url = URL.createObjectURL(new Blob([invoiceHtml], { type: "text/html;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${invoiceId}.html`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    toast.success("Invoice downloaded");
+  };
+
+  return <Page title="Payments & Billing" eyebrow="Transaction ledger" description="Review order invoices and payment settlement status."><Card><EmptySafeTable columns={["Invoice","Order","Patient","Amount","Mode","Transaction","Status","Payment date","Invoice"]} rows={orders.map((row,index)=>[`INV-PH-${2608040+index}`,row.id,row.patient,row.amount,row.payment,index===2?"COD":"TXN8A26"+(71+index),<Badge key="s">{row.payment}</Badge>,row.date,<button key="d" type="button" onClick={() => downloadInvoice(row, index)} title={`Download invoice INV-PH-${2608040+index}`} aria-label={`Download invoice INV-PH-${2608040+index}`} className="rounded-lg border border-emerald-200 bg-emerald-50 p-2 text-emerald-700 transition hover:bg-emerald-100 active:scale-95"><Download className="size-4"/></button>])}/></Card></Page>;
+}
 
 function Patients({query,setQuery}:any) { const visible=patients.filter(row=>JSON.stringify(row).toLowerCase().includes(query.toLowerCase())); return <Page title="Patients" eyebrow="Order contacts only" description="Only patient identity, contact and prescription-order history shared with this pharmacy are visible." actions={<SearchBar value={query} onChange={setQuery} placeholder="Search patients..."/>}><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{visible.map(row=><Card key={row.id} className="p-5"><div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><UserRound className="size-5"/></span><div><h3 className="font-black text-slate-900">{row.name}</h3><p className="text-xs text-slate-500">{row.id}</p></div></div><div className="mt-5 space-y-2 text-sm text-slate-600"><p>{row.contact}</p><p><MapPin className="mr-2 inline size-4"/>{row.location}</p><p>{row.requests} prescription requests · Last order {row.lastOrder}</p></div></Card>)}</div></Page>; }
 

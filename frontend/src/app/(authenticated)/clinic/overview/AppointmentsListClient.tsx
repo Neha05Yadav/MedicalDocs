@@ -10,14 +10,14 @@ export default function AppointmentsListClient({ appointments, mode = "upcoming"
   
   return (
     <>
-      <div className="flex flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-[0_16px_38px_-30px_rgba(15,23,42,.4)]">
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-6">
+      <div className="flex flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-[0_18px_42px_-32px_rgba(15,23,42,.5)]">
+        <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-emerald-50/70 to-white px-6 py-6">
           <div><p className="text-xs font-black uppercase tracking-[.16em] text-emerald-700">Consultation queue</p><h2 className="mt-1 text-2xl font-black text-slate-950">{mode === "recent" ? "Recent schedule" : "Upcoming schedule"}</h2></div>
-          <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700">{appointments.length}</span>
+          <span className="grid size-9 place-items-center rounded-xl border border-emerald-100 bg-white text-xs font-black text-emerald-700 shadow-sm">{appointments.length}</span>
         </div>
         <div className="space-y-3 p-5">
           {appointments.map((appt, index) => (
-            <div key={appt.id} className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-slate-50/70 p-4 transition hover:border-emerald-200 hover:bg-emerald-50/40">
+            <div key={appt.id} className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_8px_22px_-20px_rgba(15,23,42,.6)] transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50/30 hover:shadow-md">
               <span className="absolute bottom-0 left-0 top-0 w-1 bg-emerald-500" />
               <div className="mb-3 flex items-start justify-between pl-2">
                 <div><span className="text-xs font-black uppercase tracking-wider text-slate-400">Queue {String(index + 1).padStart(2, "0")}</span><p className="mt-1 font-black text-slate-900">{appt.patientName || "Patient"}</p></div>
@@ -25,11 +25,11 @@ export default function AppointmentsListClient({ appointments, mode = "upcoming"
               </div>
               <div className="flex items-center justify-between pl-2">
                 <span className="text-xs text-slate-500 bg-white px-2 py-1 rounded-md border border-slate-200">{appt.time} · {appt.status}</span>
-                <button 
+                <button
                   onClick={() => setSelectedAppt(appt)}
-                  className="text-xs font-bold text-emerald-700 hover:underline"
+                  className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-600 hover:text-white"
                 >
-                  View Details
+                  Open details
                 </button>
               </div>
             </div>

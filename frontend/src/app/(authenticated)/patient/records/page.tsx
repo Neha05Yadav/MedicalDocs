@@ -208,58 +208,60 @@ export default function RecordsAndReportsPage() {
             </button>
           </div>
 
-          <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200/70 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_14px_38px_-30px_rgba(15,23,42,.45)] animate-in fade-in slide-in-from-top-4 duration-300">
               {visibleReports.length === 0 ? (
                  <div className="bg-slate-50 px-6 py-12 text-center text-slate-500">
                    {activeCard === "My Uploads" ? "No personal uploads found. Use 'Upload Report' to add one." : "No reports found for this category."}
                  </div>
               ) : (
-                <table className="w-full text-left text-[clamp(1rem,.88vw,1.16rem)]">
-                  <thead className="bg-slate-50/50 border-b border-slate-200/70 text-slate-500 font-medium">
+                <div className="overflow-x-auto">
+                <table className="w-full min-w-[980px] text-left text-sm">
+                  <thead className="border-b border-slate-200 bg-slate-50/90 text-[11px] font-black uppercase tracking-[.09em] text-slate-500">
                     <tr>
-                      <th className="px-6 py-5 font-bold">File Name</th>
-                      <th className="px-6 py-5 font-bold">Type</th>
-                      {activeCard !== "My Uploads" && <th className="px-6 py-5 font-bold">Source Facility</th>}
-                      <th className="px-6 py-5 font-bold">Upload Date</th>
-                      <th className="px-6 py-5 font-bold">Size</th>
-                      <th className="px-6 py-5 text-center font-bold">Actions</th>
+                      <th className="px-6 py-4">Document</th>
+                      <th className="px-6 py-4">Report Type</th>
+                      {activeCard !== "My Uploads" && <th className="px-6 py-4">Source Facility</th>}
+                      <th className="px-6 py-4">Uploaded On</th>
+                      <th className="px-6 py-4">File Size</th>
+                      <th className="px-6 py-4 text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100/80">
+                  <tbody className="divide-y divide-slate-100">
                     {visibleReports.map((file) => (
-                      <tr key={file.id} className="hover:bg-slate-50/50 transition-colors bg-white">
-                        <td className="px-6 py-5">
-                          <div className="flex items-center gap-4">
+                      <tr key={file.id} className="group bg-white transition-colors hover:bg-cyan-50/30">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3.5">
                             {file.fileType === 'pdf' ? (
-                              <div className="rounded-xl bg-red-50 p-2.5 text-red-500"><FileText className="size-5" /></div>
+                              <div className="grid size-11 shrink-0 place-items-center rounded-xl border border-rose-100 bg-rose-50 text-rose-600"><FileText className="size-5" /></div>
                             ) : (
-                              <div className="rounded-xl bg-white p-2.5 text-emerald-500"><ImageIcon className="size-5" /></div>
+                              <div className="grid size-11 shrink-0 place-items-center rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-600"><ImageIcon className="size-5" /></div>
                             )}
-                            <span className="font-semibold text-slate-800">{file.fileName}</span>
+                            <div className="min-w-0"><p className="truncate font-bold text-slate-900">{file.fileName}</p><p className="mt-0.5 text-xs font-medium text-slate-400">Medical document</p></div>
                           </div>
                         </td>
-                        <td className="px-6 py-5">
-                          <span className={`rounded-full px-3.5 py-2 text-[clamp(.88rem,.75vw,1rem)] font-extrabold ${file.typeColor}`}>
-                            {file.type}
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex rounded-lg px-3 py-1.5 text-xs font-extrabold ${file.typeColor}`}>
+                            {String(file.type || "Report").replaceAll("_", " ")}
                           </span>
                         </td>
-                        {activeCard !== "My Uploads" && <td className="px-6 py-5">
+                        {activeCard !== "My Uploads" && <td className="px-6 py-4">
                           <div className="flex flex-col">
-                            <span className="text-slate-800 font-semibold">{file.hospitalName}</span>
-                            <span className="mt-1 flex items-center gap-1.5 text-[clamp(.84rem,.7vw,.94rem)] font-medium text-slate-500">
-                              <User className="size-4" /> Doctor Assigned
+                            <span className="font-bold text-slate-800">{file.hospitalName}</span>
+                            <span className="mt-1 flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                              <User className="size-3.5" /> Doctor assigned
                             </span>
                           </div>
                         </td>}
-                        <td className="px-6 py-5 font-semibold text-slate-600">{file.uploadDate}</td>
-                        <td className="px-6 py-5 font-semibold text-slate-600">{file.size}</td>
-                        <td className="px-6 py-5">
-                          <div className="flex items-center justify-center gap-4 text-slate-400">
-                            <button 
+                        <td className="px-6 py-4 font-semibold text-slate-600">{file.uploadDate}</td>
+                        <td className="px-6 py-4"><span className="rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-bold text-slate-600">{file.size}</span></td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end">
+                            <button
                               onClick={() => setSelectedReportDetails(file)}
-                              className="hover:text-cyan-600 transition-colors"
+                              className="inline-flex items-center gap-2 rounded-xl border border-cyan-200 bg-white px-3.5 py-2 text-xs font-bold text-cyan-700 shadow-sm transition hover:border-cyan-600 hover:bg-cyan-600 hover:text-white"
+                              aria-label={`View ${file.fileName}`}
                             >
-                              <Eye className="size-6" />
+                              <Eye className="size-4" /> View
                             </button>
                           </div>
                         </td>
@@ -267,6 +269,7 @@ export default function RecordsAndReportsPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
           </div>
         </div>

@@ -82,7 +82,7 @@ export default function PrescriptionsClient() {
       ]);
       if (quotationResponse?.ok) {
         const rows = await quotationResponse.json().catch(() => []);
-        apiQuotations = (Array.isArray(rows) ? rows : []).map((quotation: any) => {
+        apiQuotations = (Array.isArray(rows) ? rows : []).filter((quotation: any) => quotation.status !== "REJECTED").map((quotation: any) => {
           let items = quotation.itemsJson;
           if (typeof items === "string") {
             try { items = JSON.parse(items); } catch { items = []; }
@@ -185,6 +185,7 @@ export default function PrescriptionsClient() {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data?.message || "Quotation could not be rejected.");
       toast.success("Quotation rejected. The pharmacy has been notified.");
+      setPharmacyQuotations((current) => current.filter((quotation) => quotation.id !== id));
       await fetchPharmacyCommerce();
       return true;
     } catch (error) {
