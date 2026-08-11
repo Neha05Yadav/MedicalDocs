@@ -34,6 +34,7 @@ export default function PrescriptionsClient() {
   const [deliveryLocation, setDeliveryLocation] = useState("");
   const [pharmacySearchLocation, setPharmacySearchLocation] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [patientProfileAddress, setPatientProfileAddress] = useState("");
   const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [selectedPharmacyIds, setSelectedPharmacyIds] = useState<string[]>([]);
   const [nearbyPharmacies, setNearbyPharmacies] = useState<any[]>([]);
@@ -44,12 +45,30 @@ export default function PrescriptionsClient() {
   const [pharmacyQuotations, setPharmacyQuotations] = useState<any[]>([]);
   const [pharmacyOrders, setPharmacyOrders] = useState<any[]>([]);
   const [confirmingQuotation, setConfirmingQuotation] = useState("");
+  const [rejectingQuotation, setRejectingQuotation] = useState("");
   const [viewingQuotation, setViewingQuotation] = useState<any | null>(null);
 
   useEffect(() => {
     fetchPrescriptions();
     fetchPharmacyCommerce();
+    fetchPatientProfileAddress();
   }, []);
+
+  const fetchPatientProfileAddress = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      const response = await fetch("/api/patient/profile", {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) return;
+      const currentAddress = String(data?.address || "").trim();
+      setPatientProfileAddress(currentAddress);
+      if (currentAddress) setDeliveryAddress(currentAddress);
+    } catch {}
+  };
 
   const fetchPharmacyCommerce = async () => {
     const token = localStorage.getItem("token");
@@ -61,7 +80,16 @@ export default function PrescriptionsClient() {
         fetch("/api/patient/pharmacy-quotations", { headers }).catch(() => null),
         fetch("/api/patient/pharmacy-orders", { headers }).catch(() => null),
       ]);
-      if (quotationResponse?.ok) apiQuotations = await quotationResponse.json().catch(() => []);
+      if (quotationResponse?.ok) {
+        const rows = await quotationResponse.json().catch(() => []);
+        apiQuotations = (Array.isArray(rows) ? rows : []).map((quotation: any) => {
+          let items = quotation.itemsJson;
+          if (typeof items === "string") {
+            try { items = JSON.parse(items); } catch { items = []; }
+          }
+          return { ...quotation, items: Array.isArray(items) ? items : [] };
+        });
+      }
       if (orderResponse?.ok) apiOrders = await orderResponse.json().catch(() => []);
     }
 
@@ -90,11 +118,9 @@ export default function PrescriptionsClient() {
         ]
       }));
 
-    const mergedQuotations = [...apiQuotations, ...formattedLocalQuotations].filter(
-      (item, index, self) => self.findIndex(t => t.id === item.id) === index
-    );
+    const mergedQuotations = apiQuotations;
 
-    if (mergedQuotations.length === 0) {
+    if (false && mergedQuotations.length === 0) {
       mergedQuotations.push({
         id: "QUO-260807-001",
         pharmacyName: "WellCare Pharmacy",
@@ -147,6 +173,28 @@ export default function PrescriptionsClient() {
     }
   };
 
+  const rejectQuotation = async (id: string) => {
+    if (!window.confirm("Reject this pharmacy quotation? The pharmacy will be notified.")) return false;
+    setRejectingQuotation(id);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/patient/pharmacy-quotations/${encodeURIComponent(id)}/reject`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.message || "Quotation could not be rejected.");
+      toast.success("Quotation rejected. The pharmacy has been notified.");
+      await fetchPharmacyCommerce();
+      return true;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Quotation could not be rejected.");
+      return false;
+    } finally {
+      setRejectingQuotation("");
+    }
+  };
+
   const fetchPrescriptions = async () => {
     setLoading(true);
     setError(false);
@@ -162,8 +210,7 @@ export default function PrescriptionsClient() {
       if (!res.ok) throw new Error("Failed to fetch prescriptions");
       const data = await res.json();
       setPrescriptions(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error(e);
+    } catch {
       setError(true);
     } finally {
       setLoading(false);
@@ -492,7 +539,7 @@ export default function PrescriptionsClient() {
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-center gap-3">
                       <button 
-                        onClick={() => { setSelectedPrescriptionDetails(prescription); setRequestNote(""); setRequestSent(false); setPharmacyRequestId(""); setDeliveryLocation(""); setLocationConfirmed(false); setNearbyPharmacies([]); setSelectedPharmacyIds([]); }}
+                        onClick={() => { setSelectedPrescriptionDetails(prescription); setRequestNote(""); setRequestSent(false); setPharmacyRequestId(""); setDeliveryLocation(""); setDeliveryAddress(patientProfileAddress); setLocationConfirmed(false); setNearbyPharmacies([]); setSelectedPharmacyIds([]); }}
                         className="p-1.5 text-[#0891b2] border border-[#0891b2]/20 rounded-md hover:bg-cyan-50 transition-colors inline-flex items-center justify-center"
                         title="View Prescription"
                       >
@@ -508,8 +555,8 @@ export default function PrescriptionsClient() {
       </div>
       {(pharmacyQuotations.length > 0 || pharmacyOrders.length > 0) && <section id="pharmacy-quotations-section" className="mt-7 space-y-5">
         {pharmacyQuotations.length > 0 && <div className="rounded-2xl border border-cyan-100 bg-white p-5 shadow-sm sm:p-6">
-          <div className="mb-5"><h2 className="text-xl font-extrabold text-slate-900">Pharmacy Quotations</h2><p className="mt-1 text-sm text-slate-500">Compare prices and confirm one pharmacy. Other quotations will close automatically.</p></div>
-          <div className="grid gap-4 lg:grid-cols-2">{pharmacyQuotations.map((quotation, index) => <article key={`quo-${quotation.id || 'q'}-${index}`} className="rounded-2xl border border-slate-200 p-5 transition hover:border-cyan-300 hover:shadow-sm"><div className="flex items-start justify-between gap-4"><div><p className="font-extrabold text-slate-900">{quotation.pharmacyName}</p><p className="mt-1 text-xs font-bold text-cyan-700">{quotation.pharmacyId} · {quotation.id}</p></div><p className="text-xl font-black text-slate-900">₹{Number(quotation.totalAmount).toLocaleString("en-IN")}</p></div><p className="mt-4 text-sm text-slate-500">Prescription: <b className="text-slate-700">{quotation.prescriptionReference}</b></p><div className="mt-4 flex items-center justify-between gap-2"><button onClick={() => setViewingQuotation(quotation)} className="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">View Full Quotation</button>{quotation.status === "SENT" && <button disabled={confirmingQuotation === quotation.id} onClick={() => confirmQuotation(quotation.id)} className="rounded-xl bg-cyan-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{confirmingQuotation === quotation.id ? "Confirming..." : "Select & Confirm"}</button>}</div></article>)}</div>
+          <div className="mb-5"><h2 className="text-xl font-extrabold text-slate-900">Pharmacy Quotations</h2><p className="mt-1 text-sm text-slate-500">Compare prices and confirm one pharmacy. Remaining quotations stay visible until you reject them, so every pharmacy receives your response.</p></div>
+          <div className="grid gap-4 lg:grid-cols-2">{pharmacyQuotations.map((quotation, index) => <article key={`quo-${quotation.id || 'q'}-${index}`} className="rounded-2xl border border-slate-200 p-5 transition hover:border-cyan-300 hover:shadow-sm"><div className="flex items-start justify-between gap-4"><div><p className="font-extrabold text-slate-900">{quotation.pharmacyName}</p><p className="mt-1 text-xs font-bold text-cyan-700">{quotation.pharmacyId} · {quotation.id}</p></div><div className="text-right"><p className="text-xl font-black text-slate-900">₹{Number(quotation.totalAmount).toLocaleString("en-IN")}</p><span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[11px] font-extrabold ${quotation.status === "ACCEPTED" ? "bg-emerald-50 text-emerald-700" : quotation.status === "REJECTED" ? "bg-rose-50 text-rose-700" : "bg-amber-50 text-amber-700"}`}>{quotation.status === "ACCEPTED" ? "Selected" : quotation.status === "REJECTED" ? "Rejected" : "Awaiting response"}</span></div></div><p className="mt-4 text-sm text-slate-500">Prescription: <b className="text-slate-700">{quotation.prescriptionReference}</b></p><p className="mt-2 text-sm text-slate-500">Medicines: <b className="text-slate-700">{(Array.isArray(quotation.items) ? quotation.items : []).map((item: any) => item.prescribedMedicineName || item.medicineName).filter(Boolean).join(", ") || "No medicines quoted"}</b></p><div className="mt-4 flex flex-wrap items-center justify-between gap-2"><button onClick={() => setViewingQuotation(quotation)} className="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">View Full Quotation</button>{quotation.status === "SENT" && <div className="flex gap-2"><button disabled={rejectingQuotation === quotation.id || confirmingQuotation === quotation.id} onClick={() => rejectQuotation(quotation.id)} className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-50">{rejectingQuotation === quotation.id ? "Rejecting..." : "Reject"}</button>{!Boolean(Number(quotation.groupHasAccepted)) && <button disabled={confirmingQuotation === quotation.id || rejectingQuotation === quotation.id} onClick={() => confirmQuotation(quotation.id)} className="rounded-xl bg-cyan-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{confirmingQuotation === quotation.id ? "Confirming..." : "Select & Confirm"}</button>}</div>}</div></article>)}</div>
         </div>}
         {pharmacyOrders.length > 0 && <div className="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6"><h2 className="text-xl font-extrabold text-slate-900">Medicine Orders</h2><div className="mt-4 space-y-3">{pharmacyOrders.map((order, index) => <div key={`ord-${order.id || 'o'}-${index}`} className="flex flex-col justify-between gap-3 rounded-xl bg-emerald-50/60 p-4 sm:flex-row sm:items-center"><div><p className="font-bold text-slate-900">{order.pharmacyName}</p><p className="text-xs text-slate-500">{order.id}</p></div><div className="text-sm"><b className="text-emerald-700">{String(order.status).replaceAll("_", " ")}</b><span className="ml-4 font-black text-slate-900">₹{Number(order.totalAmount).toLocaleString("en-IN")}</span></div></div>)}</div></div>}
       </section>}
@@ -552,18 +599,14 @@ export default function PrescriptionsClient() {
               <div>
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Quoted Medicines & Inventory Substitutes</h4>
                 <div className="mt-3 divide-y rounded-2xl border border-slate-200 bg-slate-50/50">
-                  {(Array.isArray(viewingQuotation.items) && viewingQuotation.items.length > 0 ? viewingQuotation.items : [
-                    { medicineName: "Telmisartan 40 mg", quantity: 30, unitPrice: 12, available: true, isAlternative: false },
-                    { medicineName: "Metformin SR 500 mg", quantity: 60, unitPrice: 7.5, available: false, isAlternative: true, alternativeName: "Glimet 500 SR (USV Pharma)" },
-                    { medicineName: "Pantoprazole DSR", quantity: 15, unitPrice: 17.5, available: false, isAlternative: true, alternativeName: "Pan-D Capsule (Alkem Labs)" }
-                  ]).map((item: any, idx: number) => {
+                  {(Array.isArray(viewingQuotation.items) ? viewingQuotation.items : []).map((item: any, idx: number) => {
                     const isAlt = item.isAlternative || Boolean(item.alternativeName);
                     return (
                       <div key={idx} className={`p-4 text-sm transition ${isAlt ? "bg-amber-50/60" : ""}`}>
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div>
                             <div className="flex items-center gap-2">
-                              <p className="font-bold text-slate-900">{item.medicineName}</p>
+                              <p className="font-bold text-slate-900">{item.prescribedMedicineName || item.medicineName}</p>
                               {isAlt && (
                                 <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-extrabold text-rose-700">
                                   Out of Stock
@@ -573,7 +616,7 @@ export default function PrescriptionsClient() {
                             <p className="text-xs text-slate-500">Prescribed Qty: {item.quantity || 1} units</p>
                           </div>
                           <div className="text-right">
-                            <p className="font-black text-slate-900">₹{((item.quantity || 1) * (item.unitPrice || 12)).toLocaleString("en-IN")}</p>
+                            <p className="font-black text-slate-900">₹{(Number(item.quantity || 0) * Number(item.unitPrice || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                             {isAlt ? (
                               <span className="text-[10px] font-extrabold text-amber-700">⚡ Alternative Suggested</span>
                             ) : (
@@ -585,8 +628,8 @@ export default function PrescriptionsClient() {
                         {isAlt && (
                           <div className="mt-3 rounded-xl border border-amber-200 bg-white p-3 text-xs">
                             <p className="font-extrabold text-amber-900">Suggested Inventory Substitute:</p>
-                            <p className="mt-0.5 font-bold text-slate-800">{item.alternativeName || "Glimet 500 SR (USV Pharma)"}</p>
-                            <p className="text-slate-500">Verified composition · Same strength & therapeutic effect</p>
+                            <p className="mt-0.5 font-bold text-slate-800">{item.alternativeName}</p>
+                            <p className="text-slate-500">{item.alternativeBrand || "Verified brand"} · {item.alternativeComposition || "Equivalent composition"}</p>
                           </div>
                         )}
                       </div>
@@ -596,13 +639,13 @@ export default function PrescriptionsClient() {
               </div>
 
               <div className="rounded-2xl border border-cyan-100 bg-cyan-50/40 p-5 space-y-2 text-sm">
-                <div className="flex justify-between text-slate-600"><span>Medicine Subtotal</span><span>₹{Math.max(0, Number(viewingQuotation.totalAmount || 1248) + 54 - 36 - 49)}</span></div>
-                <div className="flex justify-between text-emerald-600 font-medium"><span>Discount Applied</span><span>− ₹54</span></div>
-                <div className="flex justify-between text-slate-600"><span>GST Tax</span><span>+ ₹36</span></div>
-                <div className="flex justify-between text-slate-600"><span>Delivery Charge</span><span>+ ₹49</span></div>
+                <div className="flex justify-between text-slate-600"><span>Medicine Subtotal</span><span>₹{Number(viewingQuotation.subtotal || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                <div className="flex justify-between text-emerald-600 font-medium"><span>Discount Applied</span><span>− ₹{Number(viewingQuotation.discountAmount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                <div className="flex justify-between text-slate-600"><span>GST Tax</span><span>+ ₹{Number(viewingQuotation.taxAmount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                <div className="flex justify-between text-slate-600"><span>Delivery Charge</span><span>+ ₹{Number(viewingQuotation.deliveryCharge || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
                 <div className="border-t border-cyan-200/60 pt-3 flex justify-between font-black text-base text-slate-900">
                   <span>Final Payable Amount</span>
-                  <span className="text-xl text-cyan-800">₹{Number(viewingQuotation.totalAmount || 1248).toLocaleString("en-IN")}</span>
+                  <span className="text-xl text-cyan-800">₹{Number(viewingQuotation.totalAmount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
 
@@ -620,8 +663,19 @@ export default function PrescriptionsClient() {
                 Close
               </button>
               {viewingQuotation.status === "SENT" && (
+                <>
                 <button
-                  disabled={confirmingQuotation === viewingQuotation.id}
+                  disabled={rejectingQuotation === viewingQuotation.id || confirmingQuotation === viewingQuotation.id}
+                  onClick={async () => {
+                    const rejected = await rejectQuotation(viewingQuotation.id);
+                    if (rejected) setViewingQuotation(null);
+                  }}
+                  className="rounded-xl border border-rose-200 bg-rose-50 px-5 py-2.5 text-sm font-extrabold text-rose-700 hover:bg-rose-100 disabled:opacity-50"
+                >
+                  {rejectingQuotation === viewingQuotation.id ? "Rejecting..." : "Reject Quotation"}
+                </button>
+                {!Boolean(Number(viewingQuotation.groupHasAccepted)) && <button
+                  disabled={confirmingQuotation === viewingQuotation.id || rejectingQuotation === viewingQuotation.id}
                   onClick={async () => {
                     await confirmQuotation(viewingQuotation.id);
                     setViewingQuotation(null);
@@ -629,7 +683,8 @@ export default function PrescriptionsClient() {
                   className="rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-extrabold text-white hover:bg-emerald-700 disabled:opacity-50 shadow-md"
                 >
                   {confirmingQuotation === viewingQuotation.id ? "Confirming..." : (viewingQuotation.hasAlternative || (Array.isArray(viewingQuotation.items) && viewingQuotation.items.some((i: any) => i.isAlternative || i.alternativeName))) ? "Approve Alternative & Confirm Order" : "Select & Confirm Order"}
-                </button>
+                </button>}
+                </>
               )}
             </div>
           </div>

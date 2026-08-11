@@ -47,8 +47,28 @@ export class PharmacyController {
     return this.pharmacyService.addInventoryItem(request.user.email, data);
   }
 
+  @Get('profile')
+  getProfile(@Request() request: any) {
+    return this.pharmacyService.getProfile(request.user.email);
+  }
+
+  @Put('profile')
+  updateProfile(@Request() request: any, @Body() data: any) {
+    return this.pharmacyService.updateProfile(request.user.email, data);
+  }
+
   @Get('notifications')
   getNotifications(@Request() request: any) {
     return this.pharmacyService.getNotifications(request.user.email);
+  }
+
+  @Put('notifications/:id/read')
+  markNotificationRead(@Request() request: any, @Param('id') id: string) {
+    return this.pharmacyService.markNotificationRead(request.user.email, id);
+  }
+
+  @Put('notifications/read-all')
+  markAllNotificationsRead(@Request() request: any) {
+    return this.pharmacyService.markAllNotificationsRead(request.user.email);
   }
 }

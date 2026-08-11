@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Activity, AlertTriangle, ArrowRight, BarChart3, Bell, Boxes, CheckCircle2, Clock3, CreditCard, Download, FileText, IndianRupee, MapPin, PackageCheck, Pill, Plus, Search, Send, ShoppingBag, Truck, Upload, UserRound, X } from "lucide-react";
@@ -34,6 +34,26 @@ const EmptySafeTable = ({ columns, rows }: { columns: string[]; rows: React.Reac
 
 const ActionLink = ({ href, label = "Open" }: { href: string; label?: string }) => <Link href={href} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100">{label}<ArrowRight className="size-3.5"/></Link>;
 
+// Keep the public prescription number identical across Patient and Pharmacy portals.
+// The database UUID remains the internal reference and is never changed here.
+const publicPrescriptionId = (value: unknown) => {
+  const raw = String(value ?? "").trim().toUpperCase();
+  if (!raw) return "Not available";
+  const numericMatch = raw.match(/^RX-?(\d+)$/) || raw.match(/^(\d+)$/);
+  if (numericMatch) {
+    const numericValue = Number(numericMatch[1]);
+    if (Number.isSafeInteger(numericValue) && numericValue >= 0 && numericValue <= 99999) {
+      return `RX${String(numericValue).padStart(5, "0")}`;
+    }
+  }
+  let hash = 2166136261;
+  for (let index = 0; index < raw.length; index += 1) {
+    hash ^= raw.charCodeAt(index);
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  return `RX${String(10000 + (hash % 90000)).padStart(5, "0")}`;
+};
+
 export default function PharmacyUI({ view }: { view: PharmacyView }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
@@ -52,13 +72,22 @@ export default function PharmacyUI({ view }: { view: PharmacyView }) {
 }
 
 function Overview() {
+  const [recentRequests, setRecentRequests] = useState<any[]>([]);
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    fetch("/api/pharmacy/prescription-requests", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" })
+      .then(async (response) => response.ok ? response.json() : [])
+      .then((rows) => setRecentRequests((Array.isArray(rows) ? rows : []).slice(0, 3)))
+      .catch(() => setRecentRequests([]));
+  }, []);
   const metrics = [
     ["New Requests", "12", FileText, "text-blue-600 bg-blue-50"], ["Pending Quotations", "7", Clock3, "text-amber-600 bg-amber-50"], ["Accepted Orders", "18", PackageCheck, "text-emerald-600 bg-emerald-50"], ["Preparing Orders", "6", Boxes, "text-violet-600 bg-violet-50"],
     ["Out for Delivery", "4", Truck, "text-cyan-600 bg-cyan-50"], ["Completed Orders", "31", CheckCircle2, "text-green-600 bg-green-50"], ["Today's Revenue", "₹28,640", IndianRupee, "text-teal-600 bg-teal-50"], ["Low Stock Medicines", "9", AlertTriangle, "text-rose-600 bg-rose-50"],
   ] as const;
   return <Page title="Pharmacy operations" eyebrow="MediDoc Pharmacy" description="Receive patient-shared prescriptions, quote medicines and manage fulfilment without accessing complete medical history.">
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(([label, value, Icon, tone]) => <Card key={label} className="p-5"><div className="flex items-start justify-between"><div><p className="text-xs font-extrabold uppercase tracking-wider text-slate-500">{label}</p><p className="mt-3 text-2xl font-black text-slate-950">{value}</p></div><span className={`rounded-xl p-3 ${tone}`}><Icon className="size-5"/></span></div></Card>)}</div>
-    <div className="grid gap-6 xl:grid-cols-[1.35fr_.65fr]"><Card><div className="flex items-center justify-between border-b p-5"><div><h2 className="font-black text-slate-900">Recent prescription requests</h2><p className="mt-1 text-xs text-slate-500">Prescriptions explicitly shared for medicine ordering</p></div><ActionLink href="/pharmacy/prescription-requests" label="View all"/></div><EmptySafeTable columns={["Request","Patient","Doctor","Location","Delivery","Status","Action"]} rows={requests.slice(0,3).map((row) => [<b key="id" className="text-slate-900">{row.id}</b>, row.patient, <span key="doc">{row.doctor}<small className="block text-slate-400">{row.facility}</small></span>, <span key="loc">{row.location}<small className="block text-slate-400">{row.distance}</small></span>, row.delivery, <Badge key="s">{row.status}</Badge>, <ActionLink key="a" href={`/pharmacy/prescription-requests/${row.id}`}/>])}/></Card><MiniCharts/></div>
+    <div className="grid gap-6 xl:grid-cols-[1.35fr_.65fr]"><Card><div className="flex items-center justify-between border-b p-5"><div><h2 className="font-black text-slate-900">Recent prescription requests</h2><p className="mt-1 text-xs text-slate-500">Prescriptions explicitly shared for medicine ordering</p></div><ActionLink href="/pharmacy/prescription-requests" label="View all"/></div><EmptySafeTable columns={["Request","Patient","Doctor","Location","Delivery","Status","Action"]} rows={recentRequests.map((row) => [<b key="id" className="text-slate-900">{row.requestGroupId || row.id}</b>, row.patient, <span key="doc">{row.doctorName || "Prescribing Doctor"}<small className="block text-slate-400">{row.facilityName || "Healthcare Facility"}</small></span>, <span key="loc">{row.patientAddress || row.location || "Address on record"}</span>, "Home delivery", <Badge key="s">{row.status}</Badge>, <ActionLink key="a" href={`/pharmacy/prescription-requests/${row.id}`}/>])}/></Card><MiniCharts/></div>
     <Card><div className="flex items-center justify-between border-b p-5"><h2 className="font-black text-slate-900">Recent orders</h2><ActionLink href="/pharmacy/orders" label="Manage orders"/></div><EmptySafeTable columns={["Order","Patient","Amount","Payment","Delivery","Status","Date","Action"]} rows={orders.map((row) => [<b key="id" className="text-slate-900">{row.id}</b>,row.patient,row.amount,<Badge key="p">{row.payment}</Badge>,row.delivery,<Badge key="s">{row.status}</Badge>,row.date,<ActionLink key="a" href="/pharmacy/orders"/>])}/></Card>
   </Page>;
 }
@@ -83,8 +112,9 @@ function MiniCharts() { const bars=[52,68,43,76,89,64,94]; return <Card classNam
         return{
           id:`RXR-${yy}${mm}${dd}-${seq}`,
           rawId:row.id,
+          patientId:row.patientId,
           patient:row.patient,
-          prescription:row.prescription,
+          prescription:publicPrescriptionId(row.prescription),
           doctor:row.doctorName||`Dr. ${row.patient}`,
           facility:row.facilityName||(row.facilityType?`${row.facilityType}`:"Self-uploaded"),
           location:row.location,
@@ -96,9 +126,8 @@ function MiniCharts() { const bars=[52,68,43,76,89,64,94]; return <Card classNam
       .catch(error=>toast.error(error.message));
   },[]);
   const statuses=["All","New","Viewed","Quotation Sent","Accepted","Rejected","Expired"];
-  const allRequests=[...liveRequests,...requests].filter((row,index,array)=>array.findIndex(item=>item.id===row.id)===index);
-  const visible=allRequests.filter(row=>(filter==="All"||row.status===filter)&&JSON.stringify(row).toLowerCase().includes(query.toLowerCase()));
-  return <Page title="Prescription Requests" eyebrow="Patient-shared access" description="Only prescriptions shared by patients for medicine fulfilment are visible. Complete medical history remains private." actions={<SearchBar value={query} onChange={setQuery} placeholder="Search requests..."/>}><div className="flex flex-wrap gap-2">{statuses.map(status=><button key={status} onClick={()=>setFilter(status)} className={`rounded-full px-4 py-2 text-xs font-bold ${filter===status?"bg-emerald-600 text-white":"border bg-white text-slate-600"}`}>{status}</button>)}</div><Card><EmptySafeTable columns={["Request ID","Patient","Prescription","Doctor / Facility","Location","Requested","Delivery","Status","Action"]} rows={visible.map((row, index)=>[<b key={`req-${row.id}-${index}`}>{row.id}</b>,row.patient,row.prescription,<span key={`doc-${index}`}>{row.doctor}<small className="block text-slate-400">{row.facility}</small></span>,row.location,row.date,row.delivery,<Badge key={`badge-${index}`}>{row.status}</Badge>,<ActionLink key={`act-${index}`} href={`/pharmacy/prescription-requests/${row.rawId||row.id}`}/>])}/></Card></Page>;
+  const visible=liveRequests.filter(row=>(filter==="All"||row.status===filter)&&JSON.stringify(row).toLowerCase().includes(query.toLowerCase()));
+  return <Page title="Prescription Requests" eyebrow="Patient-shared access" description="Only prescriptions shared by patients for medicine fulfilment are visible. Complete medical history remains private." actions={<SearchBar value={query} onChange={setQuery} placeholder="Search requests..."/>}><div className="flex flex-wrap gap-2">{statuses.map(status=><button key={status} onClick={()=>setFilter(status)} className={`rounded-full px-4 py-2 text-xs font-bold ${filter===status?"bg-emerald-600 text-white":"border bg-white text-slate-600"}`}>{status}</button>)}</div><Card><EmptySafeTable columns={["Request ID","Patient","Prescription","Doctor / Facility","Location","Requested","Delivery","Status","Action"]} rows={visible.map((row, index)=>[<b key={`req-${row.id}-${index}`}>{row.id}</b>,<span key={`patient-${index}`}>{row.patient}<small className="block font-semibold text-slate-400">{row.patientId}</small></span>,row.prescription,<span key={`doc-${index}`}>{row.doctor}<small className="block text-slate-400">{row.facility}</small></span>,row.location,row.date,row.delivery,<Badge key={`badge-${index}`}>{row.status}</Badge>,<ActionLink key={`act-${index}`} href={`/pharmacy/prescription-requests/${row.rawId||row.id}`}/>])}/></Card></Page>;
 }function Quotations({query,setQuery}:any) {
   const [liveQuotations,setLiveQuotations]=useState<any[]>([]);
   const [savedActions,setSavedActions]=useState<any[]>([]);
@@ -126,8 +155,9 @@ function MiniCharts() { const bars=[52,68,43,76,89,64,94]; return <Card classNam
 
   const mappedLive=liveQuotations.map((q:any)=>({
     id:q.id,
+    requestId:q.requestId,
     patient:q.patient,
-    prescription:q.prescription,
+    prescription:publicPrescriptionId(q.prescription),
     amount:`₹${Number(q.totalAmount).toLocaleString("en-IN")}`,
     sent:new Date(q.createdAt).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}),
     valid:"6 hours",
@@ -140,7 +170,7 @@ function MiniCharts() { const bars=[52,68,43,76,89,64,94]; return <Card classNam
     return {
       id:item.id||`QUO-SAVED-${index+1}`,
       patient:item.patient||requests[0]?.patient||"Patient",
-      prescription:item.prescription||requests[0]?.prescription||"Prescription",
+      prescription:publicPrescriptionId(item.prescription||requests[0]?.prescription),
       amount:item.formattedAmount||`₹${Number(item.amount||0).toLocaleString("en-IN")}`,
       sent:item.sent||new Date(item.updatedAt||Date.now()).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}),
       valid:item.valid||"6 hours",
@@ -149,14 +179,15 @@ function MiniCharts() { const bars=[52,68,43,76,89,64,94]; return <Card classNam
     };
   });
 
-  const allRows=[...mappedLive,...mappedLocal,...quotations].filter((row,index,array)=>array.findIndex(item=>item.id===row.id)===index);
+  const allRows=mappedLive;
   const visible=allRows.filter(row=>JSON.stringify(row).toLowerCase().includes(query.toLowerCase()));
-  return <Page title="Quotations" eyebrow="Pricing workspace" description="Prepare transparent medicine pricing and track patient responses." actions={<><SearchBar value={query} onChange={setQuery} placeholder="Search quotations..."/><ActionLink href="/pharmacy/quotations/create" label="Create quotation"/></>}><Card><EmptySafeTable columns={["Quotation","Patient","Prescription","Amount","Sent","Valid until","Patient response","Status","Action"]} rows={visible.map((row, index)=>[<b key={`quo-id-${index}`}>{row.id}</b>,row.patient,row.prescription,<b key={`quo-amt-${index}`}>{row.amount}</b>,row.sent,row.valid,row.response,<Badge key={`quo-badge-${index}`}>{row.status}</Badge>,<ActionLink key={`quo-act-${index}`} href="/pharmacy/quotations/create"/>])}/></Card></Page>;
+  return <Page title="Quotations" eyebrow="Pricing workspace" description="Prepare transparent medicine pricing and track patient responses." actions={<><SearchBar value={query} onChange={setQuery} placeholder="Search quotations..."/><ActionLink href="/pharmacy/prescription-requests" label="Create quotation"/></>}><Card><EmptySafeTable columns={["Quotation","Patient","Prescription","Amount","Sent","Valid until","Patient response","Status","Action"]} rows={visible.map((row, index)=>[<b key={`quo-id-${index}`}>{row.id}</b>,row.patient,row.prescription,<b key={`quo-amt-${index}`}>{row.amount}</b>,row.sent,row.valid,row.response,<Badge key={`quo-badge-${index}`}>{row.status}</Badge>,<ActionLink key={`quo-act-${index}`} href={`/pharmacy/quotations/create?requestId=${encodeURIComponent(row.requestId)}&quotationId=${encodeURIComponent(row.id)}`}/>])}/></Card></Page>;
 }
 
 function Orders({query,setQuery,filter,setFilter}:any) {
   const [liveOrders,setLiveOrders]=useState<any[]>([]);
   const [confirmedOrder,setConfirmedOrder]=useState<any>(null);
+  const [selectedOrder,setSelectedOrder]=useState<any>(null);
 
   useEffect(()=>{
     try {
@@ -176,8 +207,13 @@ function Orders({query,setQuery,filter,setFilter}:any) {
 
   const mappedLive=liveOrders.map((o:any)=>({
     id:o.id,
+    quotationId:o.quotationId, requestGroupId:o.requestGroupId, patientId:o.patientId,
     patient:o.patient,
+    patientPhone:o.patientPhone, patientAddress:o.patientAddress||o.deliveryAddress,
     prescription:o.prescription,
+    totalAmount:Number(o.totalAmount||0), subtotal:Number(o.subtotal||0), discountAmount:Number(o.discountAmount||0), taxAmount:Number(o.taxAmount||0), deliveryCharge:Number(o.deliveryCharge||0),
+    items:(()=>{if(Array.isArray(o.itemsJson))return o.itemsJson;try{return JSON.parse(o.itemsJson||"[]");}catch{return [];}})(),
+    pharmacyNotes:o.pharmacyNotes, requestNote:o.requestNote,
     amount:`₹${Number(o.totalAmount).toLocaleString("en-IN")}`,
     payment:"Paid",
     delivery:"Home delivery",
@@ -187,7 +223,7 @@ function Orders({query,setQuery,filter,setFilter}:any) {
 
   const localConfirmedArr=confirmedOrder?[{
     id:confirmedOrder.id||"ORD-CONFIRMED-01",
-    patient:confirmedOrder.patient||requests[0]?.patient||"Neha Yadav",
+    patient:confirmedOrder.patient||requests[0]?.patient||"Patient",
     prescription:confirmedOrder.prescription||"RX-874521",
     amount:`₹${Number(confirmedOrder.amount||1248).toLocaleString("en-IN")}`,
     payment:"Paid",
@@ -197,9 +233,14 @@ function Orders({query,setQuery,filter,setFilter}:any) {
   }]:[];
 
   const stages=["All","Confirmed","Payment Pending","Paid","Preparing","Ready for Pickup","Out for Delivery","Delivered","Cancelled"];
-  const allOrders=[...mappedLive,...localConfirmedArr,...orders].filter((row,index,array)=>array.findIndex(item=>item.id===row.id)===index);
+  const allOrders=mappedLive;
   const visible=allOrders.filter(row=>(filter==="All"||row.status===filter||row.payment===filter)&&JSON.stringify(row).toLowerCase().includes(query.toLowerCase()));
-  return <Page title="Orders" eyebrow="Medicine fulfilment" description="Manage confirmed orders through payment, preparation, pickup or delivery." actions={<SearchBar value={query} onChange={setQuery} placeholder="Search orders..."/>}><div className="flex flex-wrap gap-2">{stages.map(stage=><button key={stage} onClick={()=>setFilter(stage)} className={`rounded-full px-3 py-2 text-xs font-bold ${filter===stage?"bg-emerald-600 text-white":"border bg-white text-slate-600"}`}>{stage}</button>)}</div><Card><EmptySafeTable columns={["Order","Patient","Prescription","Amount","Payment","Delivery","Status","Date","Action"]} rows={visible.map((row, index)=>[<b key={`ord-id-${index}`}>{row.id}</b>,row.patient,row.prescription,row.amount,<Badge key={`ord-pay-${index}`}>{row.payment}</Badge>,row.delivery,<Badge key={`ord-badge-${index}`}>{row.status}</Badge>,row.date,<ActionLink key={`ord-act-${index}`} href="/pharmacy/orders"/>])}/></Card></Page>;
+  return <Page title="Orders" eyebrow="Medicine fulfilment" description="Manage confirmed orders through payment, preparation, pickup or delivery." actions={<SearchBar value={query} onChange={setQuery} placeholder="Search orders..."/>}><div className="flex flex-wrap gap-2">{stages.map(stage=><button key={stage} onClick={()=>setFilter(stage)} className={`rounded-full px-3 py-2 text-xs font-bold ${filter===stage?"bg-emerald-600 text-white":"border bg-white text-slate-600"}`}>{stage}</button>)}</div><Card><EmptySafeTable columns={["Order","Patient","Prescription","Amount","Payment","Delivery","Status","Date","Action"]} rows={visible.map((row, index)=>[<b key={`ord-id-${index}`}>{row.id}</b>,row.patient,row.prescription,row.amount,<Badge key={`ord-pay-${index}`}>{row.payment}</Badge>,row.delivery,<Badge key={`ord-badge-${index}`}>{row.status}</Badge>,row.date,<button key={`ord-act-${index}`} type="button" onClick={()=>setSelectedOrder(row)} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-100">Open<ArrowRight className="size-3.5"/></button>])}/></Card>{selectedOrder&&<OrderDetailsModal order={selectedOrder} onClose={()=>setSelectedOrder(null)}/>}</Page>;
+}
+
+function OrderDetailsModal({order,onClose}:{order:any;onClose:()=>void}) {
+  const money=(value:any)=>`₹${Number(value||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+  return <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/55 p-4 backdrop-blur-sm"><div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[1.75rem] bg-white shadow-2xl"><header className="flex items-start justify-between border-b bg-gradient-to-r from-emerald-50 to-cyan-50 px-6 py-5"><div><p className="text-xs font-black uppercase tracking-wider text-emerald-700">Confirmed medicine order</p><h2 className="mt-1 text-2xl font-black text-slate-950">{order.id}</h2><p className="mt-1 text-sm text-slate-500">Quotation {order.quotationId} · Prescription {order.prescription}</p></div><button type="button" onClick={onClose} className="rounded-xl p-2 text-slate-400 hover:bg-white hover:text-slate-700"><X className="size-5"/></button></header><div className="space-y-5 overflow-y-auto p-6"><div className="grid gap-4 md:grid-cols-2"><Card className="p-5"><h3 className="font-black text-slate-900">Patient & delivery</h3><dl className="mt-4 space-y-3 text-sm"><Info label="Patient" value={`${order.patient} (${order.patientId})`}/><Info label="Contact" value={order.patientPhone||"Not recorded"}/><Info label="Delivery address" value={order.patientAddress||"Not recorded"}/><Info label="Delivery mode" value={order.delivery}/></dl></Card><Card className="p-5"><h3 className="font-black text-slate-900">Order information</h3><dl className="mt-4 space-y-3 text-sm"><Info label="Status" value={String(order.status||"").replaceAll("_"," ")}/><Info label="Payment" value={order.payment}/><Info label="Created" value={order.date}/><Info label="Request group" value={order.requestGroupId||"—"}/></dl></Card></div><Card><div className="border-b p-5"><h3 className="font-black text-slate-900">Medicines</h3></div><div className="divide-y">{order.items.length?order.items.map((item:any,index:number)=><div key={`${item.medicineName}-${index}`} className="grid gap-3 p-5 text-sm sm:grid-cols-[1fr_auto_auto_auto]"><div><p className="font-black text-slate-900">{item.prescribedMedicineName||item.medicineName}</p>{item.isAlternative&&<p className="mt-1 text-xs font-bold text-amber-700">Substitute: {item.alternativeName} · {item.alternativeComposition}</p>}</div><Info label="Quantity" value={String(item.quantity||0)}/><Info label="Unit price" value={money(item.unitPrice)}/><Info label="Line total" value={money(Number(item.quantity||0)*Number(item.unitPrice||0))}/></div>):<p className="p-6 text-center text-sm text-slate-500">No medicine lines recorded.</p>}</div></Card><div className="grid gap-4 md:grid-cols-[1fr_360px]"><Card className="p-5"><h3 className="font-black text-slate-900">Notes</h3><p className="mt-3 text-sm text-slate-600">{order.pharmacyNotes||order.requestNote||"No additional notes."}</p></Card><Card className="p-5"><h3 className="font-black text-slate-900">Bill summary</h3><dl className="mt-4 space-y-3 text-sm"><Info label="Medicine subtotal" value={money(order.subtotal)}/><Info label="Discount" value={`− ${money(order.discountAmount)}`}/><Info label="GST" value={`+ ${money(order.taxAmount)}`}/><Info label="Delivery" value={`+ ${money(order.deliveryCharge)}`}/><div className="border-t pt-3"><Info label="Final payable" value={money(order.totalAmount)}/></div></dl></Card></div></div><footer className="flex justify-end border-t bg-slate-50 p-4"><button type="button" onClick={onClose} className="rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white">Close</button></footer></div></div>;
 }
 
 function Inventory({ query, setQuery }: any) {
@@ -719,13 +760,38 @@ function Patients({query,setQuery}:any) { const visible=patients.filter(row=>JSO
 function Notifications() {
   const [liveNotifications, setLiveNotifications] = useState<any[]>([]);
 
+  const openNotification = async (event: React.MouseEvent<HTMLAnchorElement>, item: any) => {
+    event.preventDefault();
+    if (item.id && !item.read) {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`/api/pharmacy/notifications/${encodeURIComponent(item.id)}/read`, {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          setLiveNotifications(current => current.map(notification => notification.id === item.id ? { ...notification, read: true, isRead: true } : notification));
+          window.dispatchEvent(new Event("notificationsRead"));
+        }
+      } catch {}
+    }
+    window.location.href = item.actionUrl || "/pharmacy/notifications";
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
     fetch("/api/pharmacy/notifications", { headers: { Authorization: `Bearer ${token}` } })
       .then(async res => {
         const data = await res.json().catch(() => []);
-        if (Array.isArray(data)) setLiveNotifications(data);
+        if (Array.isArray(data)) {
+          setLiveNotifications(data.map((item:any)=>({ ...item, read:true, isRead:true })));
+          await fetch("/api/pharmacy/notifications/read-all", {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${token}` },
+          }).catch(()=>null);
+          window.dispatchEvent(new Event("notificationsRead"));
+        }
       })
       .catch(() => {});
   }, []);
@@ -749,7 +815,7 @@ function Notifications() {
               </div>
               <p className="mt-1 text-sm text-slate-600">{item.message}</p>
               {item.actionUrl && (
-                <a href={item.actionUrl} className="mt-2 inline-block text-xs font-extrabold text-emerald-700 hover:underline">
+                <a href={item.actionUrl} onClick={(event)=>openNotification(event,item)} className="mt-2 inline-block text-xs font-extrabold text-emerald-700 hover:underline">
                   View Action →
                 </a>
               )}
@@ -763,39 +829,129 @@ function Notifications() {
 
 function Analytics() { const months=[48,63,58,77,72,91]; return <Page title="Reports & Analytics" eyebrow="Business intelligence" description="Sales, order, quotation, stock, expiry and delivery performance."><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[["Total sales","₹4,82,650"],["Total orders","428"],["Average order value","₹1,128"],["Quotation acceptance","78%"]].map(([label,value])=><Card key={label} className="p-5"><p className="text-xs font-bold uppercase text-slate-400">{label}</p><p className="mt-3 text-2xl font-black text-slate-950">{value}</p></Card>)}</div><div className="grid gap-6 lg:grid-cols-2"><Card className="p-6"><h2 className="font-black">Monthly revenue</h2><div className="mt-8 flex h-64 items-end gap-5">{months.map((height,index)=><div key={index} className="flex flex-1 flex-col items-center gap-2"><div className="w-full rounded-t-xl bg-gradient-to-t from-emerald-600 to-cyan-400" style={{height:`${height}%`}}/><span className="text-xs text-slate-400">{["Mar","Apr","May","Jun","Jul","Aug"][index]}</span></div>)}</div></Card><Card className="p-6"><h2 className="font-black">Operational reports</h2><div className="mt-5 space-y-3">{[["Low stock report","9 medicines"],["Near-expiry report","4 batches"],["Delivery performance","94% on time"],["Most sold medicine","Telmisartan 40 mg"]].map(([label,value])=><div key={label} className="flex justify-between rounded-xl bg-slate-50 p-4"><span className="font-semibold text-slate-600">{label}</span><b>{value}</b></div>)}</div></Card></div></Page>; }
 
-function Profile() { const [pharmacyId,setPharmacyId]=useState("PHM00001"); useEffect(()=>{ try { const user=JSON.parse(localStorage.getItem("user")||"{}"); if(user.hospitalId) setPharmacyId(String(user.hospitalId)); } catch {} },[]); const fields=[["Pharmacy ID",pharmacyId],["Pharmacy name","WellCare Pharmacy"],["Owner name","Anil Mehta"],["License number","DL-NOI-2026-84517"],["GST number","09ABCDE1234F1Z5"],["Contact","+91 98765 43021"],["Address","Sector 18, Noida, Uttar Pradesh"],["Service areas","Noida sectors 15–62"],["Delivery radius","8 km"],["Opening time","08:00 AM"],["Closing time","10:00 PM"],["Minimum order","₹199"]]; return <Page title="Pharmacy Profile" eyebrow="Registered pharmacy" description="Maintain pharmacy identity, license, service area and timings." actions={<button className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white">Save profile</button>}><Card className="p-6"><div className="grid gap-5 md:grid-cols-2">{fields.map(([label,value])=><label key={label} className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}<input {...(label==="Pharmacy ID"?{value,readOnly:true}:{defaultValue:value})} className={`mt-2 h-11 w-full rounded-xl border px-4 text-sm font-medium normal-case tracking-normal outline-none ${label==="Pharmacy ID"?"border-emerald-200 bg-emerald-50 font-extrabold text-emerald-700":"border-slate-200 text-slate-800 focus:border-emerald-500"}`}/></label>)}</div><div className="mt-6 grid gap-4 sm:grid-cols-2"><label className="rounded-xl border p-4 text-sm font-bold"><input type="checkbox" defaultChecked className="mr-3"/>Home delivery available</label><label className="rounded-xl border p-4 text-sm font-bold"><input type="checkbox" defaultChecked className="mr-3"/>Store pickup available</label></div><div className="mt-6 rounded-2xl border border-dashed p-8 text-center"><Upload className="mx-auto size-7 text-emerald-600"/><p className="mt-2 font-bold">Upload logo and pharmacy documents</p><p className="text-xs text-slate-500">Drug license, GST certificate and owner identity</p></div></Card></Page>; }
+function Profile() {
+  const emptyProfile = { pharmacyId: "", pharmacyName: "", ownerName: "", licenseNumber: "", gstNumber: "", contact: "", address: "", serviceAreas: "", deliveryRadius: "", openingTime: "", closingTime: "", minimumOrder: "", homeDelivery: false, storePickup: false };
+  const [profile, setProfile] = useState<any>(emptyProfile);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    fetch("/api/pharmacy/profile", { headers: { Authorization: `Bearer ${token}` } })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data?.message || "Could not load pharmacy profile.");
+        return data;
+      })
+      .then((data) => setProfile({ ...emptyProfile, ...data, minimumOrder: data.minimumOrder ?? "", homeDelivery: Boolean(data.homeDelivery), storePickup: Boolean(data.storePickup) }))
+      .catch((error) => toast.error(error.message))
+      .finally(() => setLoadingProfile(false));
+  }, []);
+
+  const updateField = (key: string, value: string | boolean) => setProfile((current: any) => ({ ...current, [key]: value }));
+  const saveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/pharmacy/profile", { method: "PUT", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(profile) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(Array.isArray(data?.message) ? data.message[0] : data?.message || "Could not save pharmacy profile.");
+      setProfile({ ...emptyProfile, ...data, minimumOrder: data.minimumOrder ?? "", homeDelivery: Boolean(data.homeDelivery), storePickup: Boolean(data.storePickup) });
+      try { const user = JSON.parse(localStorage.getItem("user") || "{}"); localStorage.setItem("user", JSON.stringify({ ...user, name: data.pharmacyName, hospitalId: data.pharmacyId })); } catch {}
+      toast.success("Pharmacy profile saved successfully.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save pharmacy profile.");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const fields = [
+    ["Pharmacy ID", "pharmacyId", "Assigned automatically"], ["Pharmacy name", "pharmacyName", "Enter registered pharmacy name"],
+    ["Owner name", "ownerName", "Enter owner name"], ["License number", "licenseNumber", "Enter drug license number"],
+    ["GST number", "gstNumber", "Enter GST number"], ["Contact", "contact", "Enter contact number"],
+    ["Address", "address", "Enter complete pharmacy address"], ["Service areas", "serviceAreas", "Enter areas served"],
+    ["Delivery radius", "deliveryRadius", "e.g. 8 km"], ["Opening time", "openingTime", "e.g. 08:00 AM"],
+    ["Closing time", "closingTime", "e.g. 10:00 PM"], ["Minimum order", "minimumOrder", "Enter minimum order amount"],
+  ];
+
+  return <Page title="Pharmacy Profile" eyebrow="Registered pharmacy" description="Complete your pharmacy profile after signup. Only information saved by you is displayed." actions={<button type="button" onClick={saveProfile} disabled={loadingProfile || savingProfile || !String(profile.pharmacyName || "").trim()} className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{savingProfile ? "Saving..." : "Save profile"}</button>}>
+    <Card className="p-6">
+      {loadingProfile ? <div className="grid min-h-60 place-items-center text-sm font-semibold text-slate-500">Loading your pharmacy profile...</div> : <>
+        <div className="mb-6 rounded-2xl border border-cyan-100 bg-cyan-50/60 p-4"><p className="font-bold text-cyan-900">Complete your pharmacy profile</p><p className="mt-1 text-sm text-cyan-700">Your Pharmacy ID and signup name come from your account. Add the remaining verified business information yourself.</p></div>
+        <div className="grid gap-5 md:grid-cols-2">{fields.map(([label, key, placeholder]) => <label key={key} className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}<input value={profile[key] ?? ""} readOnly={key === "pharmacyId"} required={key === "pharmacyName"} onChange={(event) => updateField(key, event.target.value)} placeholder={placeholder} className={`mt-2 h-11 w-full rounded-xl border px-4 text-sm font-medium normal-case tracking-normal outline-none ${key === "pharmacyId" ? "border-emerald-200 bg-emerald-50 font-extrabold text-emerald-700" : "border-slate-200 bg-white text-slate-800 focus:border-emerald-500"}`}/></label>)}</div>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2"><label className="rounded-xl border p-4 text-sm font-bold"><input type="checkbox" checked={profile.homeDelivery} onChange={(event) => updateField("homeDelivery", event.target.checked)} className="mr-3"/>Home delivery available</label><label className="rounded-xl border p-4 text-sm font-bold"><input type="checkbox" checked={profile.storePickup} onChange={(event) => updateField("storePickup", event.target.checked)} className="mr-3"/>Store pickup available</label></div>
+      </>}
+    </Card>
+  </Page>;
+}
 
 export function PrescriptionDetails({ id }: { id: string }) {
   const [liveDetails, setLiveDetails] = useState<any>(null);
+  const [detailsLoading, setDetailsLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
-    fetch(`/api/pharmacy/prescription-requests/${id}`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(res => res.json())
-      .then(data => {
-        if (data && !data.statusCode) setLiveDetails(data);
-      })
-      .catch(() => {});
+    const headers = { Authorization: `Bearer ${token}` };
+    const loadRequest = async () => {
+      try {
+        let response = await fetch(`/api/pharmacy/prescription-requests/${encodeURIComponent(id)}`, { headers, cache: "no-store" });
+        let data = await response.json().catch(() => ({}));
+
+        // Older UI cards used display-only RXR IDs. Resolve those links to the
+        // pharmacy's latest real database request instead of showing demo data.
+        if (!response.ok || data?.statusCode) {
+          const listResponse = await fetch("/api/pharmacy/prescription-requests", { headers, cache: "no-store" });
+          const rows = await listResponse.json().catch(() => []);
+          const latestRequest = Array.isArray(rows) ? rows[0] : null;
+          if (!listResponse.ok || !latestRequest?.id) return;
+          response = await fetch(`/api/pharmacy/prescription-requests/${encodeURIComponent(latestRequest.id)}`, { headers, cache: "no-store" });
+          data = await response.json().catch(() => ({}));
+        }
+
+        if (response.ok && data && !data.statusCode) setLiveDetails(data);
+      } catch {}
+      finally { setDetailsLoading(false); }
+    };
+    void loadRequest();
   }, [id]);
 
-  const fallback = requests.find(item => item.id === id || (item as any).rawId === id) || requests[0];
-  const request = liveDetails || fallback;
-  const doctorName = liveDetails?.doctorName || fallback?.doctor || "Prescribing Doctor";
-  const facilityName = liveDetails?.facilityName || fallback?.facility || "Healthcare Facility";
-  const savedAddress = typeof window !== "undefined" ? localStorage.getItem("updatedPatientAddress") : null;
-  const patientAddress = liveDetails?.patientAddress || savedAddress || liveDetails?.deliveryAddress || (fallback as any)?.patientAddress || "Address on record";
-  const pharmacyLocation = liveDetails?.pharmacyAddress || fallback?.location || "Pharmacy Location";
-  const prescriptionRef = liveDetails?.prescriptionReference || fallback?.prescription || "RX-874521";
+  const request = liveDetails || {};
+  const doctorName = liveDetails?.doctorName || (detailsLoading ? "Loading..." : "Not available");
+  const facilityName = liveDetails?.facilityName || (detailsLoading ? "Loading..." : "Not available");
+  const patientAddress = liveDetails?.patientAddress || liveDetails?.deliveryAddress || (detailsLoading ? "Loading..." : "Address not available");
+  const pharmacyLocation = liveDetails?.pharmacyAddress || (detailsLoading ? "Loading..." : "Pharmacy location unavailable");
+  const prescriptionRef = liveDetails?.prescriptionDisplayId || liveDetails?.prescriptionId || (detailsLoading ? "Loading..." : "Not available");
+  const splitNumberedItems = (value: unknown) => {
+    const text = String(value || "").trim();
+    if (!text) return [];
+    const matches = [...text.matchAll(/(?:^|\s)(\d+)\.\s*([\s\S]*?)(?=\s+\d+\.\s|$)/g)];
+    return matches.length > 1 ? matches.map((match) => match[2].trim()).filter(Boolean) : [text.replace(/^\d+\.\s*/, "").trim()];
+  };
+  const medicineNames = splitNumberedItems(liveDetails?.medicine);
+  const medicineDosages = splitNumberedItems(liveDetails?.dosage);
+  const medicineDurations = splitNumberedItems(liveDetails?.duration);
+  const displayedMedicines = medicineNames.length
+    ? medicineNames.map((name, index) => ({ name, dosage: medicineDosages[index] || "As directed", frequency: medicineDosages[index] || "As directed", duration: medicineDurations[index] || "As advised", quantity: 1, instruction: "Use as prescribed", availability: "Check stock" }))
+    : medicines;
+  const medicineSchedule = (item: any) => {
+    const uniqueParts = new Map<string, string>();
+    [item.dosage, item.frequency, item.duration].forEach((value) => {
+      const text = String(value || "").trim();
+      if (text) uniqueParts.set(text.toLowerCase(), text);
+    });
+    return Array.from(uniqueParts.values()).join(" · ");
+  };
 
   return (
-    <Page title={`Prescription Request ${request.id || id}`} eyebrow="Authorized prescription view" description="This access is limited to the prescription shared by the patient for medicine ordering." actions={<ActionLink href="/pharmacy/quotations/create" label="Create quotation"/>}>
+    <Page title={`Prescription Request ${request.id || id}`} eyebrow="Authorized prescription view" description="This access is limited to the prescription shared by the patient for medicine ordering." actions={<ActionLink href={`/pharmacy/quotations/create?requestId=${encodeURIComponent(request.id || id)}`} label="Create quotation"/>}>
       <div className="grid gap-6 xl:grid-cols-[.7fr_1.3fr]">
         <div className="space-y-5">
           <Card className="p-5">
             <h2 className="font-black">Patient information</h2>
             <dl className="mt-4 space-y-3 text-sm">
-              <Info label="Patient Name" value={request.patient}/>
+              <Info label="Patient Name" value={request.patient || (detailsLoading ? "Loading..." : "Patient not available")}/>
               <Info label="Patient Address" value={patientAddress}/>
               <Info label="Delivery mode" value={request.delivery || "Home delivery"}/>
             </dl>
@@ -823,12 +979,12 @@ export function PrescriptionDetails({ id }: { id: string }) {
             <p className="mt-1 text-xs text-slate-500">Availability can be updated; prescription details cannot be edited.</p>
           </div>
           <div className="divide-y">
-            {medicines.map(item => (
+            {displayedMedicines.map(item => (
               <div key={item.name} className="p-5">
                 <div className="flex flex-wrap justify-between gap-3">
                   <div>
                     <h3 className="font-black text-slate-900">{item.name}</h3>
-                    <p className="mt-1 text-sm text-slate-500">{item.dosage} · {item.frequency} · {item.duration}</p>
+                    <p className="mt-1 text-sm text-slate-500">{medicineSchedule(item)}</p>
                   </div>
                   <Badge>{item.availability}</Badge>
                 </div>
@@ -848,62 +1004,152 @@ export function PrescriptionDetails({ id }: { id: string }) {
 
 export function QuotationCreate() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestId = searchParams.get("requestId") || "";
+  const quotationId = searchParams.get("quotationId") || "";
   const [delivery] = useState(49);
   const [action, setAction] = useState<"draft" | "send" | "reject" | null>(null);
+  const [requestDetails, setRequestDetails] = useState<any>(null);
+  const [itemsState, setItemsState] = useState<any[]>([]);
+  const [inventoryState, setInventoryState] = useState<any[]>([]);
+  const [loadingQuotation, setLoadingQuotation] = useState(true);
 
-  const [itemsState, setItemsState] = useState<any[]>(() =>
-    medicines.map((m, idx) => {
-      const isAlt = m.availability === "Partially Available" || m.availability === "Alternative Available";
-      const matchedAlts = alternativeCatalog.filter(a => a.prescribed.toLowerCase().includes(m.name.toLowerCase()) || m.name.toLowerCase().includes(a.prescribed.toLowerCase()));
-      const initialAlt = matchedAlts[0]?.alternative || (idx === 1 ? "Glimet 500 SR (USV Pharma)" : idx === 2 ? "Pan-D Capsule (Alkem Labs)" : "");
-      return {
-        medicineName: m.name,
-        dosage: m.dosage,
-        quantity: m.quantity || 30,
-        unitPrice: isAlt ? 7.5 : 12,
-        availability: isAlt ? "Alternative Available" : m.availability || "Available",
-        isAlternative: isAlt,
-        alternativeName: initialAlt,
-        alternativeBrand: matchedAlts[0]?.brand || "Verified Manufacturer",
-        alternativeComposition: matchedAlts[0]?.composition || "Equivalent composition"
-      };
-    })
-  );
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token || !requestId) { setLoadingQuotation(false); return; }
+    const headers = { Authorization: `Bearer ${token}` };
+    const splitItems = (value: unknown) => {
+      const text = String(value || "").trim();
+      if (!text) return [];
+      const matches = [...text.matchAll(/(?:^|\s)(\d+)\.\s*([\s\S]*?)(?=\s+\d+\.\s|$)/g)];
+      return matches.length > 1 ? matches.map(match => match[2].trim()).filter(Boolean) : [text.replace(/^\d+\.\s*/, "").trim()];
+    };
+    Promise.all([
+      fetch(`/api/pharmacy/prescription-requests/${encodeURIComponent(requestId)}`, { headers, cache: "no-store" }),
+      fetch("/api/pharmacy/inventory", { headers, cache: "no-store" }),
+      fetch("/api/pharmacy/quotations", { headers, cache: "no-store" }),
+    ]).then(async ([requestResponse, inventoryResponse, quotationsResponse]) => {
+      const details = await requestResponse.json().catch(() => ({}));
+      const stockRows = await inventoryResponse.json().catch(() => []);
+      const quotationRows = await quotationsResponse.json().catch(() => []);
+      if (!requestResponse.ok) throw new Error(details?.message || "Prescription request could not be loaded.");
+      setRequestDetails(details);
+      const names = splitItems(details.medicine);
+      const dosages = splitItems(details.dosage);
+      const durations = splitItems(details.duration);
+      const normalize = (value: unknown) => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      const inventoryRows = Array.isArray(stockRows) ? stockRows : [];
+      setInventoryState(inventoryRows.filter((stock: any) => Number(stock.stockQuantity) > 0 && stock.active !== 0));
+      const requestItems = names.map((medicineName, index) => {
+        const wanted = normalize(medicineName);
+        const exactStock = inventoryRows.find((stock: any) => {
+          const stocked = normalize(stock.medicineName);
+          return stocked === wanted || stocked.includes(wanted) || wanted.includes(stocked);
+        });
+        const inStock = Boolean(exactStock && Number(exactStock.stockQuantity) > 0 && exactStock.active !== 0);
+        return {
+          medicineName,
+          dosage: dosages[index] || "As directed",
+          duration: durations[index] || "As advised",
+          quantity: 1,
+          unitPrice: inStock ? Number(exactStock.unitPrice || 0) : 0,
+          inventoryItemId: exactStock?.id || null,
+          exactInventoryItemId: inStock ? exactStock.id : null,
+          exactUnitPrice: inStock ? Number(exactStock.unitPrice || 0) : 0,
+          availability: inStock ? "Available" : "Not Available",
+          isAlternative: false,
+          alternativeName: "",
+          alternativeBrand: "",
+          alternativeComposition: "",
+        };
+      });
+      const savedQuotation = (Array.isArray(quotationRows) ? quotationRows : []).find((quotation:any)=>quotation.id===quotationId);
+      let savedItems = savedQuotation?.itemsJson;
+      if (typeof savedItems === "string") try { savedItems = JSON.parse(savedItems); } catch { savedItems = []; }
+      setItemsState(Array.isArray(savedItems) && savedItems.length ? savedItems.map((item:any)=>({
+        ...item,
+        medicineName:item.prescribedMedicineName||item.medicineName,
+        quantity:Number(item.quantity||1), unitPrice:Number(item.unitPrice||0),
+        availability:item.isAlternative?"Alternative Available":item.available===false?"Not Available":"Available",
+        exactInventoryItemId:item.inventoryItemId||null, exactUnitPrice:Number(item.unitPrice||0),
+      })) : requestItems);
+    }).catch(error => toast.error(error instanceof Error ? error.message : "Quotation could not be prepared."))
+      .finally(() => setLoadingQuotation(false));
+  }, [requestId, quotationId]);
 
-  const subtotal = itemsState.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-  const gst = Math.round(subtotal * 0.05);
-  const finalPayable = Math.max(0, subtotal - 54 + gst + delivery);
+  const subtotal = itemsState.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unitPrice || 0), 0);
+  const discount = Math.min(54, subtotal);
+  const taxableAmount = Math.max(0, subtotal - discount);
+  const gst = Number((taxableAmount * 0.05).toFixed(2));
+  const finalPayable = Number((taxableAmount + gst + delivery).toFixed(2));
+  const formatMoney = (value: number) => `₹${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const normalizeMedicine = (value: unknown) => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const alternativesFor = (medicineName: string) => alternativeCatalog.flatMap(candidate => {
+    const prescribed = normalizeMedicine(candidate.prescribed);
+    const requested = normalizeMedicine(medicineName);
+    if (!(prescribed.includes(requested) || requested.includes(prescribed))) return [];
+    const stocked = inventoryState.find(stock => {
+      const stockName = normalizeMedicine(stock.medicineName);
+      const alternative = normalizeMedicine(candidate.alternative);
+      return stockName === alternative || stockName.includes(alternative) || alternative.includes(stockName);
+    });
+    const catalogPrice = Number(String(candidate.price || "").match(/[\d.]+/)?.[0] || 0);
+    return [{
+      ...candidate,
+      inventoryItemId: stocked?.id || null,
+      stock: stocked ? Number(stocked.stockQuantity) : Number(candidate.stock || 0),
+      unitPrice: stocked ? Number(stocked.unitPrice || 0) : catalogPrice,
+    }];
+  });
 
   const updateItemAvailability = (index: number, newAvailability: string) => {
     setItemsState(prev => {
       const next = [...prev];
       const item = { ...next[index] };
       item.availability = newAvailability;
-      if (newAvailability === "Alternative Available" || newAvailability === "Not Available") {
-        item.isAlternative = true;
-        const matched = alternativeCatalog.filter(a => a.prescribed.toLowerCase().includes(item.medicineName.toLowerCase()) || item.medicineName.toLowerCase().includes(a.prescribed.toLowerCase()));
+      if (newAvailability === "Alternative Available") {
+        const matched = alternativesFor(item.medicineName);
         if (matched.length > 0) {
+          item.isAlternative = true;
           item.alternativeName = matched[0].alternative;
           item.alternativeBrand = matched[0].brand;
           item.alternativeComposition = matched[0].composition;
-          item.unitPrice = 7.5;
+          item.unitPrice = matched[0].unitPrice;
+          item.inventoryItemId = matched[0].inventoryItemId;
         } else {
-          item.alternativeName = "Generic Equivalent Medicine";
-          item.alternativeBrand = "Verified Substitute";
-          item.unitPrice = 8;
+          item.isAlternative = false;
+          item.alternativeName = "";
+          item.alternativeBrand = "";
+          item.alternativeComposition = "";
+          item.unitPrice = 0;
         }
+      } else if (newAvailability === "Not Available") {
+        item.isAlternative = false;
+        item.alternativeName = "";
+        item.alternativeBrand = "";
+        item.alternativeComposition = "";
+        item.unitPrice = 0;
       } else {
         item.isAlternative = false;
         item.alternativeName = "";
-        item.unitPrice = 12;
+        item.inventoryItemId = item.exactInventoryItemId || item.inventoryItemId || null;
+        if (Number(item.unitPrice || 0) <= 0 && Number(item.exactUnitPrice || 0) > 0) {
+          item.unitPrice = item.exactUnitPrice;
+        }
       }
       next[index] = item;
       return next;
     });
   };
 
+  const updatePricingField = (index: number, field: "quantity" | "unitPrice", value: string) => {
+    const parsed = Math.max(0, Number(value || 0));
+    setItemsState(previous => previous.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: parsed } : item));
+  };
+
   const updateSelectedAlternative = (index: number, altName: string) => {
-    const found = alternativeCatalog.find(a => a.alternative === altName);
+    const current = itemsState[index];
+    const found = alternativesFor(current?.medicineName || "").find(a => a.alternative === altName);
     setItemsState(prev => {
       const next = [...prev];
       const item = { ...next[index] };
@@ -913,7 +1159,8 @@ export function QuotationCreate() {
       if (found) {
         item.alternativeBrand = found.brand;
         item.alternativeComposition = found.composition;
-        item.unitPrice = parseFloat(found.price) || 7.5;
+        item.unitPrice = found.unitPrice;
+        item.inventoryItemId = found.inventoryItemId;
       }
       next[index] = item;
       return next;
@@ -922,6 +1169,14 @@ export function QuotationCreate() {
 
   const finishAction = async (type: "draft" | "send" | "reject") => {
     if (type === "reject" && !window.confirm("Reject this prescription request?")) return;
+    if (type !== "reject" && (!requestId || !itemsState.length)) {
+      toast.error("Prescription request and its medicines must be loaded first.");
+      return;
+    }
+    if (type === "send" && itemsState.some(item => Number(item.unitPrice || 0) <= 0 || (item.availability === "Not Available" && !item.isAlternative))) {
+      toast.error("Enter a valid price and mark every medicine Available, Partially Available, or choose a matching substitute.");
+      return;
+    }
     setAction(type);
     const now = new Date();
     const status = type === "draft" ? "Draft" : type === "send" ? "Quotation Sent" : "Rejected";
@@ -929,15 +1184,15 @@ export function QuotationCreate() {
 
     try {
       const token = localStorage.getItem("token");
-      if (token) {
-        const requestId = (requests[0] as any)?.rawId || requests[0]?.id || "req-1";
-        await fetch(`/api/pharmacy/prescription-requests/${requestId}/quotation`, {
+      if (token && requestId) {
+        const response = await fetch(`/api/pharmacy/prescription-requests/${encodeURIComponent(requestId)}/quotation`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           body: JSON.stringify({
             items: itemsState.map(m => ({
-              inventoryItemId: null,
-              medicineName: m.medicineName,
+              inventoryItemId: m.inventoryItemId || null,
+              prescribedMedicineName: m.medicineName,
+              medicineName: m.isAlternative && m.alternativeName ? m.alternativeName : m.medicineName,
               quantity: m.quantity || 1,
               unitPrice: m.unitPrice,
               available: m.availability !== "Not Available",
@@ -946,16 +1201,20 @@ export function QuotationCreate() {
               alternativeBrand: m.alternativeBrand,
               alternativeComposition: m.alternativeComposition
             })),
-            discountAmount: 54,
+            discountAmount: discount,
             taxAmount: gst,
             deliveryCharge: delivery,
             estimatedDelivery: "45–60 minutes",
             status: type === "send" ? "SENT" : "DRAFT"
           })
-        }).catch(() => {});
+        });
+        const responseData = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(responseData?.message || "Quotation could not be saved.");
       }
     } catch (err) {
-      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Quotation could not be saved.");
+      setAction(null);
+      return;
     }
 
     try {
@@ -966,9 +1225,9 @@ export function QuotationCreate() {
         JSON.stringify([
           {
             id: quotationId,
-            requestId: requests[0]?.id,
-            patient: requests[0]?.patient,
-            prescription: requests[0]?.prescription,
+            requestId,
+            patient: requestDetails?.patient,
+            prescription: requestDetails?.prescriptionDisplayId,
             status,
             amount: finalPayable,
             formattedAmount: `₹${finalPayable.toLocaleString("en-IN")}`,
@@ -999,7 +1258,7 @@ export function QuotationCreate() {
           </div>
           <div className="space-y-4 p-5">
             {itemsState.map((item, index) => {
-              const matchedAlts = alternativeCatalog.filter(a => a.prescribed.toLowerCase().includes(item.medicineName.toLowerCase()) || item.medicineName.toLowerCase().includes(a.prescribed.toLowerCase()));
+              const matchedAlts = alternativesFor(item.medicineName);
               return (
                 <div key={item.medicineName} className={`rounded-2xl border p-4 transition ${item.isAlternative ? "border-amber-300 bg-amber-50/40" : "border-slate-200 bg-slate-50/50"}`}>
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/60 pb-3">
@@ -1011,17 +1270,25 @@ export function QuotationCreate() {
                       <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-800">
                         ⚡ Alternative Substitute Selected
                       </span>
-                    ) : (
+                    ) : item.availability === "Available" ? (
                       <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-extrabold text-emerald-800">
                         ✓ In Stock (Inventory Available)
+                      </span>
+                    ) : item.availability === "Partially Available" ? (
+                      <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-800">
+                        Partially Available
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-extrabold text-rose-700">
+                        Out of Stock
                       </span>
                     )}
                   </div>
 
                   <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <Field label="Prescribed Medicine" value={item.medicineName}/>
-                    <Field label="Quantity" value={String(item.quantity)}/>
-                    <Field label="Unit Price" value={`₹${item.unitPrice.toFixed(2)}`}/>
+                    <EditableNumberField label="Quantity" value={item.quantity} min={1} step={1} onChange={(value) => updatePricingField(index, "quantity", value)}/>
+                    <EditableNumberField label="Unit Price (₹)" value={item.unitPrice} min={0} step={0.01} onChange={(value) => updatePricingField(index, "unitPrice", value)}/>
                     <label className="text-xs font-bold text-slate-500">
                       Stock Availability
                       <select
@@ -1032,7 +1299,7 @@ export function QuotationCreate() {
                         <option value="Available">Available (In Stock)</option>
                         <option value="Partially Available">Partially Available</option>
                         <option value="Not Available">Not Available (Out of Stock)</option>
-                        <option value="Alternative Available">Alternative Available (Suggest Substitute)</option>
+                        {matchedAlts.length > 0 && <option value="Alternative Available">Alternative Available (Suggest Substitute)</option>}
                       </select>
                     </label>
                   </div>
@@ -1046,6 +1313,7 @@ export function QuotationCreate() {
                           <select
                             value={item.alternativeName || (matchedAlts[0]?.alternative || "")}
                             onChange={(e) => updateSelectedAlternative(index, e.target.value)}
+                            disabled={matchedAlts.length === 0}
                             className="mt-1.5 h-10 w-full rounded-lg border border-amber-300 bg-amber-50/50 px-3 text-sm font-bold text-slate-900 outline-none focus:border-amber-500"
                           >
                             {matchedAlts.length > 0 ? (
@@ -1054,13 +1322,7 @@ export function QuotationCreate() {
                                   {alt.alternative} ({alt.brand}) — Stock: {alt.stock} units
                                 </option>
                               ))
-                            ) : (
-                              alternativeCatalog.map(alt => (
-                                <option key={alt.alternative} value={alt.alternative}>
-                                  {alt.alternative} ({alt.brand}) — Stock: {alt.stock} units
-                                </option>
-                              ))
-                            )}
+                            ) : <option value="">No matching salt/composition substitute in inventory</option>}
                           </select>
                         </label>
                         <div className="rounded-lg bg-slate-50 p-2.5 text-xs">
@@ -1080,12 +1342,12 @@ export function QuotationCreate() {
           <Card className="p-5">
             <h2 className="font-black text-slate-900">Quotation summary</h2>
             <div className="mt-5 space-y-3 text-sm">
-              <Info label="Medicine subtotal" value={`₹${subtotal.toLocaleString('en-IN')}`}/>
-              <Info label="Total discount" value="− ₹54"/>
-              <Info label="GST (5%)" value={`₹${gst.toLocaleString('en-IN')}`}/>
-              <Info label="Delivery charge" value={`₹${delivery}`}/>
+              <Info label="Medicine subtotal" value={formatMoney(subtotal)}/>
+              <Info label="Total discount" value={`− ${formatMoney(discount)}`}/>
+              <Info label="GST (5%)" value={formatMoney(gst)}/>
+              <Info label="Delivery charge" value={formatMoney(delivery)}/>
               <div className="border-t pt-4">
-                <Info label="Final payable" value={`₹${finalPayable.toLocaleString('en-IN')}`}/>
+                <Info label="Final payable" value={formatMoney(finalPayable)}/>
               </div>
             </div>
           </Card>
@@ -1105,3 +1367,4 @@ export function QuotationCreate() {
 
 const Info=({label,value}:{label:string;value:string})=><div className="flex justify-between gap-3"><dt className="text-slate-500">{label}</dt><dd className="text-right font-bold text-slate-800">{value}</dd></div>;
 const Field=({label,value}:{label:string;value:string})=><label className="text-xs font-bold text-slate-500">{label}<input defaultValue={value} className="mt-2 h-10 w-full rounded-lg border bg-white px-3 text-sm font-medium text-slate-800 outline-none focus:border-emerald-500"/></label>;
+const EditableNumberField=({label,value,min,step,onChange}:{label:string;value:number;min:number;step:number;onChange:(value:string)=>void})=><label className="text-xs font-bold text-slate-500">{label}<input type="number" value={value} min={min} step={step} onChange={(event)=>onChange(event.target.value)} className="mt-2 h-10 w-full rounded-lg border bg-white px-3 text-sm font-medium text-slate-800 outline-none focus:border-emerald-500"/></label>;

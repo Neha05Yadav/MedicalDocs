@@ -47,6 +47,11 @@ export const notifications = [
 ];
 
 export const alternativeCatalog = [
+  { prescribed: "Azithromycin 500 mg", alternative: "Azithral 500 Tablet", brand: "Alembic Pharma", composition: "Azithromycin 500 mg", stock: 72, price: "₹18.00/tab", status: "In Stock" },
+  { prescribed: "Azithromycin 500 mg", alternative: "Azee 500 Tablet", brand: "Cipla", composition: "Azithromycin 500 mg", stock: 48, price: "₹20.50/tab", status: "In Stock" },
+  { prescribed: "Azithromycin 500 mg", alternative: "Zithrocin 500 Tablet", brand: "Pfizer", composition: "Azithromycin 500 mg", stock: 34, price: "₹23.00/tab", status: "In Stock" },
+  { prescribed: "Vitamin D3 60,000 IU", alternative: "Uprise-D3 60K Capsule", brand: "Alkem Labs", composition: "Cholecalciferol 60,000 IU", stock: 90, price: "₹32.00/cap", status: "In Stock" },
+  { prescribed: "Vitamin D3 60,000 IU", alternative: "D-Rise 60K Capsule", brand: "USV Pharma", composition: "Cholecalciferol 60,000 IU", stock: 65, price: "₹30.00/cap", status: "In Stock" },
   { prescribed: "Metformin SR 500 mg", alternative: "Glimet 500 SR", brand: "USV Pharma", composition: "Metformin Hydrochloride 500 mg", stock: 140, price: "₹7.50/tab", status: "In Stock" },
   { prescribed: "Metformin SR 500 mg", alternative: "Obimet 500 SR", brand: "Abbott Healthcare", composition: "Metformin 500 mg", stock: 85, price: "₹6.80/tab", status: "In Stock" },
   { prescribed: "Amoxicillin CV 625 mg", alternative: "Moxikind-CV 625 mg", brand: "Mankind Pharma", composition: "Amoxicillin + Clavulanic Acid 625 mg", stock: 110, price: "₹19.50/tab", status: "In Stock" },

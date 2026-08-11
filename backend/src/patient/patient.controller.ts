@@ -113,6 +113,11 @@ export class PatientController {
     return this.patientService.confirmPharmacyQuotation(req.user.email, id);
   }
 
+  @Post('pharmacy-quotations/:id/reject')
+  async rejectPharmacyQuotation(@Request() req: any, @Param('id') id: string) {
+    return this.patientService.rejectPharmacyQuotation(req.user.email, id);
+  }
+
   @Get('pharmacy-orders')
   async getPharmacyOrders(@Request() req: any) {
     return this.patientService.getPharmacyOrders(req.user.email);

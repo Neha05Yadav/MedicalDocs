@@ -80,7 +80,7 @@ export class PatientService {
   async getOverview(userEmail: string) {
     const cacheKey = `patient:overview:${userEmail}`;
     let patient = await this.db.queryOne(
-      'SELECT * FROM patient WHERE email = ?',
+      'SELECT * FROM patient WHERE LOWER(email) = LOWER(?) LIMIT 1',
       [userEmail],
     );
 
@@ -503,7 +503,7 @@ export class PatientService {
   async getProfile(userEmail: string) {
     const cacheKey = `patient:profile:${userEmail}`;
     let patient = await this.db.queryOne(
-      'SELECT * FROM patient WHERE email = ?',
+      'SELECT * FROM patient WHERE LOWER(email) = LOWER(?) LIMIT 1',
       [userEmail],
     );
     if (!patient) {
@@ -550,9 +550,6 @@ export class PatientService {
       }
     }
 
-    // Ensure address column exists on patient table defensively
-    await this.db.query('ALTER TABLE patient ADD COLUMN address TEXT NULL').catch(() => {});
-
     let patient = await this.db.queryOne(
       'SELECT * FROM patient WHERE email = ?',
       [userEmail],
@@ -567,7 +564,7 @@ export class PatientService {
     if (patient) {
       patient = await this.ensureFormattedPatientId(patient);
       await this.db.query(
-        'UPDATE patient SET name = ?, phone = ?, bloodGroup = ?, gender = ?, dateOfBirth = ?, address = ? WHERE id = ?',
+        'UPDATE patient SET name = ?, phone = ?, bloodGroup = ?, gender = ?, dateOfBirth = ?, address = ?, updatedAt = NOW(3) WHERE id = ?',
         [nameVal || patient.name, phoneVal, bloodGroupVal, genderVal, dob, addressVal, patient.id],
       );
       if (nameVal) {
@@ -611,7 +608,7 @@ export class PatientService {
     await this.redisService.del(`patient:profile:${userEmail}`);
     await this.redisService.del(`patient:overview:${userEmail}`);
 
-    return { success: true, patient };
+    return this.getProfile(userEmail);
   }
 
   async uploadProfileLogo(userEmail: string, file?: Express.Multer.File) {
@@ -960,7 +957,7 @@ export class PatientService {
   }
 
   async getNotifications(userEmail: string) {
-    const user = await this.db.queryOne('SELECT id FROM user WHERE email = ?', [
+    const user = await this.db.queryOne<any>('SELECT id FROM user WHERE email = ?', [
       userEmail,
     ]);
     if (!user) return [];
@@ -970,19 +967,36 @@ export class PatientService {
       [user.id],
     );
 
-    return notifications.map((n) => ({
+    const patient = await this.db.queryOne<any>('SELECT id FROM patient WHERE LOWER(email)=LOWER(?) LIMIT 1', [userEmail]);
+    const quotations = patient ? await this.db.query<any>(
+      `SELECT q.id, q.pharmacyId FROM pharmacy_quotation q
+       WHERE q.patientId=? AND q.status IN ('SENT','ACCEPTED')
+       ORDER BY q.createdAt DESC`,
+      [patient.id],
+    ) : [];
+
+    return notifications.map((n) => {
+      const storedUrl = String(n.actionUrl || '');
+      const isGenericQuotationUrl = n.type === 'PHARMACY_QUOTATION' && (!storedUrl || storedUrl.endsWith('viewQuotation=true'));
+      const matchingQuotation = isGenericQuotationUrl
+        ? quotations.find((quotation: any) => quotation.pharmacyId === n.hospitalId)
+        : null;
+      return {
       id: n.id,
       title: n.title,
       message: n.message,
       type: n.type,
-      actionUrl: n.actionUrl || '/patient/prescriptions?viewQuotation=true',
+      actionUrl: matchingQuotation
+        ? `/patient/prescriptions?viewQuotation=${encodeURIComponent(matchingQuotation.id)}`
+        : storedUrl || '/patient/prescriptions',
       time: new Date(n.createdAt).toLocaleDateString('en-GB', {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
       }),
       read: n.isRead ? true : false,
-    }));
+      };
+    });
   }
 
   async markNotificationAsRead(userEmail: string, id: string) {
@@ -999,146 +1013,74 @@ export class PatientService {
 
   async getNearbyPharmacies(location?: string) {
     const dbPharmacies = await this.db.query<any>(
-      `SELECT id, name, address, phone, status
-       FROM hospital
-       WHERE UPPER(type) = 'PHARMACY'
-         AND UPPER(COALESCE(status, '')) <> 'SUSPENDED'
-       ORDER BY isVerified DESC, name ASC`,
+      `SELECT h.id, h.name, h.address, h.phone, h.status, h.isVerified,
+              hp.pharmacyServiceAreas AS serviceAreas,
+              hp.openingTime, hp.closingTime
+       FROM hospital h
+       LEFT JOIN hospital_profile hp ON hp.hospitalId = h.id
+       WHERE UPPER(h.type) = 'PHARMACY'
+         AND UPPER(COALESCE(h.status, '')) <> 'SUSPENDED'
+       ORDER BY h.isVerified DESC, h.name ASC`,
     );
-
-    const defaultPharmacies = [
-      {
-        id: 'PHM00001',
-        name: 'WellCare Pharmacy',
-        address: 'Sector 18, Noida, Uttar Pradesh',
-        phone: '+91 98765 43021',
-        city: 'Noida',
-        zone: 'Sector 18',
-        status: 'ACTIVE',
-        isVerified: 1,
-        openStatus: 'Open',
-        rating: '4.8',
-        distance: '0.8 km'
-      },
-      {
-        id: 'PHM00002',
-        name: 'Apollo Pharmacy',
-        address: 'Ghitorni, MG Road, New Delhi',
-        phone: '+91 98112 34567',
-        city: 'New Delhi',
-        zone: 'Ghitorni',
-        status: 'ACTIVE',
-        isVerified: 1,
-        openStatus: 'Open',
-        rating: '4.9',
-        distance: '0.5 km'
-      },
-      {
-        id: 'PHM00003',
-        name: 'MedPlus Pharmacy',
-        address: 'Sector 62, Noida, Uttar Pradesh',
-        phone: '+91 98223 45678',
-        city: 'Noida',
-        zone: 'Sector 62',
-        status: 'ACTIVE',
-        isVerified: 1,
-        openStatus: 'Open',
-        rating: '4.7',
-        distance: '1.4 km'
-      },
-      {
-        id: 'PHM00004',
-        name: 'Guardian Pharmacy',
-        address: 'Connaught Place, Central Delhi',
-        phone: '+91 98334 56789',
-        city: 'Delhi',
-        zone: 'Connaught Place',
-        status: 'ACTIVE',
-        isVerified: 1,
-        openStatus: 'Open',
-        rating: '4.6',
-        distance: '2.1 km'
-      },
-      {
-        id: 'PHM00005',
-        name: 'HealthKart Pharmacy',
-        address: 'Cyber City, Phase 2, Gurgaon, Haryana',
-        phone: '+91 98445 67890',
-        city: 'Gurgaon',
-        zone: 'Cyber City',
-        status: 'ACTIVE',
-        isVerified: 1,
-        openStatus: 'Open',
-        rating: '4.8',
-        distance: '1.2 km'
-      },
-      {
-        id: 'PHM00006',
-        name: 'Frank Ross Pharmacy',
-        address: 'Park Street, Kolkata, West Bengal',
-        phone: '+91 98556 78901',
-        city: 'Kolkata',
-        zone: 'Park Street',
-        status: 'ACTIVE',
-        isVerified: 1,
-        openStatus: 'Open',
-        rating: '4.7',
-        distance: '1.9 km'
-      },
-      {
-        id: 'PHM00007',
-        name: 'Wellness Forever Pharmacy',
-        address: 'Bandra West, Mumbai, Maharashtra',
-        phone: '+91 98667 89012',
-        city: 'Mumbai',
-        zone: 'Bandra',
-        status: 'ACTIVE',
-        isVerified: 1,
-        openStatus: 'Open',
-        rating: '4.9',
-        distance: '0.9 km'
-      }
-    ];
-
-    const allPharmaciesMap = new Map<string, any>();
-    for (const def of defaultPharmacies) {
-      allPharmaciesMap.set(def.id, def);
-    }
-    for (const [index, row] of dbPharmacies.entries()) {
-      const existing = allPharmaciesMap.get(row.id);
-      allPharmaciesMap.set(row.id, {
+    const allPharmacies = dbPharmacies.map((row, index) => {
+      const now = new Date();
+      const indiaTimeParts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Kolkata',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+      }).formatToParts(now);
+      const currentHour = Number(indiaTimeParts.find((part) => part.type === 'hour')?.value || 0);
+      const currentMinute = Number(indiaTimeParts.find((part) => part.type === 'minute')?.value || 0);
+      const currentMinutes = currentHour * 60 + currentMinute;
+      const toMinutes = (value: unknown) => {
+        const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
+        if (!match) return null;
+        let hour = Number(match[1]);
+        const minute = Number(match[2]);
+        const period = match[3]?.toUpperCase();
+        if (hour > 23 || minute > 59 || (period && hour > 12)) return null;
+        if (period === 'AM' && hour === 12) hour = 0;
+        if (period === 'PM' && hour < 12) hour += 12;
+        return hour * 60 + minute;
+      };
+      const opensAt = toMinutes(row.openingTime);
+      const closesAt = toMinutes(row.closingTime);
+      const isOpen = opensAt == null || closesAt == null ||
+        (opensAt <= closesAt
+          ? currentMinutes >= opensAt && currentMinutes <= closesAt
+          : currentMinutes >= opensAt || currentMinutes <= closesAt);
+      return {
         id: row.id,
-        name: row.name || existing?.name || 'Registered Pharmacy',
-        address: (row.address && row.address.trim()) ? row.address : (existing?.address || 'Sector 18, Noida, Uttar Pradesh'),
-        phone: row.phone || existing?.phone || '+91 98765 43021',
-        city: existing?.city || 'Noida',
-        zone: existing?.zone || 'Sector 18',
+        name: row.name || 'Registered Pharmacy',
+        address: String(row.address || '').trim(),
+        phone: String(row.phone || '').trim(),
+        serviceAreas: String(row.serviceAreas || '').trim(),
         status: row.status || 'ACTIVE',
         distance: `${(0.8 + index * 0.7).toFixed(1)} km`,
         rating: (4.8 - Math.min(index, 4) * 0.1).toFixed(1),
-        openStatus: 'Open',
-      });
-    }
-
-    const allPharmacies = Array.from(allPharmaciesMap.values());
-    const searchLocation = location?.trim().toLowerCase();
+        openStatus: isOpen ? 'Open' : 'Closed',
+      };
+    });
+    const normalizeSearchText = (value: unknown) => String(value || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+      .replace(/\s+/g, ' ');
+    const searchLocation = normalizeSearchText(location);
     if (!searchLocation) {
       return allPharmacies;
     }
 
+    const searchTokens = searchLocation.split(' ').filter(Boolean);
     return allPharmacies.filter((pharmacy) => {
-      const address = String(pharmacy.address || '').toLowerCase();
-      const name = String(pharmacy.name || '').toLowerCase();
-      const city = String(pharmacy.city || '').toLowerCase();
-      const zone = String(pharmacy.zone || '').toLowerCase();
-      const id = String(pharmacy.id || '').toLowerCase();
-      return (
-        address.includes(searchLocation) ||
-        name.includes(searchLocation) ||
-        city.includes(searchLocation) ||
-        zone.includes(searchLocation) ||
-        id.includes(searchLocation)
-      );
+      const searchableText = normalizeSearchText([
+        pharmacy.address,
+        pharmacy.name,
+        pharmacy.serviceAreas,
+        pharmacy.id,
+      ].filter(Boolean).join(' '));
+      return searchTokens.every((token) => searchableText.includes(token));
     });
   }
 
@@ -1151,28 +1093,6 @@ export class PatientService {
     const pharmacyIds = [...new Set((Array.isArray(data.pharmacyIds) ? data.pharmacyIds : []).map((id: any) => String(id).trim()).filter(Boolean))];
     if (!data.prescriptionReference || !data.deliveryAddress || pharmacyIds.length === 0) {
       throw new BadRequestException('Prescription, delivery location and pharmacy IDs are required.');
-    }
-
-    const defaultCatalog = [
-      { id: 'PHM00001', name: 'WellCare Pharmacy', address: 'Sector 18, Noida, Uttar Pradesh', phone: '+91 98765 43021' },
-      { id: 'PHM00002', name: 'Apollo Pharmacy', address: 'Ghitorni, MG Road, New Delhi', phone: '+91 98112 34567' },
-      { id: 'PHM00003', name: 'MedPlus Pharmacy', address: 'Sector 62, Noida, Uttar Pradesh', phone: '+91 98223 45678' },
-      { id: 'PHM00004', name: 'Guardian Pharmacy', address: 'Connaught Place, Central Delhi', phone: '+91 98334 56789' },
-      { id: 'PHM00005', name: 'HealthKart Pharmacy', address: 'Cyber City, Phase 2, Gurgaon, Haryana', phone: '+91 98445 67890' },
-      { id: 'PHM00006', name: 'Frank Ross Pharmacy', address: 'Park Street, Kolkata, West Bengal', phone: '+91 98556 78901' },
-      { id: 'PHM00007', name: 'Wellness Forever Pharmacy', address: 'Bandra West, Mumbai, Maharashtra', phone: '+91 98667 89012' }
-    ];
-
-    for (const pid of pharmacyIds) {
-      const match = defaultCatalog.find(p => p.id === pid);
-      if (match) {
-        await this.db.query(
-          `INSERT INTO hospital (id, name, address, phone, type, status, isVerified, createdAt, updatedAt)
-           VALUES (?, ?, ?, ?, 'PHARMACY', 'ACTIVE', 1, NOW(3), NOW(3))
-           ON DUPLICATE KEY UPDATE name=VALUES(name)`,
-          [match.id, match.name, match.address, match.phone]
-        );
-      }
     }
 
     const placeholders = pharmacyIds.map(() => '?').join(',');
@@ -1229,7 +1149,25 @@ export class PatientService {
   async getPharmacyQuotations(userEmail: string) {
     const patient = await this.db.queryOne<any>('SELECT id FROM patient WHERE LOWER(email)=LOWER(?) LIMIT 1', [userEmail]);
     if (!patient) throw new NotFoundException('Patient profile not found.');
-    return this.db.query(`SELECT q.*, h.name AS pharmacyName, h.id AS pharmacyId, r.prescriptionReference FROM pharmacy_quotation q JOIN hospital h ON h.id=q.pharmacyId JOIN pharmacy_prescription_request r ON r.id=q.requestId WHERE q.patientId=? AND q.status IN ('SENT','ACCEPTED') ORDER BY q.totalAmount ASC, q.createdAt DESC`, [patient.id]);
+    const rows = await this.db.query<any>(
+      `SELECT q.*, h.name AS pharmacyName, h.id AS pharmacyId, r.prescriptionReference,
+              EXISTS(
+                SELECT 1 FROM pharmacy_quotation accepted
+                WHERE accepted.requestGroupId=q.requestGroupId AND accepted.status='ACCEPTED'
+              ) AS groupHasAccepted,
+              (q.status='ACCEPTED') AS isSelected
+       FROM pharmacy_quotation q
+       JOIN hospital h ON h.id=q.pharmacyId
+       JOIN pharmacy_prescription_request r ON r.id=q.requestId
+       WHERE q.patientId=? AND q.status IN ('SENT','ACCEPTED','REJECTED')
+       ORDER BY q.createdAt DESC, q.totalAmount ASC`,
+      [patient.id],
+    );
+    return rows.map((row) => ({
+      ...row,
+      rawPrescriptionReference: row.prescriptionReference,
+      prescriptionReference: formatPrescriptionId(row.prescriptionReference),
+    }));
   }
 
   async confirmPharmacyQuotation(userEmail: string, quotationId: string) {
@@ -1241,6 +1179,14 @@ export class PatientService {
       const [rows]: any = await connection.execute('SELECT * FROM pharmacy_quotation WHERE id=? AND patientId=? AND status=? FOR UPDATE', [quotationId, patient.id, 'SENT']);
       const quotation = rows[0];
       if (!quotation) throw new BadRequestException('Quotation is unavailable or already processed.');
+      const [acceptedRows]: any = await connection.execute(
+        `SELECT id FROM pharmacy_quotation
+         WHERE requestGroupId=? AND status='ACCEPTED' LIMIT 1 FOR UPDATE`,
+        [quotation.requestGroupId],
+      );
+      if (acceptedRows[0]) {
+        throw new BadRequestException('A pharmacy has already been selected for this request. Reject the remaining quotations individually.');
+      }
       const items = typeof quotation.itemsJson === 'string' ? JSON.parse(quotation.itemsJson) : quotation.itemsJson;
       for (const item of Array.isArray(items) ? items : []) {
         if (!item.inventoryItemId || item.available === false) continue;
@@ -1249,8 +1195,17 @@ export class PatientService {
       }
       const orderId = `ORD-${Date.now()}`;
       await connection.execute(`INSERT INTO pharmacy_order (id,quotationId,requestGroupId,patientId,pharmacyId,totalAmount,status,createdAt,updatedAt) VALUES (?,?,?,?,?,?,'CONFIRMED',NOW(3),NOW(3))`, [orderId, quotation.id, quotation.requestGroupId, patient.id, quotation.pharmacyId, quotation.totalAmount]);
-      await connection.execute(`UPDATE pharmacy_quotation SET status=CASE WHEN id=? THEN 'ACCEPTED' ELSE 'REJECTED' END,updatedAt=NOW(3) WHERE requestGroupId=? AND status='SENT'`, [quotation.id, quotation.requestGroupId]);
-      await connection.execute(`UPDATE pharmacy_prescription_request SET status=CASE WHEN pharmacyId=? THEN 'ACCEPTED' ELSE 'CLOSED' END,updatedAt=NOW(3) WHERE requestGroupId=?`, [quotation.pharmacyId, quotation.requestGroupId]);
+      // Accept only the selected pharmacy. Other quotations stay pending until
+      // the patient explicitly rejects them, so every pharmacy gets a clear response.
+      await connection.execute(
+        `UPDATE pharmacy_quotation SET status='ACCEPTED', updatedAt=NOW(3) WHERE id=?`,
+        [quotation.id],
+      );
+      await connection.execute(
+        `UPDATE pharmacy_prescription_request SET status='ACCEPTED', updatedAt=NOW(3)
+         WHERE id=? AND pharmacyId=?`,
+        [quotation.requestId, quotation.pharmacyId],
+      );
 
       // Notify Pharmacy of Order Confirmation
       const [pharmacyUserRows]: any = await connection.execute(
@@ -1273,6 +1228,57 @@ export class PatientService {
 
       await connection.commit();
       return { orderId, status: 'CONFIRMED', pharmacyId: quotation.pharmacyId };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  async rejectPharmacyQuotation(userEmail: string, quotationId: string) {
+    const patient = await this.db.queryOne<any>(
+      'SELECT id, name FROM patient WHERE LOWER(email)=LOWER(?) LIMIT 1',
+      [userEmail],
+    );
+    if (!patient) throw new NotFoundException('Patient profile not found.');
+
+    const connection = await this.db.getPool().getConnection();
+    try {
+      await connection.beginTransaction();
+      const [rows]: any = await connection.execute(
+        `SELECT q.id, q.pharmacyId, q.requestId, h.name AS pharmacyName
+         FROM pharmacy_quotation q
+         JOIN hospital h ON h.id=q.pharmacyId
+         WHERE q.id=? AND q.patientId=? AND q.status='SENT' FOR UPDATE`,
+        [quotationId, patient.id],
+      );
+      const quotation = rows[0];
+      if (!quotation) throw new BadRequestException('Quotation is unavailable or already processed.');
+
+      await connection.execute(
+        `UPDATE pharmacy_quotation SET status='REJECTED', updatedAt=NOW(3) WHERE id=?`,
+        [quotation.id],
+      );
+      await connection.execute(
+        `UPDATE pharmacy_prescription_request SET status='REJECTED', updatedAt=NOW(3)
+         WHERE id=? AND pharmacyId=?`,
+        [quotation.requestId, quotation.pharmacyId],
+      );
+      const [pharmacyUsers]: any = await connection.execute(
+        'SELECT id FROM user WHERE hospitalId=? ORDER BY createdAt ASC LIMIT 1',
+        [quotation.pharmacyId],
+      );
+      if (pharmacyUsers[0]?.id) {
+        await connection.execute(
+          `INSERT INTO notification
+           (id, userId, hospitalId, type, title, message, isRead, actionRequired, actionUrl, severity, createdAt, updatedAt)
+           VALUES (?, ?, ?, 'QUOTATION_REJECTED', 'Quotation Rejected', ?, false, false, '/pharmacy/quotations', 'Medium', NOW(3), NOW(3))`,
+          [uuidv4(), pharmacyUsers[0].id, quotation.pharmacyId, `${patient.name || 'Patient'} rejected quotation ${quotation.id}.`],
+        );
+      }
+      await connection.commit();
+      return { quotationId: quotation.id, status: 'REJECTED' };
     } catch (error) {
       await connection.rollback();
       throw error;

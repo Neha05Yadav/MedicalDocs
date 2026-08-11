@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { MysqlService } from '../mysql.service';
 import { v4 as uuidv4 } from 'uuid';
+import { formatPrescriptionId } from '../prescription-id';
 
 @Injectable()
 export class PharmacyService {
@@ -8,7 +9,7 @@ export class PharmacyService {
 
   private async getPharmacy(userEmail: string) {
     const pharmacy = await this.db.queryOne<any>(
-      `SELECT h.id, h.name
+      `SELECT h.id, h.name, u.id AS userId
        FROM user u
        JOIN hospital h ON h.id = u.hospitalId
        WHERE LOWER(u.email) = LOWER(?) AND UPPER(h.type) = 'PHARMACY'
@@ -22,7 +23,7 @@ export class PharmacyService {
   async getPrescriptionRequests(userEmail: string) {
     const pharmacy = await this.getPharmacy(userEmail);
 
-    return this.db.query(
+    const requests = await this.db.query<any>(
       `SELECT r.id, r.requestGroupId, r.prescriptionReference AS prescription,
               COALESCE(NULLIF(TRIM(p.address), ''), NULLIF(TRIM(r.deliveryAddress), ''), 'Address on record') AS location,
               r.requestNote, r.status,
@@ -42,6 +43,11 @@ export class PharmacyService {
        ORDER BY r.createdAt DESC`,
       [pharmacy.id],
     );
+    return requests.map((request) => ({
+      ...request,
+      prescriptionReference: request.prescription,
+      prescription: formatPrescriptionId(request.prescription),
+    }));
   }
 
   async getPrescriptionRequest(userEmail: string, id: string) {
@@ -53,7 +59,8 @@ export class PharmacyService {
               COALESCE(NULLIF(TRIM(d.name), ''), NULLIF(TRIM(mr.description), ''), 'Prescribing Doctor') AS doctorName,
               COALESCE(NULLIF(TRIM(fac.name), ''), NULLIF(TRIM(mrh.name), ''), 'Healthcare Facility') AS facilityName,
               COALESCE(fac.type, mrh.type, 'HOSPITAL') AS facilityType,
-              rx.id AS prescriptionId, COALESCE(rx.medicinesJson, mr.fileUrl) AS medicinesJson,
+              rx.id AS prescriptionId, rx.medicine, rx.dosage, rx.duration,
+              mr.fileUrl AS prescriptionFileUrl,
               q.id AS quotationId, q.status AS quotationStatus
        FROM pharmacy_prescription_request r
        JOIN patient p ON p.id = r.patientId
@@ -68,27 +75,29 @@ export class PharmacyService {
       [id, id, pharmacy.id],
     );
     if (!request) throw new NotFoundException('Prescription request not found.');
-    return request;
+    return {
+      ...request,
+      prescriptionDisplayId: formatPrescriptionId(request.prescriptionReference),
+    };
   }
 
   async saveQuotation(userEmail: string, requestId: string, data: any) {
     const pharmacy = await this.getPharmacy(userEmail);
-    let request = await this.db.queryOne<any>(
+    const request = await this.db.queryOne<any>(
       'SELECT * FROM pharmacy_prescription_request WHERE (id = ? OR requestGroupId = ?) AND pharmacyId = ? LIMIT 1',
       [requestId, requestId, pharmacy.id],
     );
-    if (!request) {
-      request = await this.db.queryOne<any>(
-        'SELECT * FROM pharmacy_prescription_request WHERE pharmacyId = ? ORDER BY createdAt DESC LIMIT 1',
-        [pharmacy.id],
-      );
-    }
     if (!request) throw new NotFoundException('Prescription request not found.');
     const items = Array.isArray(data.items) ? data.items : [];
     if (!items.length) throw new BadRequestException('At least one medicine is required.');
     const normalizedItems = items.map((item: any) => ({
       inventoryItemId: item.inventoryItemId || null,
+      prescribedMedicineName: String(item.prescribedMedicineName || item.medicineName || '').trim(),
       medicineName: String(item.medicineName || '').trim(),
+      isAlternative: Boolean(item.isAlternative),
+      alternativeName: item.isAlternative ? String(item.alternativeName || item.medicineName || '').trim() : null,
+      alternativeBrand: item.isAlternative ? String(item.alternativeBrand || '').trim() : null,
+      alternativeComposition: item.isAlternative ? String(item.alternativeComposition || '').trim() : null,
       quantity: Math.max(1, Number(item.quantity || 1)),
       unitPrice: Math.max(0, Number(item.unitPrice || 0)),
       available: item.available !== false,
@@ -120,7 +129,7 @@ export class PharmacyService {
         const patientUsers = await this.db.query<any>(
           `SELECT u.id FROM user u
            LEFT JOIN patient p ON LOWER(p.email) = LOWER(u.email)
-           WHERE p.id = ? OR LOWER(u.role) = 'patient'`,
+           WHERE p.id = ?`,
           [request.patientId],
         );
         const formattedAmount = `₹${total.toLocaleString('en-IN')}`;
@@ -132,8 +141,8 @@ export class PharmacyService {
           const notifId = uuidv4();
           await this.db.query(
             `INSERT INTO notification (id, userId, hospitalId, type, title, message, isRead, actionRequired, actionUrl, severity, createdAt, updatedAt)
-             VALUES (?, ?, ?, 'PHARMACY_QUOTATION', ?, ?, false, true, '/patient/prescriptions?viewQuotation=true', 'Low', NOW(3), NOW(3))`,
-            [notifId, u.id, pharmacy.id, notifTitle, notifMessage],
+             VALUES (?, ?, ?, 'PHARMACY_QUOTATION', ?, ?, false, true, ?, 'Low', NOW(3), NOW(3))`,
+            [notifId, u.id, pharmacy.id, notifTitle, notifMessage, `/patient/prescriptions?viewQuotation=${encodeURIComponent(id)}`],
           );
         }
       } catch (err) {
@@ -145,12 +154,35 @@ export class PharmacyService {
 
   async getQuotations(userEmail: string) {
     const pharmacy = await this.getPharmacy(userEmail);
-    return this.db.query(`SELECT q.*, p.name AS patient, r.prescriptionReference AS prescription FROM pharmacy_quotation q JOIN patient p ON p.id=q.patientId JOIN pharmacy_prescription_request r ON r.id=q.requestId WHERE q.pharmacyId=? ORDER BY q.createdAt DESC`, [pharmacy.id]);
+    const rows = await this.db.query<any>(`SELECT q.*, p.name AS patient, r.prescriptionReference AS prescription FROM pharmacy_quotation q JOIN patient p ON p.id=q.patientId JOIN pharmacy_prescription_request r ON r.id=q.requestId WHERE q.pharmacyId=? ORDER BY q.createdAt DESC`, [pharmacy.id]);
+    return rows.map((row) => ({
+      ...row,
+      rawPrescriptionReference: row.prescription,
+      prescription: formatPrescriptionId(row.prescription),
+    }));
   }
 
   async getOrders(userEmail: string) {
     const pharmacy = await this.getPharmacy(userEmail);
-    return this.db.query(`SELECT o.*, p.name AS patient, q.itemsJson, r.prescriptionReference AS prescription FROM pharmacy_order o JOIN patient p ON p.id=o.patientId JOIN pharmacy_quotation q ON q.id=o.quotationId JOIN pharmacy_prescription_request r ON r.id=q.requestId WHERE o.pharmacyId=? ORDER BY o.createdAt DESC`, [pharmacy.id]);
+    const rows = await this.db.query<any>(
+      `SELECT o.*, p.name AS patient, p.phone AS patientPhone, p.address AS patientAddress,
+              q.itemsJson, q.subtotal, q.discountAmount, q.taxAmount, q.deliveryCharge,
+              q.notes AS pharmacyNotes, q.validUntil, q.requestGroupId,
+              r.prescriptionReference AS prescription, r.deliveryAddress, r.requestNote,
+              h.name AS pharmacyName
+       FROM pharmacy_order o
+       JOIN patient p ON p.id=o.patientId
+       JOIN pharmacy_quotation q ON q.id=o.quotationId
+       JOIN pharmacy_prescription_request r ON r.id=q.requestId
+       JOIN hospital h ON h.id=o.pharmacyId
+       WHERE o.pharmacyId=? ORDER BY o.createdAt DESC`,
+      [pharmacy.id],
+    );
+    return rows.map((row) => ({
+      ...row,
+      rawPrescriptionReference: row.prescription,
+      prescription: formatPrescriptionId(row.prescription),
+    }));
   }
 
   async updateOrderStatus(userEmail: string, id: string, rawStatus: string) {
@@ -176,13 +208,78 @@ export class PharmacyService {
     return { id };
   }
 
+  async getProfile(userEmail: string) {
+    const pharmacy = await this.getPharmacy(userEmail);
+    const profile = await this.db.queryOne<any>(
+      `SELECT h.id AS pharmacyId, h.name AS pharmacyName, h.email,
+              h.phone AS contact, h.address, h.licenseNumber,
+              hp.pharmacyOwnerName AS ownerName,
+              hp.pharmacyGstNumber AS gstNumber,
+              hp.pharmacyServiceAreas AS serviceAreas,
+              hp.pharmacyDeliveryRadius AS deliveryRadius,
+              hp.openingTime, hp.closingTime,
+              hp.pharmacyMinimumOrder AS minimumOrder,
+              hp.pharmacyHomeDelivery AS homeDelivery,
+              hp.pharmacyStorePickup AS storePickup
+       FROM hospital h
+       LEFT JOIN hospital_profile hp ON hp.hospitalId = h.id
+       WHERE h.id = ? LIMIT 1`,
+      [pharmacy.id],
+    );
+    if (!profile) throw new NotFoundException('Pharmacy profile not found.');
+    return profile;
+  }
+
+  async updateProfile(userEmail: string, data: any) {
+    const pharmacy = await this.getPharmacy(userEmail);
+    const pharmacyName = String(data.pharmacyName || '').trim();
+    if (!pharmacyName) throw new BadRequestException('Pharmacy name is required.');
+    const minimumOrder = data.minimumOrder === '' || data.minimumOrder == null
+      ? null
+      : Math.max(0, Number(data.minimumOrder));
+    const connection = await this.db.getPool().getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.execute(
+        `UPDATE hospital SET name=?, phone=?, address=?, licenseNumber=?, updatedAt=NOW(3)
+         WHERE id=? AND UPPER(type)='PHARMACY'`,
+        [pharmacyName, String(data.contact || '').trim(), String(data.address || '').trim(), String(data.licenseNumber || '').trim() || null, pharmacy.id],
+      );
+      await connection.execute(
+        `INSERT INTO hospital_profile
+         (id, hospitalId, pharmacyOwnerName, pharmacyGstNumber,
+          pharmacyServiceAreas, pharmacyDeliveryRadius, openingTime, closingTime,
+          pharmacyMinimumOrder, pharmacyHomeDelivery, pharmacyStorePickup,
+          createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
+         ON DUPLICATE KEY UPDATE
+          pharmacyOwnerName=VALUES(pharmacyOwnerName),
+          pharmacyGstNumber=VALUES(pharmacyGstNumber),
+          pharmacyServiceAreas=VALUES(pharmacyServiceAreas),
+          pharmacyDeliveryRadius=VALUES(pharmacyDeliveryRadius),
+          openingTime=VALUES(openingTime), closingTime=VALUES(closingTime),
+          pharmacyMinimumOrder=VALUES(pharmacyMinimumOrder),
+          pharmacyHomeDelivery=VALUES(pharmacyHomeDelivery),
+          pharmacyStorePickup=VALUES(pharmacyStorePickup), updatedAt=NOW(3)`,
+        [uuidv4(), pharmacy.id, String(data.ownerName || '').trim() || null, String(data.gstNumber || '').trim() || null, String(data.serviceAreas || '').trim() || null, String(data.deliveryRadius || '').trim() || null, String(data.openingTime || '').trim() || null, String(data.closingTime || '').trim() || null, minimumOrder, Boolean(data.homeDelivery), Boolean(data.storePickup)],
+      );
+      await connection.commit();
+      return this.getProfile(userEmail);
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
   async getNotifications(userEmail: string) {
     const pharmacy = await this.getPharmacy(userEmail);
     const notifications = await this.db.query<any>(
       `SELECT * FROM notification
-       WHERE hospitalId = ? OR userId = ?
+       WHERE userId = ?
        ORDER BY createdAt DESC`,
-      [pharmacy.id, (pharmacy as any).userId || ''],
+      [pharmacy.userId],
     );
     return notifications.map((n) => ({
       id: n.id,
@@ -197,5 +294,25 @@ export class PharmacyService {
       }),
       read: Boolean(n.isRead),
     }));
+  }
+
+  async markNotificationRead(userEmail: string, id: string) {
+    const pharmacy = await this.getPharmacy(userEmail);
+    const result: any = await this.db.query(
+      `UPDATE notification SET isRead=1, updatedAt=NOW(3)
+       WHERE id=? AND userId=?`,
+      [id, pharmacy.userId],
+    );
+    if (!Number(result?.affectedRows || 0)) throw new NotFoundException('Notification not found.');
+    return { id, read: true };
+  }
+
+  async markAllNotificationsRead(userEmail: string) {
+    const pharmacy = await this.getPharmacy(userEmail);
+    await this.db.query(
+      'UPDATE notification SET isRead=1, updatedAt=NOW(3) WHERE userId=? AND isRead=0',
+      [pharmacy.userId],
+    );
+    return { read: true };
   }
 }

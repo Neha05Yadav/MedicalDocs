@@ -101,12 +101,13 @@ export default function DashboardHeaderClient() {
         if (isHospital) endpoint = "/api/hospital/notifications";
         else if (isClinic) endpoint = "/api/clinic/notifications";
         else if (isLaboratory) endpoint = "/api/laboratory/notifications";
+        else if (isPharmacy) endpoint = "/api/pharmacy/notifications";
         else if (isSupport) endpoint = "/api/support-tickets/notifications";
         else if (isSuperAdmin) endpoint = "/api/management/super-admin/notifications";
         else if (isSales) endpoint = "/api/management/sales/notifications";
         else if (isAccounts) endpoint = "/api/management/accounts/notifications";
         else if (isAdmin) endpoint = "/api/management/admin/notifications";
-        else if (!isPharmacy) {
+        else {
           endpoint = "/api/patient/notifications";
         }
 

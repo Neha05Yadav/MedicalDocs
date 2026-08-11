@@ -55,6 +55,14 @@ const ROLE_OPTIONS = [
   { value: "PHARMACY", label: "Pharmacy", icon: Pill },
 ] as const;
 
+const ROLE_NAME_FIELD: Record<string, { label: string; placeholder: string; autoComplete: string }> = {
+  PATIENT: { label: "Full Name", placeholder: "Enter your full name", autoComplete: "name" },
+  HOSPITAL: { label: "Hospital Name", placeholder: "Enter hospital name", autoComplete: "organization" },
+  LAB: { label: "Laboratory Name", placeholder: "Enter laboratory name", autoComplete: "organization" },
+  CLINIC: { label: "Clinic Name", placeholder: "Enter clinic name", autoComplete: "organization" },
+  PHARMACY: { label: "Pharmacy Name", placeholder: "Enter pharmacy name", autoComplete: "organization" },
+};
+
 function SignupForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -64,6 +72,7 @@ function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const nameField = ROLE_NAME_FIELD[role] ?? ROLE_NAME_FIELD.PATIENT;
 
   useEffect(() => {
     const queryRole = searchParams.get("role")?.toUpperCase();
@@ -155,7 +164,7 @@ function SignupForm() {
             </fieldset>
 
             <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="Full name" icon={UserRound}><input type="text" value={name} onChange={(event) => setName(event.target.value)} className={styles.input} placeholder="Your full name" autoComplete="name" required /></Field>
+              <Field label={nameField.label} icon={UserRound}><input type="text" value={name} onChange={(event) => setName(event.target.value)} className={styles.input} placeholder={nameField.placeholder} autoComplete={nameField.autoComplete} required /></Field>
               <Field label="Email address" icon={Mail}><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={styles.input} placeholder="you@example.com" autoComplete="email" required /></Field>
             </div>
             <Field label="Password" icon={LockKeyhole}>

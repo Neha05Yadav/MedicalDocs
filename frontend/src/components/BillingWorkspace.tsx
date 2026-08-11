@@ -240,7 +240,6 @@ function InvoiceList({ invoices, patient = false, onPaid }: { invoices: Invoice[
         <div className="mt-4 flex flex-wrap gap-2">
           <a href={`/api/care/documents/INVOICE/${invoice.id}/pdf`} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700"><Download className="size-4" /> Download verified PDF</a>
           {typeof navigator !== "undefined" && <a href={`https://wa.me/?text=${encodeURIComponent(`MedicalDocs invoice ${invoice.invoiceNo}: ${window.location.origin}/patient/billing`)}`} target="_blank" rel="noreferrer" className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700">Share on WhatsApp</a>}
-          {typeof navigator !== "undefined" && <a href={`mailto:?subject=${encodeURIComponent(`MedicalDocs invoice ${invoice.invoiceNo}`)}&body=${encodeURIComponent(`Your invoice is available at ${window.location.origin}/patient/billing`)}`} className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700">Share by email</a>}
           {!patient && invoice.status !== "PAID" && onPaid && <button onClick={() => onPaid(invoice.id)} className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white"><CheckCircle2 className="size-4" /> Mark fully paid</button>}
         </div>
       </div>}
