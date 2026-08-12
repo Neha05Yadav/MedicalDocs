@@ -12,17 +12,35 @@ if (typeof window !== "undefined") {
   if (!guardedWindow.__medicalDocsFetchWrapped) {
     guardedWindow.__medicalDocsFetchWrapped = true;
     const originalFetch = window.fetch.bind(window);
+    const pendingGets = new Map<string, Promise<Response>>();
     window.fetch = async (...args) => {
-      const res = await originalFetch(...args);
-      if (res.status === 401 && !window.location.pathname.includes("/login") && !window.location.pathname.includes("/auth")) {
-        const payload = await res.clone().json().catch(() => ({}));
-        const message = String(payload?.message || '');
-        const token = localStorage.getItem("token");
-        const isSessionFailure = !token || message === 'Unauthorized' || message === 'Management login required.';
-        if (isSessionFailure) {
-          localStorage.removeItem("token");
-          window.location.href = `/auth?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+      const [input, init] = args;
+      const request = input instanceof Request ? input : null;
+      const method = String(init?.method || request?.method || "GET").toUpperCase();
+      const url = request?.url || String(input);
+      const headers = new Headers(init?.headers || request?.headers);
+      const dedupeKey = method === "GET"
+        ? `${url}|${headers.get("authorization") || ""}`
+        : "";
+
+      let res: Response;
+      if (dedupeKey) {
+        let pending = pendingGets.get(dedupeKey);
+        if (!pending) {
+          pending = originalFetch(...args).finally(() => pendingGets.delete(dedupeKey));
+          pendingGets.set(dedupeKey, pending);
         }
+        // Every consumer needs its own body stream even when one network request
+        // satisfies multiple components mounting during the same route change.
+        res = (await pending).clone();
+      } else {
+        res = await originalFetch(...args);
+      }
+      if (res.status === 401 && !window.location.pathname.includes("/login") && !window.location.pathname.includes("/auth")) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        window.location.href = `/auth?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`;
       }
       return res;
     };

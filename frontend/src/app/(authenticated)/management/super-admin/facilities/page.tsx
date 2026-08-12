@@ -45,7 +45,7 @@ export default function FacilityManagementPage() {
 
   const fetchFacilities = async () => {
     try {
-      const res = await fetch('/api/management/super-admin/facilities');
+      const res = await fetch('/api/management/super-admin/facilities', { cache: 'no-store' });
       const data = await res.json();
       if (Array.isArray(data)) {
         setFacilities(data);
@@ -153,7 +153,8 @@ export default function FacilityManagementPage() {
   };
 
   const handleToggleStatus = async (facilityId: string, currentStatus: string) => {
-    const newStatus = currentStatus === "Active" ? "Suspended" : "Active";
+    const normalizedStatus = String(currentStatus || '').trim().toUpperCase();
+    const newStatus = normalizedStatus === "SUSPENDED" || normalizedStatus === "INACTIVE" ? "Active" : "Suspended";
     const previous = [...facilities];
     
     // Optimistic Update
@@ -192,12 +193,31 @@ export default function FacilityManagementPage() {
   };
 
   const filteredFacilities = facilities.filter(facility => {
-    let matchesTab = true;
-    if (activeTab === "Hospitals") matchesTab = facility.type === "Hospital";
-    else if (activeTab === "Labs") matchesTab = facility.type === "Labs";
-    else if (activeTab === "Pharmacies") matchesTab = facility.type === "Pharmacy" || facility.type === "PHARMACY";
-    else if (activeTab === "Pending Approvals") matchesTab = facility.status === "Pending";
-    else if (activeTab === "Suspended") matchesTab = facility.status === "Suspended" || facility.status === "Inactive";
+    const facilityType = String(facility.type || '').trim().toUpperCase();
+    const facilityStatus = String(facility.status || '').trim().toUpperCase();
+    let matchesTab: boolean;
+
+    switch (activeTab) {
+      case "Hospitals":
+        matchesTab = facilityType === "HOSPITAL";
+        break;
+      case "Labs":
+        matchesTab = facilityType === "LAB" || facilityType === "LABS" || facilityType === "LABORATORY";
+        break;
+      case "Pharmacies":
+        matchesTab = facilityType === "PHARMACY";
+        break;
+      case "Pending Approvals":
+        matchesTab = facilityStatus === "PENDING";
+        break;
+      case "Suspended":
+        matchesTab = facilityStatus === "SUSPENDED" || facilityStatus === "INACTIVE";
+        break;
+      case "All Facilities":
+      default:
+        matchesTab = true;
+        break;
+    }
     
     const matchesSearch = (facility.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) || 
                           (facility.email?.toLowerCase() || "").includes(searchTerm.toLowerCase());
@@ -315,7 +335,7 @@ export default function FacilityManagementPage() {
                     >
                       <Eye className="size-4" />
                     </button>
-                    {facility.status === 'Pending' ? (
+                    {facility.status === 'Pending' && (
                       <>
                         <button 
                           onClick={() => handleApproveReject(facility.id, 'Active')}
@@ -332,11 +352,13 @@ export default function FacilityManagementPage() {
                           <X className="size-4" />
                         </button>
                       </>
-                    ) : (
+                    )}
+                    {(facility.status !== 'Pending' || String(facility.type).trim().toUpperCase() === 'PHARMACY') && (
                       <button 
                         onClick={() => handleToggleStatus(facility.id, facility.status)}
-                        className={`grid size-8 shrink-0 place-items-center rounded-lg transition-colors ${facility.status === 'Active' ? 'text-amber-500 hover:bg-amber-50' : 'text-emerald-500 hover:bg-emerald-50'}`}
-                        title={facility.status === 'Active' ? 'Suspend' : 'Activate'}
+                        className={`grid size-8 shrink-0 place-items-center rounded-lg transition-colors ${facility.status === 'Suspended' || facility.status === 'Inactive' ? 'text-emerald-500 hover:bg-emerald-50' : 'text-amber-500 hover:bg-amber-50'}`}
+                        title={facility.status === 'Suspended' || facility.status === 'Inactive' ? 'Restore Facility Access' : 'Suspend Facility Access'}
+                        aria-label={facility.status === 'Suspended' || facility.status === 'Inactive' ? 'Restore facility access' : 'Suspend facility access'}
                       >
                         <Power className="size-4" />
                       </button>

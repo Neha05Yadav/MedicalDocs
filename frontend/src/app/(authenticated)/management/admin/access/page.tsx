@@ -95,6 +95,7 @@ export default function AccessManagementPage() {
     if (activeFilter === "All") return true;
     if (activeFilter === "Hospitals") return user.role?.toUpperCase().includes("HOSPITAL") || user.role?.toUpperCase().includes("CLINIC");
     if (activeFilter === "Labs") return user.role?.toUpperCase().includes("LAB");
+    if (activeFilter === "Pharmacies") return user.role?.toUpperCase().includes("PHARMACY");
     if (activeFilter === "Doctors") return user.role?.toUpperCase() === "DOCTOR";
     if (activeFilter === "Staff") return ["ADMIN", "SUPER_ADMIN", "SALES", "SUPPORT", "ACCOUNTS", "TECHNICIAN"].some(r => user.role?.toUpperCase().includes(r));
     if (activeFilter === "Active") return user.status === "Active";
@@ -107,6 +108,7 @@ export default function AccessManagementPage() {
     const r = (role || "").toUpperCase();
     if (r.includes('HOSPITAL') || r.includes('CLINIC')) return "bg-blue-50 text-blue-700 border-blue-200";
     if (r.includes('LAB')) return "bg-purple-50 text-purple-700 border-purple-200";
+    if (r.includes('PHARMACY')) return "bg-cyan-50 text-cyan-700 border-cyan-200";
     if (r === 'DOCTOR') return "bg-emerald-50 text-emerald-700 border-emerald-200";
     if (r.includes('ADMIN')) return "bg-indigo-50 text-indigo-700 border-indigo-200";
     if (r.includes('TECHNICIAN')) return "bg-orange-50 text-orange-700 border-orange-200";
@@ -157,7 +159,7 @@ export default function AccessManagementPage() {
         
         {/* Tabs */}
         <div className="flex overflow-x-auto gap-2 pb-2 lg:pb-0 hide-scrollbar w-full lg:w-auto">
-          {["All", "Hospitals", "Labs", "Doctors", "Staff", "Active", "Inactive"].map(tab => (
+          {["All", "Hospitals", "Labs", "Pharmacies", "Doctors", "Staff", "Active", "Inactive"].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveFilter(tab)}
@@ -405,6 +407,7 @@ export default function AccessManagementPage() {
               <option value="DOCTOR">DOCTOR</option>
               <option value="HOSPITAL">HOSPITAL</option>
               <option value="LAB">LAB</option>
+              <option value="PHARMACY">PHARMACY</option>
               <option value="SALES">SALES</option>
               <option value="SUPPORT">SUPPORT</option>
               <option value="ACCOUNTS">ACCOUNTS</option>

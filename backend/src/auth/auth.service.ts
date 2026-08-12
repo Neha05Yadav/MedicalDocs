@@ -206,8 +206,9 @@ export class AuthService {
     // Agar hospital se linked hai, toh check karo ki hospital suspended toh nahi hai
     if (user.hospitalId) {
       const hospital = await this.db.queryOne('SELECT status FROM hospital WHERE id = ? LIMIT 1', [user.hospitalId]);
-      if (hospital && hospital.status === 'Suspended') {
-        throw new UnauthorizedException("Your hospital's access has been suspended. Please contact the system administrator for assistance.");
+      const facilityStatus = String(hospital?.status || '').trim().toUpperCase();
+      if (['SUSPENDED', 'INACTIVE', 'REJECTED'].includes(facilityStatus)) {
+        throw new UnauthorizedException('This facility has been suspended. Please contact the system administrator for assistance.');
       }
     }
 

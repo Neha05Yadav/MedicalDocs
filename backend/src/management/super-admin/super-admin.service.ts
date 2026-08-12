@@ -93,6 +93,7 @@ export class SuperAdminService {
       let mappedType = f.type ? f.type.toUpperCase() : 'HOSPITAL';
       if (mappedType.includes('LAB')) mappedType = 'Labs';
       else if (mappedType.includes('CLINIC')) mappedType = 'Clinic';
+      else if (mappedType.includes('PHARMACY')) mappedType = 'Pharmacy';
       else mappedType = 'Hospital';
 
       return {
