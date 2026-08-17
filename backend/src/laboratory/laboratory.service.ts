@@ -649,9 +649,10 @@ export class LaboratoryService {
     if (cached) return cached;
 
     const reqs = await this.db.query(`
-      SELECT t.*, p.name as patientName 
+      SELECT t.*, p.name as patientName, lt.fullName as technicianName
       FROM testrequest t
       LEFT JOIN patient p ON t.patientId = p.id
+      LEFT JOIN labtechnician lt ON lt.id = t.assignedTechnicianId AND lt.hospitalId = t.hospitalId
       WHERE t.hospitalId = ?
       ORDER BY t.createdAt DESC
     `, [hospital.id]);
@@ -665,7 +666,8 @@ export class LaboratoryService {
       test: r.testType,
       date: r.sampleCollectedAt ? new Date(r.sampleCollectedAt).toLocaleDateString() : new Date(r.createdAt).toLocaleDateString(),
       status: r.status,
-      assignedTo: r.assignedTo,
+      assignedTo: r.technicianName || r.assignedTo,
+      assignedTechnicianId: r.assignedTechnicianId || null,
       rejectionReason: r.rejectionReason
     }));
     await this.redisService.set(cacheKey, result, 300);
@@ -709,14 +711,140 @@ export class LaboratoryService {
     return { success: true };
   }
 
-  async assignSample(userEmail: string | undefined, testRequestId: string, assignee: string) {
+  async assignSample(userEmail: string | undefined, testRequestId: string, assignee?: string, technicianId?: string) {
     const hospital = await this.getHospitalContext(userEmail);
     const testReq = await this.db.queryOne('SELECT * FROM testrequest WHERE id = ? AND hospitalId = ?', [testRequestId, hospital.id]);
     if (!testReq) throw new NotFoundException('Sample request not found');
 
-    await this.db.query('UPDATE testrequest SET assignedTo = ? WHERE id = ?', [assignee, testRequestId]);
+    let technician: any = null;
+    if (technicianId) {
+      technician = await this.db.queryOne(
+        `SELECT id, fullName FROM labtechnician
+         WHERE id = ? AND hospitalId = ? AND deletedAt IS NULL AND availabilityStatus <> 'Inactive'`,
+        [technicianId, hospital.id],
+      );
+      if (!technician) throw new BadRequestException('Select an active technician registered with this laboratory.');
+    }
+    await this.db.query(
+      'UPDATE testrequest SET assignedTo = ?, assignedTechnicianId = ? WHERE id = ? AND hospitalId = ?',
+      [technician?.fullName || assignee || null, technician?.id || null, testRequestId, hospital.id],
+    );
     await this.redisService.del(`lab:samples:${hospital.id}`);
     return { success: true };
+  }
+
+  private normalizeTechnicianStatus(status: unknown) {
+    const normalized = String(status || '').trim().toLowerCase();
+    if (normalized === 'available') return 'Available';
+    if (normalized === 'busy') return 'Busy';
+    if (normalized === 'inactive') return 'Inactive';
+    throw new BadRequestException('Availability must be Available, Busy, or Inactive.');
+  }
+
+  private async createTechnicianCode() {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const code = `LABTECH${Math.floor(100000 + Math.random() * 900000)}`;
+      const existing = await this.db.queryOne('SELECT id FROM labtechnician WHERE technicianCode = ?', [code]);
+      if (!existing) return code;
+    }
+    return `LABTECH${Date.now()}`;
+  }
+
+  async getTechnicians(userEmail: string | undefined, activeOnly = false) {
+    const hospital = await this.getHospitalContext(userEmail);
+    const activeClause = activeOnly ? " AND lt.availabilityStatus <> 'Inactive'" : '';
+    return this.db.query(
+      `SELECT lt.id, lt.technicianCode, lt.fullName, lt.phone, lt.email,
+              lt.specialization, lt.experienceYears,
+              lt.availabilityStatus, lt.joiningDate, lt.createdAt,
+              COUNT(tr.id) AS assignedSamples
+       FROM labtechnician lt
+       LEFT JOIN testrequest tr ON tr.assignedTechnicianId = lt.id AND tr.hospitalId = lt.hospitalId
+       WHERE lt.hospitalId = ? AND lt.deletedAt IS NULL${activeClause}
+       GROUP BY lt.id, lt.technicianCode, lt.fullName, lt.phone, lt.email,
+                lt.specialization, lt.experienceYears,
+                lt.availabilityStatus, lt.joiningDate, lt.createdAt
+       ORDER BY lt.fullName ASC`,
+      [hospital.id],
+    );
+  }
+
+  async getTechnician(userEmail: string | undefined, id: string) {
+    const hospital = await this.getHospitalContext(userEmail);
+    const technician = await this.db.queryOne(
+      `SELECT lt.*, COUNT(tr.id) AS assignedSamples
+       FROM labtechnician lt
+       LEFT JOIN testrequest tr ON tr.assignedTechnicianId = lt.id AND tr.hospitalId = lt.hospitalId
+       WHERE lt.id = ? AND lt.hospitalId = ? AND lt.deletedAt IS NULL
+       GROUP BY lt.id`,
+      [id, hospital.id],
+    );
+    if (!technician) throw new NotFoundException('Technician not found.');
+    return technician;
+  }
+
+  async createTechnician(userEmail: string | undefined, data: any) {
+    const hospital = await this.getHospitalContext(userEmail);
+    const required = ['fullName', 'phone', 'email', 'specialization', 'joiningDate'];
+    if (required.some(field => !String(data?.[field] || '').trim())) {
+      throw new BadRequestException('Complete all required technician details.');
+    }
+    const duplicate = await this.db.queryOne(
+      'SELECT id FROM labtechnician WHERE hospitalId = ? AND LOWER(email) = LOWER(?) AND deletedAt IS NULL',
+      [hospital.id, String(data.email).trim()],
+    );
+    if (duplicate) throw new BadRequestException('A technician with this email already exists in this laboratory.');
+    const id = uuidv4();
+    const technicianCode = await this.createTechnicianCode();
+    const status = this.normalizeTechnicianStatus(data.availabilityStatus || 'Available');
+    await this.db.query(
+      `INSERT INTO labtechnician
+       (id, technicianCode, hospitalId, fullName, phone, email,
+        specialization, experienceYears, availabilityStatus, joiningDate, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, technicianCode, hospital.id, String(data.fullName).trim(), String(data.phone).trim(),
+       String(data.email).trim().toLowerCase(), String(data.specialization).trim(),
+       Math.max(0, Number(data.experienceYears || 0)),
+       status, data.joiningDate, new Date(), new Date()],
+    );
+    return this.getTechnician(userEmail, id);
+  }
+
+  async updateTechnician(userEmail: string | undefined, id: string, data: any) {
+    const hospital = await this.getHospitalContext(userEmail);
+    const current = await this.db.queryOne<any>(
+      'SELECT * FROM labtechnician WHERE id = ? AND hospitalId = ? AND deletedAt IS NULL',
+      [id, hospital.id],
+    );
+    if (!current) throw new NotFoundException('Technician not found.');
+    const email = String(data.email ?? current.email).trim().toLowerCase();
+    const duplicate = await this.db.queryOne(
+      'SELECT id FROM labtechnician WHERE hospitalId = ? AND LOWER(email) = LOWER(?) AND id <> ? AND deletedAt IS NULL',
+      [hospital.id, email, id],
+    );
+    if (duplicate) throw new BadRequestException('A technician with this email already exists in this laboratory.');
+    const status = this.normalizeTechnicianStatus(data.availabilityStatus ?? current.availabilityStatus);
+    await this.db.query(
+      `UPDATE labtechnician SET fullName = ?, phone = ?, email = ?,
+       specialization = ?, experienceYears = ?, availabilityStatus = ?, joiningDate = ?, updatedAt = ?
+       WHERE id = ? AND hospitalId = ?`,
+      [String(data.fullName ?? current.fullName).trim(), String(data.phone ?? current.phone).trim(), email,
+       String(data.specialization ?? current.specialization).trim(),
+       Math.max(0, Number(data.experienceYears ?? current.experienceYears ?? 0)), status,
+       data.joiningDate ?? current.joiningDate, new Date(), id, hospital.id],
+    );
+    return this.getTechnician(userEmail, id);
+  }
+
+  async updateTechnicianStatus(userEmail: string | undefined, id: string, status: string) {
+    const hospital = await this.getHospitalContext(userEmail);
+    const normalizedStatus = this.normalizeTechnicianStatus(status);
+    const result: any = await this.db.query(
+      'UPDATE labtechnician SET availabilityStatus = ?, updatedAt = ? WHERE id = ? AND hospitalId = ? AND deletedAt IS NULL',
+      [normalizedStatus, new Date(), id, hospital.id],
+    );
+    if (!result?.affectedRows) throw new NotFoundException('Technician not found.');
+    return { success: true, status: normalizedStatus };
   }
 
   async uploadSampleReport(userEmail: string | undefined, testRequestId: string, file: Express.Multer.File, data: any) {

@@ -8,6 +8,31 @@ import * as bcrypt from 'bcrypt';
 export class AdminService {
   constructor(private db: MysqlService) {}
 
+  private normalizeRole(role: unknown) {
+    return String(role || '').trim().toUpperCase().replace(/[\s_-]+/g, '');
+  }
+
+  private validateDelegatedRole(role: unknown) {
+    const normalized = this.normalizeRole(role);
+    const allowed = new Set([
+      'ADMIN', 'DOCTOR', 'HOSPITAL', 'CLINIC', 'LAB', 'LABORATORY',
+      'PHARMACY', 'TECHNICIAN', 'SALES', 'SALESMANAGER', 'ACCOUNTS',
+      'ACCOUNTSMANAGER', 'SUPPORT', 'SUPPORTTEAM', 'SUPPORTMANAGER',
+    ]);
+    if (!allowed.has(normalized)) {
+      throw new BadRequestException('This role cannot be assigned from Admin Access Management.');
+    }
+  }
+
+  private async assertAdminManageableUser(userId: string) {
+    const user = await this.db.queryOne('SELECT id, role FROM user WHERE id = ?', [userId]);
+    if (!user) throw new BadRequestException('User account not found.');
+    if (this.normalizeRole(user.role) === 'SUPERADMIN') {
+      throw new BadRequestException('Super Admin accounts can only be managed by the Super Admin workspace.');
+    }
+    return user;
+  }
+
   async getOverview() {
     const totalPatientsRow = await this.db.queryOne('SELECT COUNT(*) as c FROM patient');
     const totalDoctorsRow = await this.db.queryOne('SELECT COUNT(*) as c FROM doctor');
@@ -442,6 +467,7 @@ export class AdminService {
   }
 
   async updateStaffStatus(userId: string, status: string) {
+    await this.assertAdminManageableUser(userId);
     await this.db.query('UPDATE user SET status = ? WHERE id = ?', [status, userId]);
     return { success: true };
   }
@@ -487,10 +513,16 @@ export class AdminService {
   }
 
   async getAccessUsers() {
-    return this.db.query('SELECT u.id, u.name, u.email, u.phone, u.role, u.status, u.createdAt, u.updatedAt as lastLogin, h.name as organization FROM user u LEFT JOIN hospital h ON u.hospitalId = h.id WHERE UPPER(u.role) NOT LIKE "%PATIENT%"');
+    return this.db.query(`SELECT u.id, u.name, u.email, u.phone, u.role, u.status,
+      u.createdAt, u.updatedAt as lastLogin, h.name as organization
+      FROM user u
+      LEFT JOIN hospital h ON u.hospitalId = h.id
+      WHERE UPPER(u.role) NOT LIKE '%PATIENT%'
+        AND REPLACE(REPLACE(REPLACE(UPPER(u.role), '_', ''), '-', ''), ' ', '') <> 'SUPERADMIN'`);
   }
 
   async provisionUser(data: any) {
+    this.validateDelegatedRole(data.role);
     const uuidv4 = require('uuid').v4;
     const bcrypt = require('bcrypt');
     const hash = await bcrypt.hash('password123', 10);
@@ -502,11 +534,14 @@ export class AdminService {
   }
 
   async updateUserRole(userId: string, role: string) {
+    await this.assertAdminManageableUser(userId);
+    this.validateDelegatedRole(role);
     await this.db.query('UPDATE user SET role = ? WHERE id = ?', [role, userId]);
     return { success: true };
   }
 
   async resetUserPassword(userId: string) {
+    await this.assertAdminManageableUser(userId);
     const bcrypt = require('bcrypt');
     const hash = await bcrypt.hash('password123', 10);
     await this.db.query('UPDATE user SET password = ? WHERE id = ?', [hash, userId]);
@@ -514,6 +549,7 @@ export class AdminService {
   }
 
   async deleteUser(userId: string) {
+    await this.assertAdminManageableUser(userId);
     await this.db.query('DELETE FROM user WHERE id = ?', [userId]);
     return { success: true };
   }

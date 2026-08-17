@@ -114,7 +114,7 @@ function SignupForm() {
   return (
     <main className="relative min-h-[100svh] overflow-hidden bg-[#05070b] text-white">
       <video className="absolute inset-0 size-full object-cover" autoPlay muted loop playsInline preload="metadata" poster="/medidoc-campaign/hero-video-poster.jpg" aria-label="MedicalDocs connected care journey">
-        <source src="/medidoc-connected-care.mp4" type="video/mp4" />
+        <source src="/medidoc-connected-care.mp4?v=20260817" type="video/mp4" />
       </video>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,7,11,.96)_0%,rgba(5,7,11,.82)_48%,rgba(5,7,11,.64)_100%),linear-gradient(0deg,rgba(5,7,11,.88),transparent_65%)]" />
       <div className={styles.panelGrid} aria-hidden="true" />

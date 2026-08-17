@@ -151,16 +151,16 @@ export default function AdminManagementPage() {
   };
 
   const handleDeleteAdmin = async (adminId: string) => {
-    if (!window.confirm("Are you sure you want to permanently delete this admin? This action cannot be undone.")) return;
+    if (!window.confirm("Deactivate this team member? Their account data and audit history will be preserved.")) return;
     
     // Optimistic UI update
     const previousAdmins = [...admins];
-    setAdmins(admins.filter(admin => admin.id !== adminId));
+    setAdmins(admins.map(admin => admin.id === adminId ? { ...admin, status: 'Inactive' } : admin));
     
     try {
       const res = await fetch(`/api/management/super-admin/team?id=${adminId}`, { method: 'DELETE' });
       if (res.ok) {
-        toast.success("Admin deleted successfully.");
+        toast.success("Team member access deactivated successfully.");
       } else {
         throw new Error("Failed");
       }

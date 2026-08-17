@@ -222,7 +222,7 @@ export default function AuthPage() {
             poster="/medidoc-campaign/hero-video-poster.jpg"
             aria-label="Connected healthcare team in motion"
           >
-            <source src="/medidoc-connected-care.mp4" type="video/mp4" />
+            <source src="/medidoc-connected-care.mp4?v=20260817" type="video/mp4" />
           </video>
           <div className={styles.imageOverlay} />
           <div className={styles.panelGrid} />

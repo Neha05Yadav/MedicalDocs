@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { SupportTicketService } from './support-ticket.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'; // Assuming there's a standard JWT guard
+import { ManagementAuthGuard } from '../management/management-auth.guard';
 
 @Controller('support-tickets')
 @UseGuards(JwtAuthGuard)
@@ -18,31 +19,37 @@ export class SupportTicketController {
   }
 
   @Get()
+  @UseGuards(ManagementAuthGuard)
   getAllTickets() {
     return this.supportTicketService.getAllTickets();
   }
 
   @Get('notifications')
+  @UseGuards(ManagementAuthGuard)
   getSupportNotifications() {
     return this.supportTicketService.getSupportNotifications();
   }
 
   @Post('notifications/mark-read')
+  @UseGuards(ManagementAuthGuard)
   markSupportNotificationsRead() {
     return this.supportTicketService.markSupportNotificationsRead();
   }
 
   @Get(':id')
+  @UseGuards(ManagementAuthGuard)
   getTicketDetails(@Param('id') id: string) {
     return this.supportTicketService.getTicketDetails(id);
   }
 
   @Put(':id/status')
+  @UseGuards(ManagementAuthGuard)
   updateTicketStatus(@Param('id') id: string, @Body() data: { status: string }) {
     return this.supportTicketService.updateTicketStatus(id, data.status);
   }
 
   @Put(':id/details')
+  @UseGuards(ManagementAuthGuard)
   updateTicketDetails(@Param('id') id: string, @Body() data: { assignedTo: string, internalNotes: string }) {
     return this.supportTicketService.updateTicketDetails(id, data.assignedTo, data.internalNotes);
   }

@@ -19,7 +19,9 @@ if (typeof window !== "undefined") {
       const method = String(init?.method || request?.method || "GET").toUpperCase();
       const url = request?.url || String(input);
       const headers = new Headers(init?.headers || request?.headers);
-      const dedupeKey = method === "GET"
+      const parsedUrl = new URL(url, window.location.origin);
+      const isApplicationApi = parsedUrl.origin === window.location.origin && parsedUrl.pathname.startsWith("/api/");
+      const dedupeKey = method === "GET" && isApplicationApi
         ? `${url}|${headers.get("authorization") || ""}`
         : "";
 

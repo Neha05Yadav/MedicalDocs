@@ -19,6 +19,7 @@ export default function SampleManagementPage() {
   const [statusFilter, setStatusFilter] = useState("All");
   
   const [samples, setSamples] = useState<any[]>([]);
+  const [technicians, setTechnicians] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Pagination states
@@ -30,7 +31,7 @@ export default function SampleManagementPage() {
   const [selectedSample, setSelectedSample] = useState<any>(null);
   const [newStatus, setNewStatus] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
-  const [assignee, setAssignee] = useState("");
+  const [technicianId, setTechnicianId] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -50,8 +51,18 @@ export default function SampleManagementPage() {
     }
   };
 
+  const fetchTechnicians = async () => {
+    try {
+      const res = await fetch("/api/laboratory/technicians?active=true", { headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` } });
+      if (res.ok) setTechnicians(await res.json());
+    } catch {
+      toast.error("Failed to load active technicians");
+    }
+  };
+
   useEffect(() => {
     fetchSamples();
+    fetchTechnicians();
   }, []);
 
   // Reset to first page when search or filter changes
@@ -63,7 +74,7 @@ export default function SampleManagementPage() {
     setSelectedSample(smp);
     setNewStatus(smp.status);
     setRejectionReason(smp.rejectionReason || "");
-    setAssignee(smp.assignedTo || "");
+    setTechnicianId(smp.assignedTechnicianId || "");
     setSelectedFile(null);
     setIsUpdateModalOpen(true);
   };
@@ -73,12 +84,13 @@ export default function SampleManagementPage() {
     setIsUpdating(true);
     try {
       // 1. If assignedTo changed, update assignment
-      if (assignee !== (selectedSample.assignedTo || "")) {
-        await fetch(`/api/laboratory/samples/${selectedSample.testRequestId}/assign`, {
+      if (technicianId !== (selectedSample.assignedTechnicianId || "")) {
+        const assignmentRes = await fetch(`/api/laboratory/samples/${selectedSample.testRequestId}/assign`, {
           method: "PUT",
           headers: { "Authorization": `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ assignee }),
+          body: JSON.stringify({ technicianId }),
         });
+        if (!assignmentRes.ok) throw new Error("Technician assignment failed");
       }
 
       // 2. If status is Completed and a file is selected, use the report upload endpoint
@@ -337,29 +349,19 @@ export default function SampleManagementPage() {
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Assigned Technician
               </label>
-              <input
-                type="text"
-                value={assignee}
-                onChange={(e) => setAssignee(e.target.value)}
-                placeholder="Enter technician name..."
+              <select
+                value={technicianId}
+                onChange={(e) => setTechnicianId(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-[#0891b2] focus:ring-1 focus:ring-[#0891b2] text-sm"
-              />
-              <div className="mt-1 flex justify-end">
-                <button 
-                  onClick={() => {
-                    const userStr = localStorage.getItem("user");
-                    if (userStr) {
-                      const user = JSON.parse(userStr);
-                      setAssignee(user.name || "Me");
-                    } else {
-                      setAssignee("Me");
-                    }
-                  }}
-                  className="text-xs text-[#0891b2] font-semibold hover:underline"
-                >
-                  Assign to me
-                </button>
-              </div>
+              >
+                <option value="">Unassigned</option>
+                {technicians.map(technician => (
+                  <option key={technician.id} value={technician.id}>
+                    {technician.fullName} · {technician.technicianCode} · {technician.availabilityStatus}
+                  </option>
+                ))}
+              </select>
+              {technicians.length === 0 && <p className="mt-1 text-xs text-amber-600">No active technicians registered. Add one from the Technicians module.</p>}
             </div>
 
             <div>

@@ -14,6 +14,11 @@ export class ClinicController {
     return this.clinicService.getOverview();
   }
 
+  @Get('doctors')
+  async getDoctors() {
+    return this.clinicService.getDoctors();
+  }
+
   @Get('labs')
   async getLabs() {
     return this.clinicService.getAllLabs();

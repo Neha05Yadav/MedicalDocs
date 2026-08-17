@@ -56,6 +56,11 @@ export class SuperAdminController {
     return this.superAdminService.updateFacility(body.id, { status: body.status, isVerified: body.isVerified });
   }
 
+  @Delete('facilities')
+  async archiveFacility(@Query('id') id: string) {
+    return this.superAdminService.archiveFacility(id);
+  }
+
   @Get('audit')
   async getAuditLogs() {
     return this.superAdminService.getAuditLogs();

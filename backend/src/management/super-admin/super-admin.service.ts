@@ -7,6 +7,17 @@ import * as bcrypt from 'bcrypt';
 export class SuperAdminService {
   constructor(private db: MysqlService) {}
 
+  private normalizedRole(role: unknown) {
+    return String(role || '').trim().toUpperCase().replace(/[\s_-]+/g, '');
+  }
+
+  private isManagedTeamRole(role: unknown) {
+    return new Set([
+      'ADMIN', 'SALES', 'SALESMANAGER', 'ACCOUNTS', 'ACCOUNTSMANAGER',
+      'SUPPORT', 'SUPPORTTEAM', 'SUPPORTMANAGER',
+    ]).has(this.normalizedRole(role));
+  }
+
   async getOverview() {
     const [users, hospitals, labs, doctors, reports, admins, currentUsers, previousUsers, paidRevenue, monthlyRows, yearlyRows] = await Promise.all([
       this.db.queryOne('SELECT COUNT(*) AS c FROM user'),
@@ -159,6 +170,8 @@ export class SuperAdminService {
   }
 
   async updateFacility(id: string, updateData: { status?: string, isVerified?: boolean }) {
+    const facility = await this.db.queryOne('SELECT id FROM hospital WHERE id = ?', [id]);
+    if (!facility) throw new BadRequestException('Facility not found.');
     if (updateData.status && updateData.isVerified !== undefined) {
       await this.db.query('UPDATE hospital SET status = ?, isVerified = ? WHERE id = ?', [updateData.status, updateData.isVerified, id]);
     } else if (updateData.status) {
@@ -167,6 +180,13 @@ export class SuperAdminService {
       await this.db.query('UPDATE hospital SET isVerified = ? WHERE id = ?', [updateData.isVerified, id]);
     }
     return { success: true };
+  }
+
+  async archiveFacility(id: string) {
+    const facility = await this.db.queryOne('SELECT id FROM hospital WHERE id = ?', [id]);
+    if (!facility) throw new BadRequestException('Facility not found.');
+    await this.db.query('UPDATE hospital SET status = ?, updatedAt = ? WHERE id = ?', ['Suspended', new Date(), id]);
+    return { success: true, status: 'Suspended' };
   }
 
   async getAnalytics() {
@@ -344,6 +364,9 @@ export class SuperAdminService {
   }
 
   async createAdmin(data: any) {
+    if (!this.isManagedTeamRole(data.role || 'Admin')) {
+      throw new BadRequestException('Only Admin, Sales, Accounts, or Support team roles can be created here.');
+    }
     const existing = await this.db.queryOne('SELECT id FROM user WHERE email = ?', [data.email]);
     if (existing) {
       return { success: false, error: "Email already in use" };
@@ -371,13 +394,23 @@ export class SuperAdminService {
   }
 
   async updateAdminStatus(id: string, status: string) {
-    await this.db.query('UPDATE user SET status = ?, updatedAt = ? WHERE id = ? AND role IN ("Admin", "SuperAdmin")', [status, new Date(), id]);
+    const admin = await this.db.queryOne('SELECT id, role FROM user WHERE id = ?', [id]);
+    if (!admin || !this.isManagedTeamRole(admin.role)) {
+      throw new BadRequestException('This management account cannot be changed from Team Management.');
+    }
+    const allowedStatuses = new Set(['Active', 'Inactive', 'Pending', 'Rejected', 'Suspended']);
+    if (!allowedStatuses.has(status)) throw new BadRequestException('Invalid account status.');
+    await this.db.query('UPDATE user SET status = ?, updatedAt = ? WHERE id = ?', [status, new Date(), id]);
     return { success: true };
   }
 
   async deleteAdmin(id: string) {
-    await this.db.query('DELETE FROM user WHERE id = ? AND role IN ("Admin", "SuperAdmin")', [id]);
-    return { success: true };
+    const admin = await this.db.queryOne('SELECT id, role FROM user WHERE id = ?', [id]);
+    if (!admin || !this.isManagedTeamRole(admin.role)) {
+      throw new BadRequestException('This management account cannot be removed from Team Management.');
+    }
+    await this.db.query('UPDATE user SET status = ?, updatedAt = ? WHERE id = ?', ['Inactive', new Date(), id]);
+    return { success: true, status: 'Inactive' };
   }
 
   async getAllUsers() {

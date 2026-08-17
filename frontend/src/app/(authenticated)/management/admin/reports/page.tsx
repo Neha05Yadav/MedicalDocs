@@ -135,8 +135,8 @@ export default function ReportsMonitoringPage() {
   };
 
   return (
-    <div className="mx-auto min-h-screen w-full max-w-[1500px] space-y-6 p-6 lg:p-8">
-      <div className="grid gap-4 sm:grid-cols-3">
+    <div className="mx-auto min-h-screen w-full max-w-[1500px] space-y-6 p-6 lg:flex lg:h-[calc(100dvh-5rem)] lg:min-h-0 lg:flex-col lg:gap-6 lg:space-y-0 lg:overflow-hidden lg:p-8">
+      <div className="grid shrink-0 gap-4 sm:grid-cols-3">
         {[
           ["Registered Patients", patients.length, "bg-indigo-50 text-indigo-700"],
           ["Medical Reports", totalReports, "bg-cyan-50 text-cyan-700"],
@@ -152,9 +152,9 @@ export default function ReportsMonitoringPage() {
         ))}
       </div>
 
-      <div className="grid min-h-[650px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:grid-cols-[360px_1fr]">
-        <aside className="border-b border-slate-200 bg-slate-50/60 lg:border-b-0 lg:border-r">
-          <div className="border-b border-slate-200 p-5">
+      <div className="grid min-h-[650px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:min-h-0 lg:flex-1 lg:grid-cols-[360px_1fr]">
+        <aside className="border-b border-slate-200 bg-slate-50/60 lg:flex lg:min-h-0 lg:flex-col lg:border-b-0 lg:border-r">
+          <div className="shrink-0 border-b border-slate-200 p-5">
             <h2 className="text-lg font-extrabold text-slate-900">Patient Directory</h2>
             <p className="mt-1 text-sm text-slate-500">Select a patient to inspect report metadata.</p>
             <div className="relative mt-4">
@@ -162,7 +162,7 @@ export default function ReportsMonitoringPage() {
               <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Name, ID, email or phone" className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-indigo-500" />
             </div>
           </div>
-          <div className="max-h-[590px] overflow-y-auto p-3">
+          <div className="max-h-[590px] overflow-y-auto p-3 lg:max-h-none lg:min-h-0 lg:flex-1">
             {loading ? (
               <p className="p-6 text-center text-sm text-slate-500">Loading patients...</p>
             ) : filteredPatients.length === 0 ? (
@@ -183,7 +183,7 @@ export default function ReportsMonitoringPage() {
           </div>
         </aside>
 
-        <main className="min-w-0">
+        <main className="min-w-0 lg:min-h-0 lg:overflow-y-auto">
           {!selectedPatient ? (
             <div className="flex h-full min-h-[500px] flex-col items-center justify-center text-slate-400">
               <UserRound className="mb-3 size-12" />
@@ -242,7 +242,6 @@ export default function ReportsMonitoringPage() {
                         </div>
                         <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-500"><Calendar className="size-4" />{dateText(report.date)}</span>
                         <div className="flex gap-2">
-                          <button onClick={() => setSelectedReport(report)} className="rounded-lg bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700">View info</button>
                           <button onClick={() => void toggleFlag(report)} title="Flag report" className="rounded-lg border border-slate-200 p-2 text-amber-600 hover:bg-amber-50"><Flag className="size-4" /></button>
                           <button onClick={() => setDeletingId(report.id)} title="Delete report" className="rounded-lg border border-slate-200 p-2 text-rose-600 hover:bg-rose-50"><Trash2 className="size-4" /></button>
                         </div>

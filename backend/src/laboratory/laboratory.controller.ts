@@ -57,10 +57,41 @@ export class LaboratoryController {
   @Put('samples/:id/assign')
   async assignSample(
     @Param('id') id: string,
-    @Body() data: { assignee: string },
+    @Body() data: { assignee?: string; technicianId?: string },
     @Request() req: any
   ) {
-    return this.laboratoryService.assignSample(req.user.email, id, data.assignee);
+    return this.laboratoryService.assignSample(req.user.email, id, data.assignee, data.technicianId);
+  }
+
+  // --- Technicians APIs ---
+
+  @Get('technicians')
+  async getTechnicians(@Request() req: any, @Query('active') active?: string) {
+    return this.laboratoryService.getTechnicians(req.user.email, active === 'true');
+  }
+
+  @Get('technicians/:id')
+  async getTechnician(@Param('id') id: string, @Request() req: any) {
+    return this.laboratoryService.getTechnician(req.user.email, id);
+  }
+
+  @Post('technicians')
+  async createTechnician(@Body() data: any, @Request() req: any) {
+    return this.laboratoryService.createTechnician(req.user.email, data);
+  }
+
+  @Put('technicians/:id')
+  async updateTechnician(@Param('id') id: string, @Body() data: any, @Request() req: any) {
+    return this.laboratoryService.updateTechnician(req.user.email, id, data);
+  }
+
+  @Put('technicians/:id/status')
+  async updateTechnicianStatus(
+    @Param('id') id: string,
+    @Body() data: { status: string },
+    @Request() req: any,
+  ) {
+    return this.laboratoryService.updateTechnicianStatus(req.user.email, id, data.status);
   }
 
   @Post('samples/:id/report')

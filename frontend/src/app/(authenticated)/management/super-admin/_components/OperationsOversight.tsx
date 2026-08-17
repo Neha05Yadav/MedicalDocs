@@ -117,7 +117,6 @@ export default function OperationsOversight({ area }: { area: Area }) {
           <div className="absolute inset-y-0 left-0 w-1.5 bg-slate-800" />
           <div className="relative flex flex-col justify-between gap-6 md:flex-row md:items-center">
             <div className="max-w-4xl"><div className={`mb-4 inline-flex items-center gap-2 rounded-lg border px-3 py-2 ${meta.accent}`}><meta.icon className="size-4" /><p className="text-[11px] font-black uppercase tracking-[.18em]">{meta.eyebrow}</p></div><h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{meta.title}</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">{meta.description}</p></div>
-            <button onClick={() => void load()} className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-100"><RefreshCw className="size-4" /> Refresh live data</button>
           </div>
         </section>
 

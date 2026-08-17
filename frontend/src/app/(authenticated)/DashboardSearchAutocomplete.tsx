@@ -7,6 +7,7 @@ const MAX_SUGGESTIONS = 8;
 const normalize = (value: string) => value.replace(/\s+/g, " ").trim();
 
 const isDashboardSearch = (input: HTMLInputElement) => {
+  if (input.dataset.disableGlobalSearch === "true") return false;
   const placeholder = String(input.placeholder || "").toLowerCase();
   return input.type === "search" || placeholder.includes("search");
 };

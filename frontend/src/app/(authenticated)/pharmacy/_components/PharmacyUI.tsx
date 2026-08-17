@@ -87,12 +87,34 @@ function Overview() {
   ] as const;
   return <Page title="Pharmacy operations" eyebrow="MediDoc Pharmacy" description="Receive patient-shared prescriptions, quote medicines and manage fulfilment without accessing complete medical history.">
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(([label, value, Icon, tone]) => <Card key={label} className="p-5"><div className="flex items-start justify-between"><div><p className="text-xs font-extrabold uppercase tracking-wider text-slate-500">{label}</p><p className="mt-3 text-2xl font-black text-slate-950">{value}</p></div><span className={`rounded-xl p-3 ${tone}`}><Icon className="size-5"/></span></div></Card>)}</div>
-    <div className="grid gap-6 xl:grid-cols-[1.35fr_.65fr]"><Card><div className="flex items-center justify-between border-b p-5"><div><h2 className="font-black text-slate-900">Recent prescription requests</h2><p className="mt-1 text-xs text-slate-500">Prescriptions explicitly shared for medicine ordering</p></div><ActionLink href="/pharmacy/prescription-requests" label="View all"/></div><EmptySafeTable columns={["Request","Patient","Doctor","Location","Delivery","Status","Action"]} rows={recentRequests.map((row) => [<b key="id" className="text-slate-900">{row.requestGroupId || row.id}</b>, row.patient, <span key="doc">{row.doctorName || "Prescribing Doctor"}<small className="block text-slate-400">{row.facilityName || "Healthcare Facility"}</small></span>, <span key="loc">{row.patientAddress || row.location || "Address on record"}</span>, "Home delivery", <Badge key="s">{row.status}</Badge>, <ActionLink key="a" href={`/pharmacy/prescription-requests/${row.id}`}/>])}/></Card><MiniCharts/></div>
+    <div className="grid items-stretch gap-6 xl:grid-cols-[minmax(0,1fr)_19rem] 2xl:grid-cols-[minmax(0,1fr)_21rem]">
+      <Card className="min-w-0 overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b px-6 py-5"><div><h2 className="font-black text-slate-900">Recent prescription requests</h2><p className="mt-1 text-xs text-slate-500">Prescriptions explicitly shared for medicine ordering</p></div><ActionLink href="/pharmacy/prescription-requests" label="View all"/></div>
+        <EmptySafeTable columns={["Request","Patient","Doctor","Location","Delivery","Status","Action"]} rows={recentRequests.map((row) => [<b key="id" className="text-slate-900">{row.requestGroupId || row.id}</b>, row.patient, <span key="doc">{row.doctorName || "Prescribing Doctor"}<small className="mt-1 block text-slate-400">{row.facilityName || "Healthcare Facility"}</small></span>, <span key="loc" className="block max-w-52 leading-6">{row.patientAddress || row.location || "Address on record"}</span>, <span key="delivery" className="block leading-6">Home delivery</span>, <Badge key="s">{row.status}</Badge>, <ActionLink key="a" href={`/pharmacy/prescription-requests/${row.id}`}/>])}/>
+      </Card>
+      <MiniCharts/>
+    </div>
     <Card><div className="flex items-center justify-between border-b p-5"><h2 className="font-black text-slate-900">Recent orders</h2><ActionLink href="/pharmacy/orders" label="Manage orders"/></div><EmptySafeTable columns={["Order","Patient","Amount","Payment","Delivery","Status","Date","Action"]} rows={orders.map((row) => [<b key="id" className="text-slate-900">{row.id}</b>,row.patient,row.amount,<Badge key="p">{row.payment}</Badge>,row.delivery,<Badge key="s">{row.status}</Badge>,row.date,<ActionLink key="a" href="/pharmacy/orders"/>])}/></Card>
   </Page>;
 }
 
-function MiniCharts() { const bars=[52,68,43,76,89,64,94]; return <Card className="p-5"><div className="flex items-center justify-between"><div><h2 className="font-black text-slate-900">Weekly orders</h2><p className="mt-1 text-xs text-slate-500">Acceptance rate 78%</p></div><BarChart3 className="size-5 text-emerald-600"/></div><div className="mt-8 flex h-40 items-end gap-3">{bars.map((height,index)=><div key={index} className="flex flex-1 flex-col items-center gap-2"><div className="w-full rounded-t-lg bg-gradient-to-t from-emerald-600 to-cyan-400" style={{height:`${height}%`}}/><span className="text-[10px] font-bold text-slate-400">{["M","T","W","T","F","S","S"][index]}</span></div>)}</div><div className="mt-5 rounded-xl bg-emerald-50 p-4"><p className="text-xs font-bold text-emerald-700">Top medicine</p><p className="mt-1 font-black text-slate-900">Telmisartan 40 mg</p><p className="text-xs text-slate-500">146 strips sold this month</p></div></Card>; }function Requests({query,setQuery,filter,setFilter}:any) {
+function MiniCharts() {
+  const bars=[52,68,43,76,89,64,94];
+  const days=["M","T","W","T","F","S","S"];
+  return <Card className="flex min-h-[28rem] flex-col overflow-hidden p-6">
+    <div className="flex items-start justify-between gap-4">
+      <div><h2 className="font-black text-slate-900">Weekly orders</h2><p className="mt-1 text-xs text-slate-500">Acceptance rate</p></div>
+      <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-emerald-700"><BarChart3 className="size-4"/><strong className="text-sm">78%</strong></div>
+    </div>
+    <div className="mt-7 rounded-2xl border border-slate-100 bg-slate-50/70 px-4 pb-3 pt-5">
+      <div className="flex h-40 items-end gap-2.5 border-b border-slate-200">
+        {bars.map((height,index)=><div key={index} className="flex h-full flex-1 items-end justify-center"><div className="w-full max-w-6 rounded-t-md bg-gradient-to-t from-emerald-600 to-cyan-400 shadow-sm transition-all duration-300 hover:brightness-105" style={{height:`${height}%`}} title={`${height} orders score`}/></div>)}
+      </div>
+      <div className="mt-2.5 flex gap-2.5">{days.map((day,index)=><span key={`${day}-${index}`} className="flex-1 text-center text-[10px] font-extrabold text-slate-400">{day}</span>)}</div>
+    </div>
+    <div className="mt-auto rounded-2xl border border-emerald-100 bg-emerald-50/80 p-4"><p className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-700">Top medicine</p><p className="mt-1.5 font-black text-slate-900">Telmisartan 40 mg</p><p className="mt-1 text-xs text-slate-500">146 strips sold this month</p></div>
+  </Card>;
+}function Requests({query,setQuery,filter,setFilter}:any) {
   const [liveRequests,setLiveRequests]=useState<any[]>([]);
   useEffect(()=>{
     const token=localStorage.getItem("token");

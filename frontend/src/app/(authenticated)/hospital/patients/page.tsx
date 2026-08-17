@@ -703,10 +703,6 @@ export default function PatientSearchVerificationPage() {
                   <span className="text-sm text-slate-800 font-medium col-span-2">{selectedPatient.mobile}</span>
                 </div>
                 <div className="grid grid-cols-3">
-                  <span className="text-sm font-medium text-slate-500 col-span-1">Email</span>
-                  <span className="text-sm text-slate-800 font-medium col-span-2">{selectedPatient.email}</span>
-                </div>
-                <div className="grid grid-cols-3">
                   <span className="text-sm font-medium text-slate-500 col-span-1">Gender</span>
                   <span className="text-sm text-slate-800 font-medium col-span-2">{selectedPatient.gender}</span>
                 </div>

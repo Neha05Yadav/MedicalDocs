@@ -17,6 +17,10 @@ export class ManagementAuthGuard extends AuthGuard('jwt') {
       || (path.startsWith('/api/management/sales') && role.includes('SALE'))
       || (path.startsWith('/api/management/support') && role.includes('SUPPORT'))
       || (path.startsWith('/api/management/super-admin/facilities') && role.includes('SUPPORT'))
+      // Ticket operations are shared by Support, assigned Admin/Accounts teams,
+      // and Super Admin oversight. The management-role check above still keeps
+      // patient/facility accounts out of these privileged endpoints.
+      || path.startsWith('/api/support-tickets')
       || path === '/api/management/status';
     if (!roleMatchesArea) throw new ForbiddenException('You cannot access another management team dashboard.');
     return user as TUser;

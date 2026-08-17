@@ -56,7 +56,7 @@ export default function HomePage() {
             className={styles.heroVideo}
             aria-label="A patient journey through a connected hospital, laboratory and care team"
           >
-            <source src="/medidoc-connected-care.mp4" type="video/mp4" />
+            <source src="/medidoc-connected-care.mp4?v=20260817" type="video/mp4" />
           </video>
           <div className={styles.heroVignette} aria-hidden="true" />
           <div className={styles.cinematicHaze} aria-hidden="true" />
@@ -247,7 +247,7 @@ function ExperienceSection() {
         <div className="mt-16 grid gap-5 lg:grid-cols-[1.3fr_.7fr]">
           <motion.article initial={{ opacity: 0, y: 35 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className={`group relative min-h-[38rem] overflow-hidden rounded-[2.5rem] ${styles.storyMedia}`}>
             <div className={styles.careStoryCast} aria-label="Patient and care team journey">
-              <video autoPlay muted loop playsInline preload="auto" aria-hidden="true" tabIndex={-1}><source src="/medidoc-connected-care.mp4" type="video/mp4" /></video>
+              <video autoPlay muted loop playsInline preload="auto" aria-hidden="true" tabIndex={-1}><source src="/medidoc-connected-care.mp4?v=20260817" type="video/mp4" /></video>
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-[#02060b] via-[#02060b]/25 to-cyan-950/10" />
             <div className="absolute left-6 top-6 z-10 flex items-center gap-3 rounded-full bg-cyan-300 px-4 py-2 text-[10px] font-black uppercase tracking-[.2em] text-slate-950"><Fingerprint className="size-4" /> Patient + Care Team</div>
@@ -338,7 +338,7 @@ function CapabilitiesSection() {
 
             <div className={styles.recordCinema}>
               <div className={styles.recordHumanCast} aria-hidden="true">
-                <video autoPlay muted loop playsInline preload="auto" tabIndex={-1}><source src="/medidoc-connected-care.mp4" type="video/mp4" /></video>
+                <video autoPlay muted loop playsInline preload="auto" tabIndex={-1}><source src="/medidoc-connected-care.mp4?v=20260817" type="video/mp4" /></video>
               </div>
               <div className="absolute inset-0 bg-gradient-to-r from-[#07111a]/95 via-[#07111a]/55 to-transparent" />
               <div className="absolute left-5 top-5 flex items-center gap-2 rounded-full bg-emerald-300 px-3.5 py-2 text-[10px] font-black uppercase tracking-[.16em] text-emerald-950"><span className="size-2 animate-pulse rounded-full bg-emerald-700" /> Identity verified</div>

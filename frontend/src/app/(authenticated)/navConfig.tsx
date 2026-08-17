@@ -14,6 +14,7 @@ export const patientNav = [
 
 export const clinicNav = [
   { title: "Dashboard", subtitle: "Welcome to the clinic dashboard.", url: "/clinic/overview", iconName: "LayoutDashboard" },
+  { title: "Doctors", subtitle: "View clinic doctors, specializations, availability, and assigned patients.", url: "/clinic/doctors", iconName: "Stethoscope" },
   { title: "Patients", subtitle: "Manage your assigned patients and view their histories.", url: "/clinic/patients", iconName: "Users" },
   { title: "Appointments", subtitle: "Manage the consultation calendar and visit lifecycle.", url: "/clinic/appointments", iconName: "Calendar" },
   { title: "Prescriptions", subtitle: "View active prescriptions or issue new ones to your patients.", url: "/clinic/prescriptions", iconName: "Pill" },
@@ -46,6 +47,7 @@ export const laboratoryNav = [
   { title: "Lab Workflow", subtitle: "Manage test pricing, packages, samples, labels and result billing.", url: "/laboratory/workflow", iconName: "FlaskConical" },
   { title: "Reports", subtitle: "Manage uploaded reports and dispatch new results to patients.", url: "/laboratory/reports", iconName: "FileText" },
   { title: "Sample Management", subtitle: "Track physical samples from collection to analysis.", url: "/laboratory/sample-management", iconName: "Activity" },
+  { title: "Technicians", subtitle: "Manage laboratory technicians, availability, and sample assignments.", url: "/laboratory/technicians", iconName: "UserCog" },
   { title: "Patients", subtitle: "Manage patient records and request access to medical history.", url: "/laboratory/patients", iconName: "Users" },
   { title: "Billing & Payments", subtitle: "Maintain test prices and generate itemized laboratory bills.", url: "/laboratory/billing", iconName: "CreditCard" },
   { title: "Notifications", subtitle: "Stay updated on new test requests and alerts.", url: "/laboratory/notifications", iconName: "Bell" },

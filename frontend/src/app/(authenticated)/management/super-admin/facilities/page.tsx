@@ -176,15 +176,16 @@ export default function FacilityManagementPage() {
   };
 
   const handleDelete = async (facilityId: string) => {
-    if (!window.confirm("Are you sure you want to delete this facility completely?")) return;
+    if (!window.confirm("Suspend and archive this facility? Its records will be preserved and its login access will be blocked.")) return;
 
     const previous = [...facilities];
-    setFacilities(facilities.filter(f => f.id !== facilityId));
+    setFacilities(facilities.map(f => f.id === facilityId ? { ...f, status: 'Suspended' } : f));
 
     try {
       const res = await fetch(`/api/management/super-admin/facilities?id=${facilityId}`, { method: 'DELETE' });
       if (res.ok) {
-        toast.success("Facility deleted successfully.");
+        toast.success("Facility suspended and archived safely.");
+        setActiveTab('Suspended');
       } else throw new Error();
     } catch (error) {
       setFacilities(previous);

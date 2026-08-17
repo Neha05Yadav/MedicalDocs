@@ -24,7 +24,7 @@ export class ClinicService {
     let doctor = await this.db.queryOne('SELECT * FROM doctor WHERE email = ?', [email]);
     if (!doctor) {
       const user = await this.db.queryOne(
-        `SELECT u.hospitalId
+        `SELECT u.hospitalId, h.name AS clinicName
          FROM user u
          INNER JOIN hospital h ON h.id = u.hospitalId
          WHERE u.email = ? AND UPPER(h.type) = 'CLINIC'
@@ -40,10 +40,63 @@ export class ClinicService {
            LIMIT 1`,
           [user.hospitalId],
         );
+
+        // Some existing databases contain a legacy duplicate facility row for
+        // the same clinic name. Resolve its active doctor without modifying or
+        // merging stored records, while remaining restricted to CLINIC rows.
+        if (!doctor && user.clinicName) {
+          doctor = await this.db.queryOne(
+            `SELECT d.*
+             FROM doctor d
+             INNER JOIN hospital h ON h.id = d.hospitalId
+             WHERE UPPER(h.type) = 'CLINIC'
+               AND LOWER(TRIM(h.name)) = LOWER(TRIM(?))
+               AND (d.status IS NULL OR d.status = 'Active')
+             ORDER BY d.updatedAt DESC, d.id ASC
+             LIMIT 1`,
+            [user.clinicName],
+          );
+        }
       }
     }
     if (!doctor) throw new UnauthorizedException('No clinic workspace is linked to this identity.');
     return doctor;
+  }
+
+  async getDoctors() {
+    const currentDoctor = await this.getDoctorContext();
+    const doctors = await this.db.query(
+      `SELECT id, name, specialization, department, shift, status
+       FROM doctor
+       WHERE hospitalId = ?
+       ORDER BY name ASC`,
+      [currentDoctor.hospitalId],
+    );
+
+    return Promise.all(doctors.map(async (doctor: any) => {
+      const assigned = await this.db.queryOne(
+        `SELECT COUNT(DISTINCT activity.patientId) AS count
+         FROM (
+           SELECT patientId FROM appointment WHERE doctorId = ?
+           UNION
+           SELECT patientId FROM prescription WHERE doctorId = ?
+           UNION
+           SELECT patientId FROM accessrequest WHERE doctorId = ?
+           UNION
+           SELECT id AS patientId FROM clinic_patient WHERE doctorId = ?
+         ) activity`,
+        [doctor.id, doctor.id, doctor.id, doctor.id],
+      );
+
+      return {
+        id: doctor.id,
+        name: doctor.name,
+        specialization: doctor.specialization || doctor.department || 'General Medicine',
+        availability: doctor.shift || 'Availability not configured',
+        status: doctor.status || 'Active',
+        assignedPatients: Number(assigned?.count || 0),
+      };
+    }));
   }
 
   async getOverview() {
