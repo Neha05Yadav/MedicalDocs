@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Download, FileText, Plus, ReceiptText, Trash2 } from "lucide-react";
+import { CheckCircle2, ChevronDown, Download, FileText, Plus, ReceiptText, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 type CatalogItem = { id: string; code?: string; name: string; category: string; price: number; taxRate: number };
@@ -24,24 +24,46 @@ const categories: Record<string, string[]> = {
 const money = (value: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(value || 0);
 const headers = (json = false) => ({ ...(json ? { "Content-Type": "application/json" } : {}), Authorization: `Bearer ${localStorage.getItem("token") || ""}` });
 
-export function BillingWorkspace({ patientView = false }: { patientView?: boolean }) {
+async function readApiResponse(response: Response, fallbackMessage: string) {
+  const rawBody = await response.text();
+  let result: any = null;
+
+  if (rawBody) {
+    try {
+      result = JSON.parse(rawBody);
+    } catch {
+      result = { message: rawBody };
+    }
+  }
+
+  if (!response.ok) throw new Error(result?.message || fallbackMessage);
+  return result;
+}
+
+export function BillingWorkspace({ patientView = false, selectedPatientId = "" }: { patientView?: boolean; selectedPatientId?: string }) {
+  const dischargePatientId = patientView ? "" : selectedPatientId;
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"bill" | "catalog" | "history">(patientView ? "history" : "bill");
-  const [patientId, setPatientId] = useState("");
+  const [patientId, setPatientId] = useState(dischargePatientId);
   const [lines, setLines] = useState<Line[]>([]);
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [amountPaid, setAmountPaid] = useState(0);
   const [catalogForm, setCatalogForm] = useState({ code: "", name: "", category: "", price: "", taxRate: "0" });
   const [saving, setSaving] = useState(false);
+  const [serviceSearch, setServiceSearch] = useState("");
+  const [servicePickerOpen, setServicePickerOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/billing/workspace", { headers: headers() });
-      if (!response.ok) throw new Error((await response.json())?.message || "Unable to load billing");
-      setData(await response.json());
+      let response = await fetch("/api/billing/workspace", { headers: headers(), cache: "no-store" });
+      if (response.status >= 500) {
+        await new Promise((resolve) => window.setTimeout(resolve, 250));
+        response = await fetch("/api/billing/workspace", { headers: headers(), cache: "no-store" });
+      }
+      setData(await readApiResponse(response, "Unable to load billing"));
     } catch (error: any) {
       toast.error(error.message || "Unable to load billing");
     } finally {
@@ -50,6 +72,9 @@ export function BillingWorkspace({ patientView = false }: { patientView?: boolea
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    if (dischargePatientId) setPatientId(dischargePatientId);
+  }, [dischargePatientId]);
 
   const viewer = patientView ? "PATIENT" : data?.viewer || "HOSPITAL";
   const availableCategories = categories[viewer] || categories.HOSPITAL;
@@ -80,10 +105,9 @@ export function BillingWorkspace({ patientView = false }: { patientView?: boolea
         method: "POST", headers: headers(true),
         body: JSON.stringify({ patientId, items: lines, dueDate: dueDate || null, notes, amountPaid }),
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Invoice creation failed");
+      const result = await readApiResponse(response, "Invoice creation failed");
       toast.success(`${result.invoiceNo} generated for ${money(result.totalAmount)}`);
-      setPatientId(""); setLines([]); setDueDate(""); setNotes(""); setAmountPaid(0); setTab("history");
+      setPatientId(dischargePatientId); setLines([]); setDueDate(""); setNotes(""); setAmountPaid(0); setTab("history");
       await load();
     } catch (error: any) {
       toast.error(error.message || "Invoice creation failed");
@@ -94,8 +118,7 @@ export function BillingWorkspace({ patientView = false }: { patientView?: boolea
     setSaving(true);
     try {
       const response = await fetch("/api/billing/catalog", { method: "POST", headers: headers(true), body: JSON.stringify(catalogForm) });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Unable to save rate");
+      await readApiResponse(response, "Unable to save rate");
       toast.success("Service rate added");
       setCatalogForm({ code: "", name: "", category: "", price: "", taxRate: "0" });
       await load();
@@ -107,6 +130,15 @@ export function BillingWorkspace({ patientView = false }: { patientView?: boolea
   if (!data) return <div className="p-8 text-red-600">Billing workspace could not be loaded.</div>;
 
   const invoices: Invoice[] = data.invoices || [];
+  const savedServices: CatalogItem[] = data.catalog || [];
+  const matchingServices = savedServices.filter((item) => {
+    const search = serviceSearch.trim().toLowerCase();
+    if (!search) return true;
+    return [item.name, item.code, item.category].some((value) => String(value || "").toLowerCase().includes(search));
+  });
+  const dischargePatient = dischargePatientId
+    ? (data.patients || []).find((patient: Patient) => patient.id === dischargePatientId)
+    : null;
   if (patientView) return (
     <div className="mx-auto w-full max-w-7xl p-5 md:p-8">
       <div className="mb-6">
@@ -140,17 +172,61 @@ export function BillingWorkspace({ patientView = false }: { patientView?: boolea
             <div className="space-y-6 p-5">
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">Patient *</label>
-                <select value={patientId} onChange={event => setPatientId(event.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-500">
-                  <option value="">Select patient</option>
-                  {(data.patients || []).map((patient: Patient) => <option key={patient.id} value={patient.id}>{patient.name} {patient.phone ? `· ${patient.phone}` : ""}</option>)}
-                </select>
+                {dischargePatientId ? (
+                  <div className="rounded-xl border border-cyan-200 bg-cyan-50/70 px-4 py-3">
+                    <p className="font-bold text-slate-900">{dischargePatient?.name || "Selected inpatient"}</p>
+                    <p className="mt-0.5 text-xs font-medium text-slate-500">Patient ID: {dischargePatientId}{dischargePatient?.phone ? ` · ${dischargePatient.phone}` : ""}</p>
+                  </div>
+                ) : (
+                  <select value={patientId} onChange={event => setPatientId(event.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-500">
+                    <option value="">Select patient</option>
+                    {(data.patients || []).map((patient: Patient) => <option key={patient.id} value={patient.id}>{patient.name} {patient.phone ? `· ${patient.phone}` : ""}</option>)}
+                  </select>
+                )}
               </div>
               <div>
                 <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-bold text-slate-800">Add from your rate master</h3><button onClick={addCustomLine} className="flex items-center gap-1 text-sm font-semibold text-cyan-700"><Plus className="size-4" /> Custom item</button></div>
-                <div className="flex flex-wrap gap-2">
-                  {(data.catalog || []).map((item: CatalogItem) => <button key={item.id} onClick={() => addCatalogLine(item)} className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm font-medium text-cyan-800 hover:bg-cyan-100">+ {item.name} · {money(item.price)}</button>)}
-                  {!data.catalog?.length && <button onClick={() => setTab("catalog")} className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-500">No saved rates yet — create your first service</button>}
-                </div>
+                {viewer === "HOSPITAL" ? (
+                  savedServices.length ? (
+                    <div className="relative">
+                      <Search className="pointer-events-none absolute left-3.5 top-3.5 z-10 size-4 text-slate-400" />
+                      <input
+                        value={serviceSearch}
+                        onFocus={() => setServicePickerOpen(true)}
+                        onBlur={() => window.setTimeout(() => setServicePickerOpen(false), 120)}
+                        onChange={(event) => { setServiceSearch(event.target.value); setServicePickerOpen(true); }}
+                        placeholder="Select Service/Test"
+                        aria-label="Search saved services and tests"
+                        className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-11 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10"
+                      />
+                      <ChevronDown className="pointer-events-none absolute right-3.5 top-3.5 size-5 text-slate-400" />
+                      {servicePickerOpen && (
+                        <div className="absolute z-30 mt-2 max-h-72 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                          {matchingServices.length ? matchingServices.map((item) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => { addCatalogLine(item); setServiceSearch(""); setServicePickerOpen(false); }}
+                              className="flex w-full items-center justify-between gap-4 rounded-lg px-3 py-3 text-left transition hover:bg-cyan-50 focus:bg-cyan-50 focus:outline-none"
+                            >
+                              <span className="min-w-0">
+                                <span className="block truncate text-sm font-bold text-slate-800">{item.name}</span>
+                                <span className="mt-0.5 block truncate text-xs text-slate-500">{item.category}{item.code ? ` · ${item.code}` : ""}</span>
+                              </span>
+                              <span className="shrink-0 text-sm font-black text-cyan-700">{money(item.price)}</span>
+                            </button>
+                          )) : <p className="px-3 py-6 text-center text-sm text-slate-500">No matching service or test found.</p>}
+                        </div>
+                      )}
+                    </div>
+                  ) : <button onClick={() => setTab("catalog")} className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-500">No saved rates yet — create your first service</button>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {savedServices.map((item) => <button key={item.id} onClick={() => addCatalogLine(item)} className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm font-medium text-cyan-800 hover:bg-cyan-100">+ {item.name} · {money(item.price)}</button>)}
+                    {!savedServices.length && <button onClick={() => setTab("catalog")} className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-500">No saved rates yet — create your first service</button>}
+                  </div>
+                )}
               </div>
               <div className="space-y-3">
                 {lines.map(line => (

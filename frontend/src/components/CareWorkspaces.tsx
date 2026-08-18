@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BedDouble, CalendarDays, Clock3, Download, FileCheck2, FlaskConical, PackagePlus, Plus, RefreshCw, ShieldCheck, TestTube2 } from "lucide-react";
 import { toast } from "sonner";
@@ -955,28 +956,6 @@ export function InpatientWorkspace() {
       toast.error(error.message);
     }
   };
-  const discharge = async (admission: any) => {
-    const finalDiagnosis = window.prompt("Final diagnosis", admission.diagnosis || "");
-    if (!finalDiagnosis) return;
-    const clinicalCourse = window.prompt("Clinical course / treatment summary", "") || "";
-    const followUpInstructions = window.prompt("Follow-up instructions", "") || "";
-    try {
-      const result = await api(`/api/care/inpatient/admissions/${admission.id}/discharge`, {
-        method: "POST",
-        body: JSON.stringify({
-          finalDiagnosis,
-          clinicalCourse,
-          followUpInstructions,
-          signerName: admission.doctorName || "Authorized Doctor",
-        }),
-      });
-      toast.success("Patient discharged and final bill generated");
-      window.open(`/api/care/documents/DISCHARGE_SUMMARY/${result.summaryId}/pdf`, "_blank");
-      await load();
-    } catch (error: any) {
-      toast.error(error.message);
-    }
-  };
   return (
     <Shell>
       <div className="mb-6 flex gap-2">
@@ -1115,9 +1094,9 @@ export function InpatientWorkspace() {
                         <button onClick={() => charge(item)} className="rounded-lg border px-3 py-2 text-xs font-bold">
                           Add charge
                         </button>
-                        <button onClick={() => discharge(item)} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white">
+                        <Link href={`/hospital/billing?patientId=${encodeURIComponent(item.patientId)}&admissionId=${encodeURIComponent(item.id)}`} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white">
                           Discharge & final bill
-                        </button>
+                        </Link>
                       </>
                     )}
                   </div>

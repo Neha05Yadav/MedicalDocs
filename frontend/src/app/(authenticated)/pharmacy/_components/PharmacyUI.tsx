@@ -203,7 +203,7 @@ function MiniCharts() {
   const allRows=mappedLive;
   const statuses=["All","Pending","Accepted","Rejected","Expired"];
   const visible=allRows.filter(row=>(filter==="All"||String(row.status).toLowerCase()===filter.toLowerCase())&&JSON.stringify(row).toLowerCase().includes(query.toLowerCase()));
-  return <Page title="Quotations" eyebrow="Pricing workspace" description="Prepare transparent medicine pricing and track patient responses." actions={<><SearchBar value={query} onChange={setQuery} placeholder="Search quotations..."/><ActionLink href="/pharmacy/prescription-requests" label="Create quotation"/></>}><div className="flex flex-wrap gap-2">{statuses.map(status=><button key={status} onClick={()=>setFilter(status)} className={`rounded-full px-4 py-2 text-xs font-bold transition-colors ${filter===status?"bg-emerald-600 text-white shadow-sm":"border border-slate-200 bg-white text-slate-600 hover:border-emerald-200 hover:text-emerald-700"}`}>{status}</button>)}</div><Card><EmptySafeTable columns={["Quotation","Patient","Prescription","Amount","Sent","Valid until","Patient response","Status","Action"]} rows={visible.map((row, index)=>[<b key={`quo-id-${index}`}>{row.id}</b>,row.patient,row.prescription,<b key={`quo-amt-${index}`}>{row.amount}</b>,row.sent,row.valid,row.response,<Badge key={`quo-badge-${index}`}>{row.status}</Badge>,<ActionLink key={`quo-act-${index}`} href={`/pharmacy/quotations/create?requestId=${encodeURIComponent(row.requestId)}&quotationId=${encodeURIComponent(row.id)}`}/>])}/></Card></Page>;
+  return <Page title="Quotations" eyebrow="Pricing workspace" description="Prepare transparent medicine pricing and track patient responses." actions={<><SearchBar value={query} onChange={setQuery} placeholder="Search quotations..."/><ActionLink href="/pharmacy/quotations/create" label="Create quotation"/></>}><div className="flex flex-wrap gap-2">{statuses.map(status=><button key={status} onClick={()=>setFilter(status)} className={`rounded-full px-4 py-2 text-xs font-bold transition-colors ${filter===status?"bg-emerald-600 text-white shadow-sm":"border border-slate-200 bg-white text-slate-600 hover:border-emerald-200 hover:text-emerald-700"}`}>{status}</button>)}</div><Card><EmptySafeTable columns={["Quotation","Patient","Prescription","Amount","Sent","Valid until","Patient response","Status","Action"]} rows={visible.map((row, index)=>[<b key={`quo-id-${index}`}>{row.id}</b>,row.patient,row.prescription,<b key={`quo-amt-${index}`}>{row.amount}</b>,row.sent,row.valid,row.response,<Badge key={`quo-badge-${index}`}>{row.status}</Badge>,<ActionLink key={`quo-act-${index}`} href={`/pharmacy/quotations/create?requestId=${encodeURIComponent(row.requestId)}&quotationId=${encodeURIComponent(row.id)}`}/>])}/></Card></Page>;
 }
 
 function Orders({query,setQuery,filter,setFilter}:any) {
@@ -1093,10 +1093,39 @@ export function QuotationCreate() {
   const [itemsState, setItemsState] = useState<any[]>([]);
   const [inventoryState, setInventoryState] = useState<any[]>([]);
   const [loadingQuotation, setLoadingQuotation] = useState(true);
+  const [resolvingRequest, setResolvingRequest] = useState(!requestId);
+
+  useEffect(() => {
+    if (requestId) { setResolvingRequest(false); return; }
+    const token = localStorage.getItem("token");
+    if (!token) { setResolvingRequest(false); return; }
+    fetch("/api/pharmacy/prescription-requests", {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    })
+      .then(async response => {
+        const data = await response.json().catch(() => []);
+        if (!response.ok) throw new Error(data?.message || "Prescription requests could not be loaded.");
+        return Array.isArray(data) ? data : [];
+      })
+      .then(rows => {
+        if (!rows.length) { setResolvingRequest(false); return; }
+        const completedStatuses = new Set(["QUOTATION_SENT", "ACCEPTED", "REJECTED", "CLOSED", "EXPIRED"]);
+        const nextRequest = rows.find(request => !completedStatuses.has(String(request.status || "NEW").toUpperCase())) || rows[0];
+        router.replace(`/pharmacy/quotations/create?requestId=${encodeURIComponent(nextRequest.id)}`);
+      })
+      .catch(error => {
+        toast.error(error instanceof Error ? error.message : "Prescription requests could not be loaded.");
+        setResolvingRequest(false);
+      });
+  }, [requestId, router]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token || !requestId) { setLoadingQuotation(false); return; }
+    setLoadingQuotation(true);
+    setRequestDetails(null);
+    setItemsState([]);
     const headers = { Authorization: `Bearer ${token}` };
     const splitItems = (value: unknown) => {
       const text = String(value || "").trim();
@@ -1143,7 +1172,7 @@ export function QuotationCreate() {
           alternativeComposition: "",
         };
       });
-      const savedQuotation = (Array.isArray(quotationRows) ? quotationRows : []).find((quotation:any)=>quotation.id===quotationId);
+      const savedQuotation = (Array.isArray(quotationRows) ? quotationRows : []).find((quotation:any)=>quotation.id===quotationId || quotation.requestId===details.id);
       let savedItems = savedQuotation?.itemsJson;
       if (typeof savedItems === "string") try { savedItems = JSON.parse(savedItems); } catch { savedItems = []; }
       setItemsState(Array.isArray(savedItems) && savedItems.length ? savedItems.map((item:any)=>({
@@ -1328,6 +1357,14 @@ export function QuotationCreate() {
     );
     router.push(type === "reject" ? "/pharmacy/prescription-requests" : "/pharmacy/quotations");
   };
+
+  if (resolvingRequest || (requestId && loadingQuotation)) {
+    return <Page><Card className="grid min-h-64 place-items-center p-8 text-center"><div><Clock3 className="mx-auto size-7 animate-pulse text-emerald-600"/><p className="mt-3 font-bold text-slate-800">Preparing quotation form...</p><p className="mt-1 text-sm text-slate-500">Loading the prescription request and medicines.</p></div></Card></Page>;
+  }
+
+  if (!requestId) {
+    return <Page><Card className="grid min-h-64 place-items-center p-8 text-center"><div><FileText className="mx-auto size-8 text-slate-300"/><p className="mt-3 font-bold text-slate-800">No prescription request is available.</p><p className="mt-1 text-sm text-slate-500">A patient prescription request is required before creating a quotation.</p><div className="mt-5"><ActionLink href="/pharmacy/prescription-requests" label="View prescription requests"/></div></div></Card></Page>;
+  }
 
   return (
     <Page title="Create Quotation" eyebrow="Prescription pricing & inventory substitution" description="Enter medicine availability from stock. Out-of-stock items allow selecting verified alternative substitutes from inventory." actions={<ActionLink href="/pharmacy/quotations" label="Back to quotations"/>}>
