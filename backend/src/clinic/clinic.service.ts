@@ -18,21 +18,33 @@ export class ClinicService {
     const email = this.request?.user?.email;
     if (!email) throw new UnauthorizedException('Clinic identity is required.');
 
-    // A clinic portal may be opened by an individual doctor or by the clinic
-    // administrator. Resolve the doctor directly first; for an administrator,
-    // stay inside the linked clinic tenant and use its active clinical profile.
-    let doctor = await this.db.queryOne('SELECT * FROM doctor WHERE email = ?', [email]);
-    if (!doctor) {
-      const user = await this.db.queryOne(
-        `SELECT u.hospitalId, h.name AS clinicName
-         FROM user u
-         INNER JOIN hospital h ON h.id = u.hospitalId
-         WHERE u.email = ? AND UPPER(h.type) = 'CLINIC'
+    // The facility linked to the authenticated account is the tenant boundary.
+    // Resolve it before looking up a doctor by email because the same doctor
+    // email can legitimately appear in another facility (for example, a
+    // hospital). Using that unrelated doctor made clinic pages query the wrong
+    // tenant and appear empty or inconsistent.
+    const user = await this.db.queryOne(
+      `SELECT u.hospitalId, h.name AS clinicName
+       FROM user u
+       INNER JOIN hospital h ON h.id = u.hospitalId
+       WHERE u.email = ? AND UPPER(h.type) = 'CLINIC'
+       LIMIT 1`,
+      [email],
+    );
+
+    let doctor: any = null;
+    if (user?.hospitalId) {
+      doctor = await this.db.queryOne(
+        `SELECT * FROM doctor
+         WHERE hospitalId = ?
+           AND LOWER(TRIM(email)) = LOWER(TRIM(?))
+           AND (status IS NULL OR status = 'Active')
+         ORDER BY updatedAt DESC, id ASC
          LIMIT 1`,
-        [email],
+        [user.hospitalId, email],
       );
 
-      if (user?.hospitalId) {
+      if (!doctor) {
         doctor = await this.db.queryOne(
           `SELECT * FROM doctor
            WHERE hospitalId = ? AND (status IS NULL OR status = 'Active')
@@ -40,37 +52,74 @@ export class ClinicService {
            LIMIT 1`,
           [user.hospitalId],
         );
+      }
 
-        // Some existing databases contain a legacy duplicate facility row for
-        // the same clinic name. Resolve its active doctor without modifying or
-        // merging stored records, while remaining restricted to CLINIC rows.
-        if (!doctor && user.clinicName) {
-          doctor = await this.db.queryOne(
-            `SELECT d.*
-             FROM doctor d
-             INNER JOIN hospital h ON h.id = d.hospitalId
-             WHERE UPPER(h.type) = 'CLINIC'
-               AND LOWER(TRIM(h.name)) = LOWER(TRIM(?))
-               AND (d.status IS NULL OR d.status = 'Active')
-             ORDER BY d.updatedAt DESC, d.id ASC
-             LIMIT 1`,
-            [user.clinicName],
-          );
-        }
+      // Some existing databases contain a legacy duplicate facility row for
+      // the same clinic name. Resolve its active doctor without modifying or
+      // merging stored records, while remaining restricted to CLINIC rows.
+      if (!doctor && user.clinicName) {
+        doctor = await this.db.queryOne(
+          `SELECT d.*
+           FROM doctor d
+           INNER JOIN hospital h ON h.id = d.hospitalId
+           WHERE UPPER(h.type) = 'CLINIC'
+             AND LOWER(TRIM(h.name)) = LOWER(TRIM(?))
+             AND (d.status IS NULL OR d.status = 'Active')
+           ORDER BY d.updatedAt DESC, d.id ASC
+           LIMIT 1`,
+          [user.clinicName],
+        );
       }
     }
+
+    // Support a clinic practitioner account that has no user-to-facility link,
+    // but never allow an email match from a hospital or laboratory tenant.
+    if (!doctor) {
+      doctor = await this.db.queryOne(
+        `SELECT d.*
+         FROM doctor d
+         INNER JOIN hospital h ON h.id = d.hospitalId
+         WHERE LOWER(TRIM(d.email)) = LOWER(TRIM(?))
+           AND UPPER(h.type) = 'CLINIC'
+           AND (d.status IS NULL OR d.status = 'Active')
+         ORDER BY d.updatedAt DESC, d.id ASC
+         LIMIT 1`,
+        [email],
+      );
+    }
     if (!doctor) throw new UnauthorizedException('No clinic workspace is linked to this identity.');
+
+    // Existing Green Valley Clinic activity is split between the account-linked
+    // facility row and the established clinical row that owns its doctor. Keep
+    // both rows in the authenticated tenant scope so historical and newer data
+    // remain visible without moving or rewriting any database records.
+    doctor.clinicFacilityIds = Array.from(
+      new Set(
+        [doctor.hospitalId, user?.hospitalId]
+          .map((id) => String(id || '').trim())
+          .filter(Boolean),
+      ),
+    );
     return doctor;
+  }
+
+  private clinicFacilityIds(doctor: any): string[] {
+    const ids = Array.isArray(doctor?.clinicFacilityIds)
+      ? doctor.clinicFacilityIds
+      : [doctor?.hospitalId];
+    return Array.from(new Set(ids.map((id: any) => String(id || '').trim()).filter(Boolean)));
   }
 
   async getDoctors() {
     const currentDoctor = await this.getDoctorContext();
+    const facilityIds = this.clinicFacilityIds(currentDoctor);
+    const facilityPlaceholders = facilityIds.map(() => '?').join(',');
     const doctors = await this.db.query(
       `SELECT id, name, specialization, department, shift, status
        FROM doctor
-       WHERE hospitalId = ?
+       WHERE hospitalId IN (${facilityPlaceholders})
        ORDER BY name ASC`,
-      [currentDoctor.hospitalId],
+      facilityIds,
     );
 
     return Promise.all(doctors.map(async (doctor: any) => {
@@ -272,6 +321,8 @@ export class ClinicService {
   // --- Prescriptions Module APIs ---
   async getMyPatients() {
     const doctor = await this.getDoctorContext();
+    const facilityIds = this.clinicFacilityIds(doctor);
+    const facilityPlaceholders = facilityIds.map(() => '?').join(',');
     const customRows = await this.db.query(
       'SELECT * FROM clinic_patient WHERE doctorId = ? ORDER BY updatedAt DESC',
       [doctor.id],
@@ -286,17 +337,24 @@ export class ClinicService {
           FROM appointment WHERE doctorId = ? GROUP BY patientId
         UNION ALL
         SELECT patientId, MAX(requestDate), MAX(admissionInfo)
-          FROM accessrequest WHERE doctorId = ? OR hospitalId = ? GROUP BY patientId
+          FROM accessrequest WHERE doctorId = ? OR hospitalId IN (${facilityPlaceholders}) GROUP BY patientId
         UNION ALL
         SELECT patientId, MAX(createdAt), MAX(medicine)
-          FROM prescription WHERE doctorId = ? OR hospitalId = ? GROUP BY patientId
+          FROM prescription WHERE doctorId = ? OR hospitalId IN (${facilityPlaceholders}) GROUP BY patientId
         UNION ALL
         SELECT patientId, MAX(createdAt), MAX(description)
-          FROM medicalrecord WHERE hospitalId = ? GROUP BY patientId
+          FROM medicalrecord WHERE hospitalId IN (${facilityPlaceholders}) GROUP BY patientId
       ) activity ON activity.patientId = p.id
       GROUP BY p.id
       ORDER BY activityAt DESC, p.updatedAt DESC
-    `, [doctor.id, doctor.id, doctor.hospitalId, doctor.id, doctor.hospitalId, doctor.hospitalId]);
+    `, [
+      doctor.id,
+      doctor.id,
+      ...facilityIds,
+      doctor.id,
+      ...facilityIds,
+      ...facilityIds,
+    ]);
 
     const customIds = new Set(customRows.map((row: any) => row.id));
     const realRows = linkedRows
@@ -670,14 +728,16 @@ export class ClinicService {
 
   async getPrescriptions() {
     const doctor = await this.getDoctorContext();
+    const facilityIds = this.clinicFacilityIds(doctor);
+    const facilityPlaceholders = facilityIds.map(() => '?').join(',');
     const rxs = await this.db.query(`
       SELECT r.*, p.name as patientName, sfp.storedFileId as imageFileId
       FROM prescription r
       LEFT JOIN patient p ON r.patientId = p.id
       LEFT JOIN stored_file_prescription sfp ON sfp.prescriptionId = r.id
-      WHERE r.doctorId = ?
+      WHERE r.doctorId = ? OR r.hospitalId IN (${facilityPlaceholders})
       ORDER BY r.createdAt DESC
-    `, [doctor.id]);
+    `, [doctor.id, ...facilityIds]);
 
     return rxs.map(rx => ({
       id: formatPrescriptionId(rx.id),
@@ -873,14 +933,19 @@ export class ClinicService {
 
   async getReceivedLabReports() {
     const doctor = await this.getDoctorContext();
-    // Use the doctor's hospitalId (the clinic's ID) to find lab reports assigned to this clinic
+    const facilityIds = this.clinicFacilityIds(doctor);
+    const facilityPlaceholders = facilityIds.map(() => '?').join(',');
+    // Read reports from every facility row belonging to this authenticated
+    // clinic workspace so neither legacy nor newer records disappear.
     const records = await this.db.query(`
       SELECT m.*, p.name as patientName, p.phone as patientPhone 
       FROM medicalrecord m
       LEFT JOIN patient p ON m.patientId = p.id
-      WHERE m.hospitalId = ? AND m.type = 'LAB_REPORT' AND m.description LIKE 'From %'
+      WHERE m.hospitalId IN (${facilityPlaceholders})
+        AND m.type = 'LAB_REPORT'
+        AND m.description LIKE 'From %'
       ORDER BY m.date DESC
-    `, [doctor.hospitalId]);
+    `, facilityIds);
 
     return records.map(r => {
       let labName = 'Unknown Lab';
@@ -931,9 +996,16 @@ export class ClinicService {
 
   async getNotifications() {
     const doctor = await this.getDoctorContext();
-    if (!doctor.hospitalId) return [];
+    const facilityIds = this.clinicFacilityIds(doctor);
+    if (facilityIds.length === 0) return [];
+    const facilityPlaceholders = facilityIds.map(() => '?').join(',');
     
-    const notifs = await this.db.query('SELECT * FROM notification WHERE hospitalId = ? ORDER BY createdAt DESC', [doctor.hospitalId]);
+    const notifs = await this.db.query(
+      `SELECT * FROM notification
+       WHERE hospitalId IN (${facilityPlaceholders})
+       ORDER BY createdAt DESC`,
+      facilityIds,
+    );
     return notifs.map(n => ({
       id: n.id,
       title: n.title,
@@ -947,20 +1019,38 @@ export class ClinicService {
 
   async markNotificationRead(id: string) {
     const doctor = await this.getDoctorContext();
-    await this.db.query('UPDATE notification SET isRead = true WHERE id = ? AND hospitalId = ?', [id, doctor.hospitalId]);
+    const facilityIds = this.clinicFacilityIds(doctor);
+    const facilityPlaceholders = facilityIds.map(() => '?').join(',');
+    await this.db.query(
+      `UPDATE notification SET isRead = true
+       WHERE id = ? AND hospitalId IN (${facilityPlaceholders})`,
+      [id, ...facilityIds],
+    );
     return { success: true };
   }
 
   async markAllNotificationsRead() {
     const doctor = await this.getDoctorContext();
-    if (!doctor.hospitalId) return { success: false };
-    await this.db.query('UPDATE notification SET isRead = true WHERE hospitalId = ? AND isRead = false', [doctor.hospitalId]);
+    const facilityIds = this.clinicFacilityIds(doctor);
+    if (facilityIds.length === 0) return { success: false };
+    const facilityPlaceholders = facilityIds.map(() => '?').join(',');
+    await this.db.query(
+      `UPDATE notification SET isRead = true
+       WHERE hospitalId IN (${facilityPlaceholders}) AND isRead = false`,
+      facilityIds,
+    );
     return { success: true };
   }
 
   async deleteNotification(id: string) {
     const doctor = await this.getDoctorContext();
-    await this.db.query('DELETE FROM notification WHERE id = ? AND hospitalId = ?', [id, doctor.hospitalId]);
+    const facilityIds = this.clinicFacilityIds(doctor);
+    const facilityPlaceholders = facilityIds.map(() => '?').join(',');
+    await this.db.query(
+      `DELETE FROM notification
+       WHERE id = ? AND hospitalId IN (${facilityPlaceholders})`,
+      [id, ...facilityIds],
+    );
     return { success: true };
   }
 

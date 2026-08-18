@@ -9,7 +9,11 @@ async function upsertUser(connection, values) {
   await connection.query(
     `INSERT INTO user (id, email, password, role, name, status, hospitalId, createdAt, updatedAt)
      VALUES (?, ?, ?, ?, ?, 'Active', ?, NOW(3), NOW(3))
-     ON DUPLICATE KEY UPDATE name = VALUES(name), role = VALUES(role), hospitalId = VALUES(hospitalId), updatedAt = NOW(3)`,
+     ON DUPLICATE KEY UPDATE
+       name = VALUES(name),
+       role = VALUES(role),
+       hospitalId = COALESCE(NULLIF(user.hospitalId, ''), VALUES(hospitalId)),
+       updatedAt = NOW(3)`,
     [
       values.id,
       values.email,

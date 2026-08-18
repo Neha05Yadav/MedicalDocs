@@ -68,7 +68,7 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
 
   private async facility(user: any, accepted: string[] = []) {
     const account = await this.account(user);
-    const row = account?.hospitalId
+    let row = account?.hospitalId
       ? await this.db.queryOne<any>('SELECT * FROM hospital WHERE id = ?', [
           account.hospitalId,
         ])
@@ -77,6 +77,34 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
         ]);
     if (!row)
       throw new ForbiddenException('Facility is not linked to this account.');
+
+    // Keep legacy clinic data reachable when an account is linked to a newer
+    // duplicate facility row with the same name but the established doctors,
+    // appointments and availability still belong to the original CLINIC row.
+    // This is a read-time tenant alias only; no stored facility data is changed.
+    if (String(row.type || '').toUpperCase() === 'CLINIC') {
+      const linkedDoctor = await this.db.queryOne<any>(
+        'SELECT id FROM doctor WHERE hospitalId = ? LIMIT 1',
+        [row.id],
+      );
+      if (!linkedDoctor) {
+        const establishedClinic = await this.db.queryOne<any>(
+          `SELECT h.*
+           FROM hospital h
+           WHERE UPPER(h.type) = 'CLINIC'
+             AND LOWER(TRIM(h.name)) = LOWER(TRIM(?))
+             AND h.id <> ?
+             AND EXISTS (SELECT 1 FROM doctor d WHERE d.hospitalId = h.id)
+           ORDER BY (UPPER(COALESCE(h.status, '')) = 'ACTIVE') DESC,
+                    h.createdAt ASC,
+                    h.id ASC
+           LIMIT 1`,
+          [row.name, row.id],
+        );
+        if (establishedClinic) row = establishedClinic;
+      }
+    }
+
     const type = String(row.type || '').toUpperCase();
     if (accepted.length && !accepted.includes(type))
       throw new ForbiddenException(
