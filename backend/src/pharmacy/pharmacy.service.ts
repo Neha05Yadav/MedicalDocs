@@ -182,17 +182,36 @@ export class PharmacyService {
       ...row,
       rawPrescriptionReference: row.prescription,
       prescription: formatPrescriptionId(row.prescription),
+      deliveryMode: Number(row.deliveryCharge || 0) > 0 ? 'Home delivery' : 'Store pickup',
     }));
   }
 
   async updateOrderStatus(userEmail: string, id: string, rawStatus: string) {
     const pharmacy = await this.getPharmacy(userEmail);
     const status = String(rawStatus || '').toUpperCase().replace(/\s+/g, '_');
-    const allowed = ['CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'];
-    if (!allowed.includes(status)) throw new BadRequestException('Invalid order status.');
+    const order = await this.db.queryOne<any>(
+      `SELECT o.status, q.deliveryCharge
+       FROM pharmacy_order o
+       JOIN pharmacy_quotation q ON q.id=o.quotationId
+       WHERE o.id=? AND o.pharmacyId=? LIMIT 1`,
+      [id, pharmacy.id],
+    );
+    if (!order) throw new NotFoundException('Order not found.');
+    const isHomeDelivery = Number(order.deliveryCharge || 0) > 0;
+    const sequence = isHomeDelivery
+      ? ['CONFIRMED', 'PREPARING', 'READY_FOR_DISPATCH', 'OUT_FOR_DELIVERY', 'DELIVERED']
+      : ['CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP', 'PICKED_UP'];
+    const currentStatus = String(order.status || '').toUpperCase() === 'ACCEPTED'
+      ? 'CONFIRMED'
+      : String(order.status || '').toUpperCase();
+    const currentIndex = sequence.indexOf(currentStatus);
+    const requestedIndex = sequence.indexOf(status);
+    if (currentIndex < 0 || requestedIndex !== currentIndex + 1) {
+      throw new BadRequestException('Order status must be updated in the required delivery sequence.');
+    }
     const result: any = await this.db.query('UPDATE pharmacy_order SET status=?, updatedAt=NOW(3) WHERE id=? AND pharmacyId=?', [status, id, pharmacy.id]);
     if (!Number(result?.affectedRows || 0)) throw new NotFoundException('Order not found.');
-    return { id, status };
+    return { id, status, deliveryMode: isHomeDelivery ? 'Home delivery' : 'Store pickup' };
   }
 
   async getInventory(userEmail: string) {

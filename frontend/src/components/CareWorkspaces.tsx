@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BedDouble, CalendarDays, Clock3, Download, FileCheck2, FlaskConical, PackagePlus, Plus, RefreshCw, ShieldCheck, TestTube2 } from "lucide-react";
+import { BedDouble, CalendarDays, Clock3, Download, Eye, FileCheck2, FlaskConical, PackagePlus, Plus, RefreshCw, ShieldCheck, TestTube2, X } from "lucide-react";
 import { toast } from "sonner";
 
 const authHeaders = (json = false) => ({
@@ -84,6 +84,7 @@ export function AppointmentWorkspace({ patientMode = false }: { patientMode?: bo
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [rules, setRules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewingAppointment, setViewingAppointment] = useState<any | null>(null);
   const [form, setForm] = useState({
     provider: "",
     date: patientMode ? nextBookingDate() : "",
@@ -118,6 +119,9 @@ export function AppointmentWorkspace({ patientMode = false }: { patientMode?: bo
   }, [load]);
 
   const selected = providers.find((provider) => provider.doctorId === form.provider);
+  const selectedDoctorRules = ruleForm.doctorId
+    ? rules.filter((rule) => rule.doctorId === ruleForm.doctorId)
+    : [];
   useEffect(() => {
     if (!patientMode || !form.provider || !form.date) {
       setSlots([]);
@@ -125,7 +129,6 @@ export function AppointmentWorkspace({ patientMode = false }: { patientMode?: bo
     }
     if (form.date < todayValue()) {
       setSlots([]);
-      toast.error("Please select today or a future appointment date.");
       return;
     }
     setSlotsLoading(true);
@@ -319,13 +322,17 @@ export function AppointmentWorkspace({ patientMode = false }: { patientMode?: bo
           <button onClick={saveRule} className="mt-4 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">
             Save working hours
           </button>
-          {!!rules.length && (
+          {!!ruleForm.doctorId && (
             <div className="mt-4 flex flex-wrap gap-2">
-              {rules.map((rule) => (
-                <span key={rule.id} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">
-                  {rule.doctorName} · {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][rule.weekday]} · {String(rule.startTime).slice(0, 5)}–{String(rule.endTime).slice(0, 5)}
-                </span>
-              ))}
+              {selectedDoctorRules.length ? (
+                selectedDoctorRules.map((rule) => (
+                  <span key={rule.id} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">
+                    {rule.doctorName} · {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][rule.weekday]} · {String(rule.startTime).slice(0, 5)}–{String(rule.endTime).slice(0, 5)}
+                  </span>
+                ))
+              ) : (
+                <span className="text-sm text-slate-500">No working hours saved for this doctor.</span>
+              )}
             </div>
           )}
         </section>
@@ -339,7 +346,7 @@ export function AppointmentWorkspace({ patientMode = false }: { patientMode?: bo
             <p className="p-8 text-center text-slate-500">Loading calendar…</p>
           ) : (
             appointments.map((appointment) => (
-              <div key={appointment.id} className="grid gap-4 p-5 md:grid-cols-[1.1fr_1fr_.8fr_auto] md:items-center">
+              <div key={appointment.id} className="grid gap-4 p-5 md:grid-cols-[1.1fr_1fr_.8fr_250px] md:items-center">
                 <div>
                   <p className="font-bold text-slate-900">{patientMode ? appointment.doctorName : appointment.patientName}</p>
                   <p className="text-xs text-slate-500">{patientMode ? appointment.facilityName : appointment.patientPhone}</p>
@@ -355,6 +362,16 @@ export function AppointmentWorkspace({ patientMode = false }: { patientMode?: bo
                 </div>
                 <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{appointment.status.replaceAll("_", " ")}</span>
                 <div className="flex flex-wrap justify-end gap-2">
+                  {!patientMode && (
+                    <button
+                      type="button"
+                      onClick={() => setViewingAppointment(appointment)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700"
+                    >
+                      <Eye className="size-3.5" />
+                      View
+                    </button>
+                  )}
                   {patientMode && ["SCHEDULED", "CONFIRMED"].includes(appointment.status) && (
                     <>
                       <button onClick={() => reschedule(appointment)} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-700">
@@ -392,6 +409,63 @@ export function AppointmentWorkspace({ patientMode = false }: { patientMode?: bo
           {!loading && !appointments.length && <p className="p-12 text-center text-sm text-slate-500">No appointments found.</p>}
         </div>
       </section>
+      {viewingAppointment && !patientMode && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target) setViewingAppointment(null);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="appointment-details-title"
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl"
+          >
+            <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-600">Appointment details</p>
+                <h2 id="appointment-details-title" className="mt-1 text-xl font-black text-slate-950">
+                  {viewingAppointment.patientName || "Patient"}
+                </h2>
+                <p className="mt-1 text-sm font-semibold text-slate-500">Patient ID: {viewingAppointment.patientId || "Not available"}</p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close appointment details"
+                onClick={() => setViewingAppointment(null)}
+                className="rounded-full bg-slate-100 p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-800"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <div className="grid gap-4 p-6 sm:grid-cols-2">
+              {[
+                ["Patient Name", viewingAppointment.patientName || "Not available"],
+                ["Patient ID", viewingAppointment.patientId || "Not available"],
+                ["Mobile Number", viewingAppointment.patientPhone || "Not available"],
+                ["Gender", viewingAppointment.patientGender || "Not specified"],
+                ["Appointment Date & Time", dateTime(viewingAppointment.dateTime)],
+                ["Assigned Doctor", viewingAppointment.doctorName || "Not assigned"],
+                ["Visit Type", viewingAppointment.type === "FOLLOW_UP" ? "Follow-up" : "New"],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3.5">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">{label}</p>
+                  <p className="mt-1.5 break-words text-sm font-bold text-slate-900">{value}</p>
+                </div>
+              ))}
+              <div className="rounded-2xl border border-cyan-100 bg-cyan-50/70 px-4 py-3.5 sm:col-span-2">
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-cyan-700">Reason for Visit / Symptoms</p>
+                <p className="mt-1.5 whitespace-pre-wrap text-sm font-semibold text-slate-800">
+                  {viewingAppointment.reason || viewingAppointment.notes || "Not provided"}
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
     </Shell>
   );
 }
@@ -496,7 +570,7 @@ export function LaboratoryWorkflow() {
       <div className="mb-6 flex flex-wrap gap-2">
         {(
           [
-            ["orders", "Orders & samples"],
+            ["orders", "Test Orders"],
             ["catalog", "Test catalogue"],
             ["packages", "Health packages"],
           ] as const
@@ -518,46 +592,51 @@ export function LaboratoryWorkflow() {
                   <div>
                     <h3 className="font-bold text-slate-900">{order.testType}</h3>
                     <p className="text-sm text-slate-500">
-                      {order.patientName} · {order.patientPhone}
+                      Patient: <span className="font-semibold text-slate-700">{order.patientName}</span> · {order.patientPhone}
                     </p>
-                    <p className="mt-1 font-mono text-xs text-slate-500">{order.barcodeValue}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Requester: <span className="font-semibold text-slate-700">{order.referringHospitalName || order.patientName || "Direct Patient"}</span>
+                    </p>
+                    {order.barcodeValue && <p className="mt-1 font-mono text-xs text-slate-400">ID: {order.barcodeValue}</p>}
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className={`rounded-full px-3 py-1 text-xs font-bold ${order.abnormalFlag === "CRITICAL" ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-700"}`}>{order.status}</span>
-                  <p className="mt-2 font-bold">{money(Number(order.unitPrice) + Number(order.homeCollectionCharge))}</p>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                      {order.invoiceId ? "Paid" : "Pending Payment"}
+                    </span>
+                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${order.status === "Rejected" ? "bg-red-100 text-red-700" : order.status === "Accepted" ? "bg-blue-100 text-blue-700" : order.status === "Sent to Sample Management" ? "bg-purple-100 text-purple-700" : "bg-slate-100 text-slate-700"}`}>
+                      {order.status === "Pending Collection" ? "Pending" : order.status}
+                    </span>
+                  </div>
+                  <p className="mt-2 font-bold text-slate-900">{money(Number(order.unitPrice) + Number(order.homeCollectionCharge))}</p>
                 </div>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 {order.barcodeValue && (
-                  <a href={`/api/care/lab/orders/${order.id}/label`} target="_blank" className="flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-bold">
+                  <a href={`/api/care/lab/orders/${order.id}/label`} target="_blank" className="flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">
                     <Download className="size-3.5" /> QR label
                   </a>
                 )}
-                {order.status === "Pending Collection" && (
-                  <button onClick={() => sampleStatus(order.id, "Collected")} className="rounded-lg bg-cyan-50 px-3 py-2 text-xs font-bold text-cyan-700">
-                    Collected
-                  </button>
+                {(!order.status || ["Pending Collection", "Pending"].includes(order.status)) && (
+                  <>
+                    <button onClick={() => sampleStatus(order.id, "Accepted")} className="rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition">
+                      Accept
+                    </button>
+                    <button onClick={() => sampleStatus(order.id, "Rejected")} className="rounded-lg bg-red-50 px-3.5 py-2 text-xs font-bold text-red-700 hover:bg-red-100 transition">
+                      Reject
+                    </button>
+                  </>
                 )}
-                {order.status === "Collected" && (
-                  <button onClick={() => sampleStatus(order.id, "Received")} className="rounded-lg bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700">
-                    Received at lab
-                  </button>
-                )}
-                {order.status === "Received" && (
-                  <button onClick={() => sampleStatus(order.id, "In Processing")} className="rounded-lg bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700">
-                    Start processing
-                  </button>
-                )}
-                {["In Processing", "Quality Check"].includes(order.status) && (
-                  <button onClick={() => complete(order)} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white">
-                    Complete report & bill
+                {order.status === "Accepted" && (
+                  <button onClick={() => sampleStatus(order.id, "Sent to Sample Management")} className="rounded-lg bg-cyan-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-cyan-700 transition">
+                    Send to Sample Management
                   </button>
                 )}
               </div>
             </article>
           ))}
-          {!orders.length && <div className="rounded-2xl border border-dashed bg-white p-16 text-center text-sm text-slate-500">No laboratory orders.</div>}
+          {!orders.length && <div className="rounded-2xl border border-dashed bg-white p-16 text-center text-sm text-slate-500">No test orders found.</div>}
         </div>
       )}
       {tab === "catalog" && (
@@ -728,7 +807,7 @@ export function PatientLabBooking() {
           priority,
         }),
       });
-      toast.success("Lab order placed. Preparation instructions are shown below and in your notifications.");
+      toast.success("Lab place order sent");
       setTestIds([]);
       setPackageId("");
     } catch (error: any) {

@@ -78,7 +78,7 @@ export class PatientService {
   }
 
   async getOverview(userEmail: string) {
-    const cacheKey = `patient:overview:${userEmail}`;
+    const cacheKey = `patient:overview:v2:${userEmail}`;
     let patient = await this.db.queryOne(
       'SELECT * FROM patient WHERE LOWER(email) = LOWER(?) LIMIT 1',
       [userEmail],
@@ -135,17 +135,73 @@ export class PatientService {
     const providerStats = await this.db.queryOne(
       `SELECT
          COUNT(DISTINCT CASE
-           WHEN UPPER(COALESCE(h.type, '')) NOT LIKE '%LAB%' THEN ar.hospitalId
+           WHEN UPPER(TRIM(COALESCE(h.type, ''))) = 'HOSPITAL' THEN connections.facilityId
          END) AS connectedHospitals,
          COUNT(DISTINCT CASE
-           WHEN UPPER(COALESCE(h.type, '')) LIKE '%LAB%' THEN ar.hospitalId
+           WHEN UPPER(TRIM(COALESCE(h.type, ''))) = 'CLINIC' THEN connections.facilityId
+         END) AS connectedClinics,
+         COUNT(DISTINCT CASE
+           WHEN UPPER(TRIM(COALESCE(h.type, ''))) LIKE '%LAB%' THEN connections.facilityId
          END) AS connectedLabs,
-         SUM(CASE WHEN UPPER(COALESCE(ar.status, '')) = 'APPROVED' THEN 1 ELSE 0 END) AS accessGranted
-       FROM accessrequest ar
-       LEFT JOIN hospital h ON h.id = ar.hospitalId
-       WHERE ar.patientId = ?
-         AND UPPER(COALESCE(ar.status, '')) = 'APPROVED'`,
-      [patient.id],
+         (
+           SELECT COUNT(DISTINCT approved.hospitalId)
+           FROM accessrequest approved
+           WHERE approved.patientId = ?
+             AND approved.hospitalId IS NOT NULL
+             AND UPPER(TRIM(COALESCE(approved.status, ''))) = 'APPROVED'
+         ) AS accessGranted
+       FROM (
+         SELECT ar.hospitalId AS facilityId
+         FROM accessrequest ar
+         WHERE ar.patientId = ?
+           AND ar.hospitalId IS NOT NULL
+           AND UPPER(TRIM(COALESCE(ar.status, ''))) = 'APPROVED'
+
+         UNION ALL
+
+         SELECT mr.hospitalId AS facilityId
+         FROM medicalrecord mr
+         WHERE mr.patientId = ?
+           AND mr.hospitalId IS NOT NULL
+
+         UNION ALL
+
+         SELECT pr.hospitalId AS facilityId
+         FROM prescription pr
+         WHERE pr.patientId = ?
+           AND pr.hospitalId IS NOT NULL
+
+         UNION ALL
+
+         SELECT ap.hospitalId AS facilityId
+         FROM appointment ap
+         WHERE ap.patientId = ?
+           AND ap.hospitalId IS NOT NULL
+           AND ap.deletedAt IS NULL
+
+         UNION ALL
+
+         SELECT tr.hospitalId AS facilityId
+         FROM testrequest tr
+         WHERE tr.patientId = ?
+           AND tr.hospitalId IS NOT NULL
+
+         UNION ALL
+
+         SELECT tr.referringHospitalId AS facilityId
+         FROM testrequest tr
+         WHERE tr.patientId = ?
+           AND tr.referringHospitalId IS NOT NULL
+
+         UNION ALL
+
+         SELECT bi.facilityId
+         FROM billing_invoice bi
+         WHERE bi.patientId = ?
+           AND bi.facilityId IS NOT NULL
+       ) connections
+       INNER JOIN hospital h ON h.id = connections.facilityId`,
+      Array(8).fill(patient.id),
     );
 
     let age = 'N/A';
@@ -243,6 +299,7 @@ export class PatientService {
       },
       providerStats: {
         connectedHospitals: Number(providerStats?.connectedHospitals || 0),
+        connectedClinics: Number(providerStats?.connectedClinics || 0),
         connectedLabs: Number(providerStats?.connectedLabs || 0),
         accessGranted: Number(providerStats?.accessGranted || 0),
       },
@@ -369,7 +426,7 @@ export class PatientService {
         now,
       ],
     );
-    await this.redisService.del(`patient:overview:${userEmail}`);
+    await this.redisService.del(`patient:overview:v2:${userEmail}`);
     return { id, message: 'Appointment booked successfully.' };
   }
 
@@ -404,7 +461,7 @@ export class PatientService {
       'UPDATE appointment SET status = ?, updatedAt = ? WHERE id = ?',
       ['CANCELLED', new Date(), id],
     );
-    await this.redisService.del(`patient:overview:${userEmail}`);
+    await this.redisService.del(`patient:overview:v2:${userEmail}`);
     return { message: 'Appointment cancelled.' };
   }
 
@@ -494,7 +551,7 @@ export class PatientService {
     );
 
     // Invalidate patient cache
-    await this.redisService.del(`patient:overview:${userEmail}`);
+    await this.redisService.del(`patient:overview:v2:${userEmail}`);
     await this.redisService.del(`patient:records:${userEmail}`);
 
     return { id: newId };
@@ -606,7 +663,7 @@ export class PatientService {
 
     // Invalidate caches
     await this.redisService.del(`patient:profile:${userEmail}`);
-    await this.redisService.del(`patient:overview:${userEmail}`);
+    await this.redisService.del(`patient:overview:v2:${userEmail}`);
 
     return this.getProfile(userEmail);
   }

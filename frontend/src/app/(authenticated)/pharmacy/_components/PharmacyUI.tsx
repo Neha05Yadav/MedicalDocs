@@ -4,10 +4,21 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Activity, AlertTriangle, ArrowRight, BarChart3, Bell, Boxes, CheckCircle2, Clock3, CreditCard, Download, FileText, IndianRupee, MapPin, PackageCheck, Pill, Plus, Search, Send, ShoppingBag, Truck, Upload, UserRound, X } from "lucide-react";
-import { alternativeCatalog, deliveries, inventory, medicines, notifications, orders, patients, quotations, requests } from "./pharmacy-data";
+import { Activity, AlertTriangle, ArrowLeft, ArrowRight, BarChart3, Bell, Boxes, CheckCircle2, Clock3, CreditCard, Download, FileText, IndianRupee, MapPin, PackageCheck, Pill, Plus, Search, Send, ShoppingBag, Truck, Upload, UserRound, X } from "lucide-react";
+import { alternativeCatalog, inventory, medicines, notifications, orders, patients, quotations, requests } from "./pharmacy-data";
 
 export type PharmacyView = "overview" | "requests" | "quotations" | "orders" | "inventory" | "alternatives" | "deliveries" | "billing" | "patients" | "notifications" | "analytics" | "profile";
+
+const alternativeRequestStorageKey = () => {
+  if (typeof window === "undefined") return "pharmacyAlternativeMedicineRequests:current";
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const accountId = user.id || user.hospitalId || user.email || "current";
+    return `pharmacyAlternativeMedicineRequests:${String(accountId)}`;
+  } catch {
+    return "pharmacyAlternativeMedicineRequests:current";
+  }
+};
 
 const badgeTone = (status: string) => {
   const value = status.toLowerCase();
@@ -282,6 +293,18 @@ function Inventory({ query, setQuery }: any) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [selectedMedicine, setSelectedMedicine] = useState<any>(null);
+  const [quotationReturnPath, setQuotationReturnPath] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const medicineQuery = params.get("medicine")?.trim() || "";
+    const returnTo = params.get("returnTo") || "";
+
+    if (medicineQuery) setQuery(medicineQuery);
+    if (returnTo === "/pharmacy/quotations/create" || returnTo.startsWith("/pharmacy/quotations/create?")) {
+      setQuotationReturnPath(returnTo);
+    }
+  }, [setQuery]);
 
   const [form, setForm] = useState({
     medicine: "",
@@ -457,6 +480,15 @@ function Inventory({ query, setQuery }: any) {
     <Page
       actions={
         <>
+          {quotationReturnPath && (
+            <Link
+              href={quotationReturnPath}
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-sm font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-50"
+            >
+              <ArrowLeft className="size-4" />
+              Back to Create Quotation
+            </Link>
+          )}
           <SearchBar value={query} onChange={setQuery} placeholder="Search inventory..." />
           <button
             onClick={() => setIsAddModalOpen(true)}
@@ -748,44 +780,368 @@ function Inventory({ query, setQuery }: any) {
 }
 
 function Alternatives() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<any[]>([]);
+  const [inventoryLoading, setInventoryLoading] = useState(true);
+  const [selectedAlternatives, setSelectedAlternatives] = useState<Record<string, string>>({});
+  const [addingFor, setAddingFor] = useState("");
+  const [savingMedicine, setSavingMedicine] = useState(false);
+  const [newMedicine, setNewMedicine] = useState({ medicineName: "", brand: "", composition: "", batchNumber: "", stockQuantity: "", unitPrice: "" });
+  const requestId = searchParams.get("requestId") || "";
+  const prescribedMedicine = searchParams.get("medicine") || "";
+  const itemIndex = searchParams.get("itemIndex") || "";
+  const normalizeMedicine = (value: unknown) => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const visiblePendingRequests = prescribedMedicine
+    ? pendingRequests.filter((item) => (
+        (!requestId || item.requestId === requestId)
+        && normalizeMedicine(item.medicineName) === normalizeMedicine(prescribedMedicine)
+      ))
+    : pendingRequests;
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(alternativeRequestStorageKey()) || "[]");
+      setPendingRequests(Array.isArray(stored) ? stored : []);
+    } catch {
+      setPendingRequests([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setInventoryLoading(false);
+      return;
+    }
+    fetch("/api/pharmacy/inventory", {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    })
+      .then(async response => {
+        const data = await response.json().catch(() => []);
+        if (!response.ok) throw new Error(data?.message || "Inventory could not be loaded.");
+        return Array.isArray(data) ? data : [];
+      })
+      .then(rows => {
+        let metadata: any[] = [];
+        try {
+          const saved = JSON.parse(localStorage.getItem("pharmacyAlternativeInventoryMetadata") || "[]");
+          metadata = Array.isArray(saved) ? saved : [];
+        } catch {}
+        setInventoryItems(rows.map((row: any) => {
+          const extra = metadata.find(item => item.id === row.id || normalizeMedicine(item.medicineName) === normalizeMedicine(row.medicineName));
+          return { ...row, ...(extra || {}) };
+        }));
+      })
+      .catch(error => toast.error(error instanceof Error ? error.message : "Inventory could not be loaded."))
+      .finally(() => setInventoryLoading(false));
+  }, []);
+
+  const requestKeyFor = (item: any, index: number) => String(item.id || `${item.requestId}-${item.medicineName}-${index}`);
+  const catalogueFor = (medicineName: string) => alternativeCatalog.filter(candidate => {
+    const prescribed = normalizeMedicine(candidate.prescribed);
+    const requested = normalizeMedicine(medicineName);
+    return prescribed.includes(requested) || requested.includes(prescribed);
+  });
+  const alternativesForRequest = (item: any) => {
+    const catalogue = catalogueFor(item.medicineName);
+    return inventoryItems.flatMap((stock: any) => {
+      if (Number(stock.stockQuantity || 0) <= 0 || stock.active === 0) return [];
+      const stockName = normalizeMedicine(stock.medicineName);
+      const matched = catalogue.find(candidate => {
+        const alternative = normalizeMedicine(candidate.alternative);
+        return stockName === alternative || stockName.includes(alternative) || alternative.includes(stockName);
+      });
+      const manuallyRelated = normalizeMedicine(stock.prescribedFor) === normalizeMedicine(item.medicineName);
+      if (!matched && !manuallyRelated) return [];
+      return [{
+        id: stock.id,
+        inventoryItemId: stock.id,
+        alternative: stock.medicineName,
+        brand: stock.brand || matched?.brand || "Registered inventory medicine",
+        composition: stock.composition || matched?.composition || item.medicineName,
+        stock: Number(stock.stockQuantity || 0),
+        unitPrice: Number(stock.unitPrice || 0),
+      }];
+    });
+  };
+
+  const createQuotationWithAlternative = (request: any, selected: any) => {
+    const activeRequestId = String(request.requestId || requestId || "");
+    const activeMedicine = String(request.medicineName || prescribedMedicine || "");
+    if (!activeRequestId || !activeMedicine || !selected) {
+      toast.error("Select an alternative medicine first.");
+      return;
+    }
+    try {
+      const storageKey = alternativeRequestStorageKey();
+      const stored = JSON.parse(localStorage.getItem(storageKey) || "[]");
+      const current = Array.isArray(stored) ? stored : [];
+      localStorage.setItem(storageKey, JSON.stringify(current.map((entry: any) => (
+        entry.requestId === activeRequestId && normalizeMedicine(entry.medicineName) === normalizeMedicine(activeMedicine)
+          ? { ...entry, status: "Added to quotation", selectedAlternative: selected.alternative, selectedInventoryItemId: selected.inventoryItemId }
+          : entry
+      ))));
+    } catch {}
+    const params = new URLSearchParams({
+      requestId: activeRequestId,
+      prescribedMedicine: activeMedicine,
+      alternativeMedicine: selected.alternative,
+      alternativeBrand: selected.brand || "",
+      alternativeComposition: selected.composition || activeMedicine,
+      alternativePrice: String(selected.unitPrice || 0),
+      alternativeInventoryItemId: String(selected.inventoryItemId || ""),
+    });
+    const activeIndex = request.itemIndex ?? (prescribedMedicine ? itemIndex : "");
+    if (activeIndex !== "" && activeIndex !== undefined) params.set("itemIndex", String(activeIndex));
+    toast.success("Alternative selected and added to the quotation.");
+    router.push(`/pharmacy/quotations/create?${params.toString()}`);
+  };
+
+  const addRelatedMedicine = async (event: React.FormEvent, request: any, key: string) => {
+    event.preventDefault();
+    if (!newMedicine.medicineName.trim() || Number(newMedicine.stockQuantity) <= 0 || Number(newMedicine.unitPrice) <= 0) {
+      toast.error("Enter medicine name, available stock, and a valid unit price.");
+      return;
+    }
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Please sign in again to update inventory.");
+      return;
+    }
+    setSavingMedicine(true);
+    try {
+      const response = await fetch("/api/pharmacy/inventory", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          medicineName: newMedicine.medicineName.trim(),
+          batchNumber: newMedicine.batchNumber.trim(),
+          stockQuantity: Number(newMedicine.stockQuantity),
+          unitPrice: Number(newMedicine.unitPrice),
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.message || "Related medicine could not be added.");
+      const added = {
+        id: data.id,
+        medicineName: newMedicine.medicineName.trim(),
+        brand: newMedicine.brand.trim() || "Registered inventory medicine",
+        composition: newMedicine.composition.trim() || request.medicineName,
+        prescribedFor: request.medicineName,
+        batchNumber: newMedicine.batchNumber.trim(),
+        stockQuantity: Number(newMedicine.stockQuantity),
+        unitPrice: Number(newMedicine.unitPrice),
+        active: 1,
+      };
+      setInventoryItems(previous => [added, ...previous]);
+      try {
+        const saved = JSON.parse(localStorage.getItem("pharmacyAlternativeInventoryMetadata") || "[]");
+        const metadata = Array.isArray(saved) ? saved : [];
+        localStorage.setItem("pharmacyAlternativeInventoryMetadata", JSON.stringify([added, ...metadata.filter(item => item.id !== added.id)].slice(0, 200)));
+      } catch {}
+      setSelectedAlternatives(previous => ({ ...previous, [key]: String(added.id) }));
+      setAddingFor("");
+      setNewMedicine({ medicineName: "", brand: "", composition: "", batchNumber: "", stockQuantity: "", unitPrice: "" });
+      toast.success("Related medicine added to inventory and selected.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Related medicine could not be added.");
+    } finally {
+      setSavingMedicine(false);
+    }
+  };
+
   return (
-    <Page title="Alternative Medicines" eyebrow="Patient approval required" description="Review available inventory substitutes for out-of-stock prescribed medicines. A suggested substitute requires patient approval before order confirmation.">
+    <Page title="Alternative Medicines" eyebrow="Inventory substitution" description="Select a matching inventory substitute for an out-of-stock prescribed medicine, then complete the quotation.">
       <div className="grid gap-4 lg:grid-cols-2">
-        {alternativeCatalog.map((item, index) => (
-          <Card key={`${item.alternative}-${index}`} className="p-5">
-            <div className="flex items-start justify-between">
+        {visiblePendingRequests.map((item, index) => {
+          const key = requestKeyFor(item, index);
+          const candidates = alternativesForRequest(item);
+          const selectedId = selectedAlternatives[key] || "";
+          const selected = candidates.find(candidate => String(candidate.id) === selectedId);
+          return (
+          <Card key={key} className="p-5">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Prescribed Medicine Out of Stock</p>
-                <h3 className="mt-1 font-black text-slate-900">{item.prescribed}</h3>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Alternative Medicine Requested</p>
+                <h3 className="mt-1 font-black text-slate-900">{item.medicineName}</h3>
+                <p className="mt-1 text-xs font-semibold text-slate-500">Prescription {item.prescriptionId || "Not recorded"} · Request {item.requestId}</p>
               </div>
-              <Badge>Out of Stock</Badge>
+              <Badge>Pending</Badge>
             </div>
             <div className="my-5 flex items-center gap-3">
               <div className="h-px flex-1 bg-slate-200"/>
               <RefreshIcon/>
               <div className="h-px flex-1 bg-slate-200"/>
             </div>
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
-              <p className="text-xs font-extrabold uppercase tracking-wide text-emerald-800">Inventory Substitute Available</p>
-              <p className="mt-1 font-black text-slate-900">{item.alternative} <small className="font-semibold text-slate-600">({item.brand})</small></p>
-              <p className="mt-1 text-xs font-medium text-slate-600">{item.composition}</p>
-              <div className="mt-3 flex items-center justify-between text-xs font-extrabold">
-                <span className="text-emerald-700">Stock: {item.stock} units available</span>
-                <span className="text-slate-900">{item.price}</span>
+            <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+              <p className="text-xs font-extrabold uppercase tracking-wide text-amber-900">Alternative review requested</p>
+              <p className="mt-2 text-sm font-semibold text-slate-700">{inventoryLoading ? "Checking registered inventory…" : candidates.length > 0 ? "Select a matching salt/composition medicine available in inventory." : "No matching medicine is available. Add a verified related medicine to inventory to continue."}</p>
+              <div className="mt-3 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
+                <span>Dosage: <b className="text-slate-800">{item.dosage || "As directed"}</b></span>
+                <span>Quantity: <b className="text-slate-800">{item.quantity || 1}</b></span>
               </div>
             </div>
-            <div className="mt-4 flex justify-end">
-              <ActionLink href="/pharmacy/quotations/create" label="Add Alternative to Quotation" />
-            </div>
+            {!inventoryLoading && candidates.length > 0 && (
+              <div className="mt-4 space-y-3">
+                <label className="block text-xs font-extrabold uppercase tracking-wide text-slate-600">
+                  Select Alternative Medicine
+                  <select value={selectedId} onChange={event => setSelectedAlternatives(previous => ({ ...previous, [key]: event.target.value }))} className="mt-2 h-11 w-full rounded-xl border border-emerald-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100">
+                    <option value="">Choose from matching inventory medicines</option>
+                    {candidates.map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.alternative} · Stock {candidate.stock}</option>)}
+                  </select>
+                </label>
+                {selected && (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
+                    <p className="text-xs font-extrabold uppercase tracking-wide text-emerald-800">Selected medicine details</p>
+                    <p className="mt-1 font-black text-slate-900">{selected.alternative}</p>
+                    <p className="mt-1 text-xs font-semibold text-slate-600">{selected.brand} · {selected.composition}</p>
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs font-extrabold"><span className="text-emerald-700">Stock: {selected.stock} units</span><span className="text-slate-900">₹{selected.unitPrice.toFixed(2)} / unit</span></div>
+                  </div>
+                )}
+              </div>
+            )}
+            {!inventoryLoading && candidates.length === 0 && addingFor !== key && (
+              <button type="button" onClick={() => { setAddingFor(key); setNewMedicine({ medicineName: "", brand: "", composition: item.medicineName || "", batchNumber: "", stockQuantity: "", unitPrice: "" }); }} className="mt-4 inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-xs font-extrabold text-amber-800 transition hover:bg-amber-100"><Plus className="size-4" /> Add Related Medicine</button>
+            )}
+            {addingFor === key && (
+              <form onSubmit={event => addRelatedMedicine(event, item, key)} className="mt-4 space-y-3 rounded-xl border border-amber-200 bg-white p-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="text-xs font-bold text-slate-600">Medicine Name *<input required value={newMedicine.medicineName} onChange={event => setNewMedicine(previous => ({ ...previous, medicineName: event.target.value }))} className="mt-1.5 h-10 w-full rounded-lg border px-3 text-sm outline-none focus:border-amber-500" /></label>
+                  <label className="text-xs font-bold text-slate-600">Brand<input value={newMedicine.brand} onChange={event => setNewMedicine(previous => ({ ...previous, brand: event.target.value }))} className="mt-1.5 h-10 w-full rounded-lg border px-3 text-sm outline-none focus:border-amber-500" /></label>
+                  <label className="text-xs font-bold text-slate-600">Salt / Composition *<input required value={newMedicine.composition} onChange={event => setNewMedicine(previous => ({ ...previous, composition: event.target.value }))} className="mt-1.5 h-10 w-full rounded-lg border px-3 text-sm outline-none focus:border-amber-500" /></label>
+                  <label className="text-xs font-bold text-slate-600">Batch Number<input value={newMedicine.batchNumber} onChange={event => setNewMedicine(previous => ({ ...previous, batchNumber: event.target.value }))} className="mt-1.5 h-10 w-full rounded-lg border px-3 text-sm outline-none focus:border-amber-500" /></label>
+                  <label className="text-xs font-bold text-slate-600">Available Stock *<input required type="number" min="1" value={newMedicine.stockQuantity} onChange={event => setNewMedicine(previous => ({ ...previous, stockQuantity: event.target.value }))} className="mt-1.5 h-10 w-full rounded-lg border px-3 text-sm outline-none focus:border-amber-500" /></label>
+                  <label className="text-xs font-bold text-slate-600">Unit Price (₹) *<input required type="number" min="0.01" step="0.01" value={newMedicine.unitPrice} onChange={event => setNewMedicine(previous => ({ ...previous, unitPrice: event.target.value }))} className="mt-1.5 h-10 w-full rounded-lg border px-3 text-sm outline-none focus:border-amber-500" /></label>
+                </div>
+                <div className="flex justify-end gap-2"><button type="button" onClick={() => setAddingFor("")} className="rounded-lg border px-3 py-2 text-xs font-bold text-slate-600">Cancel</button><button type="submit" disabled={savingMedicine} className="rounded-lg bg-amber-600 px-4 py-2 text-xs font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-60">{savingMedicine ? "Adding…" : "Add & Select Medicine"}</button></div>
+              </form>
+            )}
+            {selected && <div className="mt-4 flex justify-end"><button type="button" onClick={() => createQuotationWithAlternative(item, selected)} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-emerald-700"><ArrowRight className="size-4" /> Create Quotation with Alternative</button></div>}
           </Card>
-        ))}
+          );
+        })}
+        {!visiblePendingRequests.length && (
+          <Card className="p-8 text-center lg:col-span-2"><Pill className="mx-auto size-8 text-slate-300" /><h3 className="mt-3 font-black text-slate-900">No alternative medicine requests</h3><p className="mt-1 text-sm text-slate-500">Out-of-stock medicines added from Create Quotation will appear here.</p></Card>
+        )}
       </div>
     </Page>
   );
 }
 const RefreshIcon=()=> <Activity className="size-4 text-emerald-600"/>;
 
-function Deliveries() { return <Page title="Delivery Management" eyebrow="Last-mile fulfilment" description="Coordinate store pickup and home delivery without exposing clinical information."><Card><EmptySafeTable columns={["Delivery","Order","Patient","Address / Contact","Partner","ETA","Charge","Status","Action"]} rows={deliveries.map(row=>[<b key="id">{row.id}</b>,row.order,row.patient,<span key="a">{row.address}<small className="block text-slate-400">{row.contact}</small></span>,row.partner,row.eta,row.charge,<Badge key="s">{row.status}</Badge>,<button key="x" className="text-xs font-bold text-emerald-700">Track</button>])}/></Card></Page>; }
+function Deliveries() {
+  const [deliveryOrders, setDeliveryOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingOrderId, setUpdatingOrderId] = useState("");
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    fetch("/api/pharmacy/orders", {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        const data = await response.json().catch(() => []);
+        if (!response.ok) throw new Error(data?.message || "Delivery orders could not be loaded.");
+        setDeliveryOrders(Array.isArray(data) ? data : []);
+      })
+      .catch((error) => toast.error(error instanceof Error ? error.message : "Delivery orders could not be loaded."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const statusLabel = (status: unknown) => {
+    const value = String(status || "").toUpperCase();
+    const labels: Record<string, string> = {
+      ACCEPTED: "Accepted",
+      CONFIRMED: "Accepted",
+      PREPARING: "Preparing",
+      READY_FOR_DISPATCH: "Ready for Dispatch",
+      OUT_FOR_DELIVERY: "Out for Delivery",
+      DELIVERED: "Delivered",
+      READY_FOR_PICKUP: "Ready for Pickup",
+      PICKED_UP: "Picked Up",
+      CANCELLED: "Cancelled",
+    };
+    return labels[value] || String(status || "Accepted").replaceAll("_", " ");
+  };
+
+  const nextStatus = (order: any) => {
+    const homeDelivery = String(order.deliveryMode || "Home delivery").toLowerCase() !== "store pickup";
+    const sequence = homeDelivery
+      ? ["CONFIRMED", "PREPARING", "READY_FOR_DISPATCH", "OUT_FOR_DELIVERY", "DELIVERED"]
+      : ["CONFIRMED", "PREPARING", "READY_FOR_PICKUP", "PICKED_UP"];
+    const current = String(order.status || "CONFIRMED").toUpperCase() === "ACCEPTED"
+      ? "CONFIRMED"
+      : String(order.status || "CONFIRMED").toUpperCase();
+    const currentIndex = sequence.indexOf(current);
+    return currentIndex >= 0 ? sequence[currentIndex + 1] || "" : "";
+  };
+
+  const updateDeliveryStatus = async (order: any, status: string) => {
+    if (!status) return;
+    setUpdatingOrderId(order.id);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/pharmacy/orders/${encodeURIComponent(order.id)}/status`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.message || "Delivery status could not be updated.");
+      setDeliveryOrders((current) => current.map((item) => item.id === order.id ? { ...item, status: data.status || status } : item));
+      toast.success(`Order status updated to ${statusLabel(data.status || status)}.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Delivery status could not be updated.");
+    } finally {
+      setUpdatingOrderId("");
+    }
+  };
+
+  const rows = deliveryOrders.map((order, index) => {
+    const mode = order.deliveryMode || (Number(order.deliveryCharge || 0) > 0 ? "Home delivery" : "Store pickup");
+    const upcomingStatus = nextStatus({ ...order, deliveryMode: mode });
+    const terminal = !upcomingStatus;
+    return [
+      <b key={`delivery-${order.id}`}>{`DLV-${String(order.id || index + 1).replace(/^ORD-/, "")}`}</b>,
+      order.id,
+      order.patient,
+      <span key={`address-${order.id}`}>{order.deliveryAddress || order.patientAddress || "Address on record"}<small className="block text-slate-400">{order.patientPhone || "Contact not recorded"}</small></span>,
+      mode === "Store pickup" ? "Store counter" : "Pharmacy delivery",
+      terminal ? "Completed" : mode === "Store pickup" ? "Pickup workflow" : "45–60 minutes",
+      `₹${Number(order.deliveryCharge || 0).toLocaleString("en-IN")}`,
+      <Badge key={`status-${order.id}`}>{statusLabel(order.status)}</Badge>,
+      <select
+        key={`action-${order.id}`}
+        value=""
+        disabled={terminal || updatingOrderId === order.id}
+        onChange={(event) => updateDeliveryStatus(order, event.target.value)}
+        aria-label={`Update status for order ${order.id}`}
+        className="min-w-40 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 outline-none transition focus:border-emerald-500 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
+      >
+        <option value="">{updatingOrderId === order.id ? "Updating..." : terminal ? statusLabel(order.status) : "Update Status"}</option>
+        {upcomingStatus && <option value={upcomingStatus}>{statusLabel(upcomingStatus)}</option>}
+      </select>,
+    ];
+  });
+
+  return (
+    <Page title="Delivery Management" eyebrow="Last-mile fulfilment" description="Coordinate store pickup and home delivery without exposing clinical information.">
+      <Card>
+        <EmptySafeTable columns={["Delivery", "Order", "Patient", "Address / Contact", "Partner", "ETA", "Charge", "Status", "Action"]} rows={rows}/>
+        {!loading && rows.length === 0 && <p className="border-t p-10 text-center text-sm font-medium text-slate-500">No accepted orders are awaiting fulfilment.</p>}
+        {loading && <p className="border-t p-10 text-center text-sm font-medium text-slate-500">Loading accepted orders...</p>}
+      </Card>
+    </Page>
+  );
+}
 
 function Billing() {
   const downloadInvoice = (row: (typeof orders)[number], index: number) => {
@@ -1015,6 +1371,7 @@ export function PrescriptionDetails({ id }: { id: string }) {
   const displayedMedicines = medicineNames.length
     ? medicineNames.map((name, index) => ({ name, dosage: medicineDosages[index] || "As directed", frequency: medicineDosages[index] || "As directed", duration: medicineDurations[index] || "As advised", quantity: 1, instruction: "Use as prescribed", availability: "Check stock" }))
     : medicines;
+  const quotationPath = `/pharmacy/quotations/create?requestId=${encodeURIComponent(request.id || id)}`;
   const medicineSchedule = (item: any) => {
     const uniqueParts = new Map<string, string>();
     [item.dosage, item.frequency, item.duration].forEach((value) => {
@@ -1025,7 +1382,7 @@ export function PrescriptionDetails({ id }: { id: string }) {
   };
 
   return (
-    <Page title={`Prescription Request ${request.id || id}`} eyebrow="Authorized prescription view" description="This access is limited to the prescription shared by the patient for medicine ordering." actions={<ActionLink href={`/pharmacy/quotations/create?requestId=${encodeURIComponent(request.id || id)}`} label="Create quotation"/>}>
+    <Page title={`Prescription Request ${request.id || id}`} eyebrow="Authorized prescription view" description="This access is limited to the prescription shared by the patient for medicine ordering." actions={<ActionLink href={quotationPath} label="Create quotation"/>}>
       <div className="grid gap-6 xl:grid-cols-[.7fr_1.3fr]">
         <div className="space-y-5">
           <Card className="p-5">
@@ -1066,7 +1423,16 @@ export function PrescriptionDetails({ id }: { id: string }) {
                     <h3 className="font-black text-slate-900">{item.name}</h3>
                     <p className="mt-1 text-sm text-slate-500">{medicineSchedule(item)}</p>
                   </div>
-                  <Badge>{item.availability}</Badge>
+                  {String(item.availability).trim().toLowerCase() === "check stock" ? (
+                    <Link
+                      href={`/pharmacy/inventory?medicine=${encodeURIComponent(item.name)}&returnTo=${encodeURIComponent(quotationPath)}`}
+                      className="inline-flex whitespace-nowrap rounded-full bg-rose-50 px-3 py-2 text-[11px] font-extrabold text-rose-700 ring-1 ring-inset ring-rose-200 transition hover:bg-rose-100"
+                    >
+                      Check stock
+                    </Link>
+                  ) : (
+                    <Badge>{item.availability}</Badge>
+                  )}
                 </div>
                 <div className="mt-4 grid gap-3 rounded-xl bg-slate-50 p-4 text-xs sm:grid-cols-3">
                   <Info label="Required quantity" value={String(item.quantity)}/>
@@ -1087,6 +1453,13 @@ export function QuotationCreate() {
   const searchParams = useSearchParams();
   const requestId = searchParams.get("requestId") || "";
   const quotationId = searchParams.get("quotationId") || "";
+  const prescribedMedicineParam = searchParams.get("prescribedMedicine") || "";
+  const alternativeMedicineParam = searchParams.get("alternativeMedicine") || "";
+  const alternativeBrandParam = searchParams.get("alternativeBrand") || "";
+  const alternativeCompositionParam = searchParams.get("alternativeComposition") || "";
+  const alternativePriceParam = searchParams.get("alternativePrice") || "";
+  const alternativeInventoryItemIdParam = searchParams.get("alternativeInventoryItemId") || "";
+  const alternativeItemIndex = searchParams.get("itemIndex");
   const [delivery] = useState(49);
   const [action, setAction] = useState<"draft" | "send" | "reject" | null>(null);
   const [requestDetails, setRequestDetails] = useState<any>(null);
@@ -1175,16 +1548,54 @@ export function QuotationCreate() {
       const savedQuotation = (Array.isArray(quotationRows) ? quotationRows : []).find((quotation:any)=>quotation.id===quotationId || quotation.requestId===details.id);
       let savedItems = savedQuotation?.itemsJson;
       if (typeof savedItems === "string") try { savedItems = JSON.parse(savedItems); } catch { savedItems = []; }
-      setItemsState(Array.isArray(savedItems) && savedItems.length ? savedItems.map((item:any)=>({
+      const preparedItems = Array.isArray(savedItems) && savedItems.length ? savedItems.map((item:any)=>({
         ...item,
         medicineName:item.prescribedMedicineName||item.medicineName,
         quantity:Number(item.quantity||1), unitPrice:Number(item.unitPrice||0),
         availability:item.isAlternative?"Alternative Available":item.available===false?"Not Available":"Available",
         exactInventoryItemId:item.inventoryItemId||null, exactUnitPrice:Number(item.unitPrice||0),
-      })) : requestItems);
+      })) : requestItems;
+      if (alternativeMedicineParam && prescribedMedicineParam) {
+        const requestedMedicine = normalize(prescribedMedicineParam);
+        const catalogAlternative = alternativeCatalog.find((candidate) => (
+          normalize(candidate.alternative) === normalize(alternativeMedicineParam)
+          && (normalize(candidate.prescribed).includes(requestedMedicine) || requestedMedicine.includes(normalize(candidate.prescribed)))
+        ));
+        const selectedAlternative = catalogAlternative || {
+          prescribed: prescribedMedicineParam,
+          alternative: alternativeMedicineParam,
+          brand: alternativeBrandParam || "Registered inventory medicine",
+          composition: alternativeCompositionParam || prescribedMedicineParam,
+          price: alternativePriceParam,
+        };
+        if (selectedAlternative.alternative) {
+          const stockedAlternative = inventoryRows.find((stock: any) => {
+            const stockedName = normalize(stock.medicineName);
+            const alternativeName = normalize(selectedAlternative.alternative);
+            return stock.id === alternativeInventoryItemIdParam || stockedName === alternativeName || stockedName.includes(alternativeName) || alternativeName.includes(stockedName);
+          });
+          const catalogPrice = Number(alternativePriceParam || String(selectedAlternative.price || "").match(/[\d.]+/)?.[0] || 0);
+          const requestedIndex = alternativeItemIndex === null ? -1 : Number(alternativeItemIndex);
+          preparedItems.forEach((item: any, index: number) => {
+            const isRequestedItem = Number.isInteger(requestedIndex) && requestedIndex >= 0
+              ? index === requestedIndex
+              : normalize(item.medicineName) === requestedMedicine;
+            if (!isRequestedItem) return;
+            item.availability = "Alternative Available";
+            item.isAlternative = true;
+            item.selectedAlternative = selectedAlternative.alternative;
+            item.alternativeName = selectedAlternative.alternative;
+            item.alternativeBrand = selectedAlternative.brand;
+            item.alternativeComposition = selectedAlternative.composition;
+            item.unitPrice = stockedAlternative ? Number(stockedAlternative.unitPrice || 0) : catalogPrice;
+            item.inventoryItemId = stockedAlternative?.id || null;
+          });
+        }
+      }
+      setItemsState(preparedItems);
     }).catch(error => toast.error(error instanceof Error ? error.message : "Quotation could not be prepared."))
       .finally(() => setLoadingQuotation(false));
-  }, [requestId, quotationId]);
+  }, [requestId, quotationId, prescribedMedicineParam, alternativeMedicineParam, alternativeBrandParam, alternativeCompositionParam, alternativePriceParam, alternativeInventoryItemIdParam, alternativeItemIndex]);
 
   const subtotal = itemsState.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unitPrice || 0), 0);
   const discount = Math.min(54, subtotal);
@@ -1274,6 +1685,46 @@ export function QuotationCreate() {
       next[index] = item;
       return next;
     });
+  };
+
+  const addToAlternativeMedicines = (item: any, index: number) => {
+    const requestKey = `${requestId}::${String(item.medicineName || "").toLowerCase()}`;
+    try {
+      const storageKey = alternativeRequestStorageKey();
+      const stored = JSON.parse(localStorage.getItem(storageKey) || "[]");
+      const current = Array.isArray(stored) ? stored : [];
+      if (!current.some((request: any) => `${request.requestId}::${String(request.medicineName || "").toLowerCase()}` === requestKey)) {
+        const quotationPath = `/pharmacy/quotations/create?requestId=${encodeURIComponent(requestId)}`;
+        current.unshift({
+          id: `ALT-${Date.now()}-${index}`,
+          requestId,
+          prescriptionId: requestDetails?.prescriptionDisplayId || requestDetails?.prescriptionId || "",
+          patient: requestDetails?.patient || "",
+          medicineName: item.medicineName,
+          dosage: item.dosage,
+          duration: item.duration,
+          quantity: item.quantity || 1,
+          itemIndex: index,
+          status: "Pending",
+          quotationPath,
+          createdAt: new Date().toISOString(),
+        });
+        localStorage.setItem(storageKey, JSON.stringify(current.slice(0, 100)));
+      }
+      toast.success(`${item.medicineName} added to Alternative Medicines.`);
+    } catch {
+      toast.error("Medicine could not be added to Alternative Medicines.");
+    }
+  };
+
+  const openAlternativeMedicines = (item: any, index: number) => {
+    addToAlternativeMedicines(item, index);
+    const params = new URLSearchParams({
+      requestId,
+      medicine: String(item.medicineName || ""),
+      itemIndex: String(index),
+    });
+    router.push(`/pharmacy/alternatives?${params.toString()}`);
   };
 
   const finishAction = async (type: "draft" | "send" | "reject") => {
@@ -1421,7 +1872,22 @@ export function QuotationCreate() {
                     </label>
                   </div>
 
-                  {(item.availability === "Alternative Available" || item.availability === "Not Available" || item.isAlternative) && (
+                  {item.availability === "Not Available" && !item.isAlternative ? (
+                      <div className="mt-4 flex flex-col gap-4 rounded-xl border border-amber-200 bg-amber-50/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-xs font-extrabold uppercase tracking-wide text-amber-900">Prescribed medicine is out of stock</p>
+                          <p className="mt-1 text-xs font-medium text-slate-600">Open Alternative Medicines to review matching salt/composition options.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => openAlternativeMedicines(item, index)}
+                          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-amber-700"
+                        >
+                          Go to Alternative Medicines
+                          <ArrowRight className="size-3.5" />
+                        </button>
+                      </div>
+                    ) : (item.availability === "Alternative Available" || item.isAlternative) ? (
                     <div className="mt-4 rounded-xl border border-amber-200 bg-white p-4">
                       <p className="text-xs font-extrabold uppercase tracking-wide text-amber-900">Select Alternative Substitute from Inventory</p>
                       <div className="mt-2 grid gap-3 sm:grid-cols-2">
@@ -1449,7 +1915,7 @@ export function QuotationCreate() {
                         </div>
                       </div>
                     </div>
-                  )}
+                    ) : null}
                 </div>
               );
             })}

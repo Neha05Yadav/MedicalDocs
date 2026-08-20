@@ -836,6 +836,10 @@ export class CareService implements OnModuleInit, OnModuleDestroy {
       'In Processing',
       'Quality Check',
       'Rejected',
+      'Accepted',
+      'Sent to Sample Management',
+      'Pending Collection',
+      'Pending',
     ];
     if (!allowed.includes(status))
       throw new BadRequestException('Invalid sample status.');

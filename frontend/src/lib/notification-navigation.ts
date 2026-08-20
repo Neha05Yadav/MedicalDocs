@@ -51,14 +51,15 @@ const routeRules: Record<Portal, Array<[RegExp, string]>> = {
     [/PROFILE|ACCOUNT/, "/clinic/profile"],
   ],
   laboratory: [
+    [/TEST REQUEST|LAB REQUEST|LAB BOOKING|BOOKING|BOOKED|ORDER|X-RAY|TEST BOOK/, "/laboratory/test-requests"],
+    [/ACCESS|CONSENT|PERMIT|REVOKE|REVOKED|APPROVED ACCESS|ACCESS REQUEST/, "/laboratory/patients"],
     [/SAMPLE|COLLECTED|SPECIMEN/, "/laboratory/sample-management"],
     [/REPORT|RESULT/, "/laboratory/reports"],
-    [/ACCESS|CONSENT|PATIENT/, "/laboratory/patients"],
-    [/TEST REQUEST|LAB REQUEST|ORDER|BOOK/, "/laboratory/test-requests"],
-    [/WORKFLOW|CATALOG|PACKAGE|TEST/, "/laboratory/workflow"],
+    [/WORKFLOW|CATALOG|PACKAGE/, "/laboratory/workflow"],
     [/INVOICE|BILLING|PAYMENT/, "/laboratory/billing"],
     [/SUPPORT|TICKET|COMPLAINT|ISSUE/, "/laboratory/support"],
     [/PROFILE|ACCOUNT/, "/laboratory/profile"],
+    [/PATIENT/, "/laboratory/patients"],
   ],
 };
 

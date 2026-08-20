@@ -24,7 +24,6 @@ const ActivitySquare = (props: any) => <svg {...props} xmlns="http://www.w3.org/
 const Building2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 12h4"></path><path d="M10 8h4"></path><path d="M14 21v-3a2 2 0 0 0-4 0v3"></path><path d="M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2"></path><path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"></path></svg>;
 const FlaskConical = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"></path><path d="M6.453 15h11.094"></path><path d="M8.5 2h7"></path></svg>;
 const ShieldCheck = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg>;
-const History = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>;
 
 import Link from "next/link";
 import UploadReportClient from "./UploadReportClient";
@@ -220,6 +219,10 @@ export default function PatientDashboard() {
                     <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-cyan-700 shadow-sm"><Building2 className="size-5" /></span>
                     <div><p className="text-[clamp(.78rem,.68vw,.9rem)] font-semibold text-slate-500">Connected Hospitals</p><p className="mt-0.5 text-[clamp(1.35rem,1.25vw,1.7rem)] font-extrabold text-slate-900">{providerStats?.connectedHospitals ?? 0}</p></div>
                   </div>
+                  <div className="flex items-center gap-4 rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+                    <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-blue-700 shadow-sm"><Stethoscope className="size-5" /></span>
+                    <div><p className="text-[clamp(.78rem,.68vw,.9rem)] font-semibold text-slate-500">Connected Clinics</p><p className="mt-0.5 text-[clamp(1.35rem,1.25vw,1.7rem)] font-extrabold text-slate-900">{providerStats?.connectedClinics ?? 0}</p></div>
+                  </div>
                   <div className="flex items-center gap-4 rounded-2xl border border-violet-100 bg-violet-50/70 p-4">
                     <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-violet-700 shadow-sm"><FlaskConical className="size-5" /></span>
                     <div><p className="text-[clamp(.78rem,.68vw,.9rem)] font-semibold text-slate-500">Connected Labs</p><p className="mt-0.5 text-[clamp(1.35rem,1.25vw,1.7rem)] font-extrabold text-slate-900">{providerStats?.connectedLabs ?? 0}</p></div>
@@ -227,10 +230,6 @@ export default function PatientDashboard() {
                   <div className="flex items-center gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
                     <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-emerald-700 shadow-sm"><ShieldCheck className="size-5" /></span>
                     <div><p className="text-[clamp(.78rem,.68vw,.9rem)] font-semibold text-slate-500">Access Granted</p><p className="mt-0.5 text-[clamp(1.35rem,1.25vw,1.7rem)] font-extrabold text-slate-900">{providerStats?.accessGranted ?? 0}</p></div>
-                  </div>
-                  <div className="flex items-center gap-4 rounded-2xl border border-amber-100 bg-amber-50/70 p-4">
-                    <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-amber-700 shadow-sm"><History className="size-5" /></span>
-                    <div><p className="text-[clamp(.78rem,.68vw,.9rem)] font-semibold text-slate-500">Last Access</p><p className="mt-0.5 text-[clamp(1.05rem,1vw,1.35rem)] font-extrabold text-slate-900">Yesterday</p></div>
                   </div>
                 </div>
               </div>

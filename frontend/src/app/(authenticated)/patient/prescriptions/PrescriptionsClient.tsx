@@ -17,6 +17,22 @@ const Pill = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" 
 const Check = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m20 6-11 11-5-5"/></svg>;
 const AlertTriangle = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
 
+const splitPrescriptionField = (value: unknown) => {
+  const text = String(value || "").trim();
+  if (!text) return [];
+  const numberedItems = [...text.matchAll(/(?:^|\s)(\d+)\.\s*([\s\S]*?)(?=\s+\d+\.\s|$)/g)]
+    .map((match) => match[2].trim())
+    .filter(Boolean);
+  if (numberedItems.length) return numberedItems;
+  return text.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+};
+
+const isAlternativeQuotationItem = (item: any) => (
+  item?.isAlternative === true
+  || item?.isAlternative === 1
+  || String(item?.isAlternative || "").toLowerCase() === "true"
+);
+
 export default function PrescriptionsClient() {
   const router = useRouter();
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
@@ -47,6 +63,15 @@ export default function PrescriptionsClient() {
   const [confirmingQuotation, setConfirmingQuotation] = useState("");
   const [rejectingQuotation, setRejectingQuotation] = useState("");
   const [viewingQuotation, setViewingQuotation] = useState<any | null>(null);
+
+  const selectedMedicineNames = splitPrescriptionField(selectedPrescriptionDetails?.medicine);
+  const selectedMedicineDosages = splitPrescriptionField(selectedPrescriptionDetails?.dosage);
+  const selectedMedicineDurations = splitPrescriptionField(selectedPrescriptionDetails?.duration);
+  const selectedPrescriptionMedicines = selectedMedicineNames.map((name, index) => ({
+    name,
+    dosage: selectedMedicineDosages[index] || "As directed",
+    duration: selectedMedicineDurations[index] || "As advised",
+  }));
 
   useEffect(() => {
     fetchPrescriptions();
@@ -583,14 +608,14 @@ export default function PrescriptionsClient() {
               </button>
             </div>
             <div className="overflow-y-auto p-6 sm:p-8 space-y-6">
-              {Boolean(viewingQuotation.hasAlternative || (Array.isArray(viewingQuotation.items) && viewingQuotation.items.some((i: any) => i.isAlternative || i.alternativeName))) && (
+              {Boolean(Array.isArray(viewingQuotation.items) && viewingQuotation.items.some(isAlternativeQuotationItem)) && (
                 <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="size-5 shrink-0 text-amber-600 mt-0.5" />
                     <div>
                       <h4 className="font-extrabold text-amber-900">Alternative Medicine Suggested from Inventory</h4>
                       <p className="mt-1 text-xs font-medium text-amber-800 leading-relaxed">
-                        One or more prescribed medicines are out of stock at the pharmacy. The pharmacy has selected a verified substitute medicine from inventory below. Please review and approve to confirm order.
+                        The pharmacy used a matching inventory alternative for an out-of-stock prescribed medicine. The exact replacement is shown below; please review it with the quotation before confirming the order.
                       </p>
                     </div>
                   </div>
@@ -601,7 +626,7 @@ export default function PrescriptionsClient() {
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Quoted Medicines & Inventory Substitutes</h4>
                 <div className="mt-3 divide-y rounded-2xl border border-slate-200 bg-slate-50/50">
                   {(Array.isArray(viewingQuotation.items) ? viewingQuotation.items : []).map((item: any, idx: number) => {
-                    const isAlt = item.isAlternative || Boolean(item.alternativeName);
+                    const isAlt = isAlternativeQuotationItem(item);
                     return (
                       <div key={idx} className={`p-4 text-sm transition ${isAlt ? "bg-amber-50/60" : ""}`}>
                         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -628,8 +653,8 @@ export default function PrescriptionsClient() {
 
                         {isAlt && (
                           <div className="mt-3 rounded-xl border border-amber-200 bg-white p-3 text-xs">
-                            <p className="font-extrabold text-amber-900">Suggested Inventory Substitute:</p>
-                            <p className="mt-0.5 font-bold text-slate-800">{item.alternativeName}</p>
+                            <p className="font-extrabold text-amber-900">Alternative medicine provided:</p>
+                            <p className="mt-0.5 font-bold text-slate-800">{item.alternativeName || item.medicineName} instead of {item.prescribedMedicineName || "the prescribed medicine"}</p>
                             <p className="text-slate-500">{item.alternativeBrand || "Verified brand"} · {item.alternativeComposition || "Equivalent composition"}</p>
                           </div>
                         )}
@@ -683,7 +708,7 @@ export default function PrescriptionsClient() {
                   }}
                   className="rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-extrabold text-white hover:bg-emerald-700 disabled:opacity-50 shadow-md"
                 >
-                  {confirmingQuotation === viewingQuotation.id ? "Confirming..." : (viewingQuotation.hasAlternative || (Array.isArray(viewingQuotation.items) && viewingQuotation.items.some((i: any) => i.isAlternative || i.alternativeName))) ? "Approve Alternative & Confirm Order" : "Select & Confirm Order"}
+                  {confirmingQuotation === viewingQuotation.id ? "Confirming..." : (Array.isArray(viewingQuotation.items) && viewingQuotation.items.some(isAlternativeQuotationItem)) ? "Accept Quotation & Confirm Order" : "Select & Confirm Order"}
                 </button>}
                 </>
               )}
@@ -723,6 +748,50 @@ export default function PrescriptionsClient() {
                 </div>
               ) : (
                 <div className="space-y-6">
+                  <section>
+                    <SectionTitle>Medicines Prescribed by Doctor</SectionTitle>
+                    <div className="overflow-hidden rounded-2xl border border-cyan-100 bg-white shadow-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-cyan-100 bg-cyan-50/60 px-4 py-3 sm:px-5">
+                        <div>
+                          <p className="text-sm font-extrabold text-slate-900">Prescription {selectedPrescriptionDetails.id}</p>
+                          <p className="mt-0.5 text-xs font-medium text-slate-500">Prescribed by {selectedPrescriptionDetails.doctor || "Doctor not recorded"}</p>
+                        </div>
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-extrabold text-cyan-700 ring-1 ring-inset ring-cyan-200">
+                          {selectedPrescriptionMedicines.length} {selectedPrescriptionMedicines.length === 1 ? "medicine" : "medicines"}
+                        </span>
+                      </div>
+                      {selectedPrescriptionMedicines.length > 0 ? (
+                        <div className="divide-y divide-slate-100">
+                          {selectedPrescriptionMedicines.map((medicine, index) => (
+                            <div key={`${medicine.name}-${index}`} className="grid gap-3 px-4 py-4 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,.8fr)] sm:px-5">
+                              <div className="flex min-w-0 items-start gap-3">
+                                <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-cyan-50 text-cyan-700">
+                                  <Pill className="size-4" />
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Medicine {index + 1}</p>
+                                  <p className="mt-1 break-words text-sm font-extrabold text-slate-900">{medicine.name}</p>
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Dosage</p>
+                                <p className="mt-1 text-sm font-semibold text-slate-700">{medicine.dosage}</p>
+                              </div>
+                              <div>
+                                <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Duration</p>
+                                <p className="mt-1 text-sm font-semibold text-slate-700">{medicine.duration}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="px-5 py-6 text-center">
+                          <p className="text-sm font-semibold text-slate-600">Structured medicine details are not available for this prescription.</p>
+                        </div>
+                      )}
+                    </div>
+                  </section>
+
                   <section>
                     <SectionTitle>Search Pharmacy Location / City / Area</SectionTitle>
                     <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 sm:p-5">
@@ -872,29 +941,9 @@ export default function PrescriptionsClient() {
                       <div className="grid grid-cols-2 gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-5 sm:grid-cols-4">
                         <SummaryItem label="Prescription ID" value={selectedPrescriptionDetails.id} />
                         <SummaryItem label="Doctor Name" value={selectedPrescriptionDetails.doctor || "Not recorded"} />
-                        <SummaryItem label="Total Medicines" value={selectedPrescriptionDetails.medicine ? "1" : "0"} />
+                        <SummaryItem label="Total Medicines" value={String(selectedPrescriptionMedicines.length)} />
                         <SummaryItem label="Prescription Date" value={selectedPrescriptionDetails.date || "Not recorded"} />
                         <SummaryItem label="Pharmacy ID" value={selectedPharmacyIds.join(", ")} />
-                      </div>
-                    </section>
-                  )}
-
-                  {selectedPharmacyIds.length > 0 && (
-                    <section>
-                      <SectionTitle>Medicine List</SectionTitle>
-                      <div className="overflow-hidden rounded-2xl border border-slate-200">
-                        <div className="grid grid-cols-[1.5fr_1fr_.7fr_1fr] gap-3 bg-slate-50 px-4 py-3 text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
-                          <span>Medicine Name</span>
-                          <span>Dosage</span>
-                          <span>Quantity</span>
-                          <span>Duration</span>
-                        </div>
-                        <div className="grid grid-cols-[1.5fr_1fr_.7fr_1fr] gap-3 px-4 py-4 text-sm font-semibold text-slate-800">
-                          <span>{selectedPrescriptionDetails.medicine || "Prescription medicine"}</span>
-                          <span>{selectedPrescriptionDetails.dosage || "As directed"}</span>
-                          <span>1</span>
-                          <span>{selectedPrescriptionDetails.duration || "As advised"}</span>
-                        </div>
                       </div>
                     </section>
                   )}
